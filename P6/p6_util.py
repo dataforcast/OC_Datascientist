@@ -27,7 +27,65 @@ LIST_EMBEDDING_MODE=['tfidf','bow','ngram']
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p6_df_standardization(df, is_stemming=False, is_lem=True) :
+def clean_marker_text(text,leading_marker=None, trailing_marker=None):
+    """ Remove trailer and leading markers from a given text.
+    Returns a list of words that were encapsulated between markers.
+    """
+    if leading_marker is not None:
+        list1=text.split(leading_marker)
+        str2 = " ".join(list1)
+    else :
+        str2 = text
+    if trailing_marker is not None: 
+        list2=str2.split(trailing_marker)
+    else :
+        list2 = str2.split()
+
+    list3 = [element.strip() for element in list2 if 0 < len(element)]
+    return list3
+#-------------------------------------------------------------------------------
+    
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_df_standardization(ser, is_stemming=False, is_lem=True) :
+    """ Applies all pre-processing actions over a Series ser given as 
+    parameter.
+    
+    Returned Series is a cleaned one.
+    """
+    
+    print("\nCleaning text in-between markers <code></code> markers...")
+    ser = ser.apply(cb_remove_marker,args=('code',))
+
+    print("\nCleaning LXML markers...")
+    ser = ser.apply(cb_clean_lxml)
+
+    print("\nRemove verbs from sentences...")
+    ser = ser.apply(cb_sentence_filter)
+
+    print("\nFiltering alpha-numeric words from sentences...")
+    ser = ser.apply(cb_remove_verb_from_sentence)
+
+    print("\nRemoving stopwords...")
+    ser= ser.apply(cb_remove_stopwords)
+
+    if is_lem is True:
+        print("\nLemmatization ...")
+        lemmatizer=WordNetLemmatizer()
+        ser=ser.apply(p5_util.cb_lemmatizer,args=(lemmatizer,'lower'))
+
+    if is_stemming is True:
+        print("\nEnglish stemming ...")
+        stemmer=SnowballStemmer('english')
+        ser=ser.apply(p5_util.cb_stemmer,args=(stemmer,'lower'))
+    return ser
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_df_standardization_deprecated(df, is_stemming=False, is_lem=True) :
     """ Applies all pre-processing actions over a dataframe df given as 
     parameter.
     Returned dataframe is a cleaned dataframe.
@@ -320,8 +378,10 @@ def get_list_tag_stat_bow(sentence, vectorizer, csr_matrix, tag_ratio=1.0) :
 #
 #-------------------------------------------------------------------------------
 def cb_clean_lxml(str_lxml, mode='lower'):
-    """This function clean (remove) all LXML markers from str_lxml given as parameter.
-    BeautifulSoup library is used to process LXML string.
+    """This function clean (remove) all LXML markers from str_lxml given as 
+    parameter.
+    
+    BeautifulSoup library is used to process LXML strings.
     
     It returns a cleaned string in low case.
     
@@ -364,8 +424,8 @@ def cb_sentence_filter(sentence, mode='lower'):
 #
 #-------------------------------------------------------------------------------
 def cb_remove_code_source_compare(item):
-    """This function removes from item given as parameter source code comparaison expression 
-    such as A=B or A>=cf,...
+    """This function removes from item given as parameter source code 
+    comparaison expression such as A=B or A>=cf,...
     """
     my_text = item.replace(' = ','=')
     my_text = my_text.replace(' == ','==')
@@ -661,7 +721,7 @@ def taglist_stat_predict(df_corpus, document_index, embedding_mode, vectorizer\
     #---------------------------------------------------------------------------
     # Document is normalized
     #---------------------------------------------------------------------------
-    df_document_std = p6_df_standardization(df_document)
+    df_document_std = p6_df_standardization(df_document.Body)
 
 
     #---------------------------------------------------------------------------
@@ -849,7 +909,8 @@ def get_dict_list_cluster_tag( arr_cluster_label, dict_sof_document, vectorizer\
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def get_tag_intersect_cluster_list_tag(list_question_key_words, dict_cluster_list_tag) :
+def get_tag_intersect_cluster_list_tag(list_question_key_words\
+, dict_cluster_list_tag) :
     """Returns a dictionary formated as following : {cluster_id, tag_count} 
     where tag_count is issued from intersection between list_question_key_words 
     and dict_cluster_list_tag[clster_id], for any cluster_id.
@@ -871,4 +932,105 @@ def get_tag_intersect_cluster_list_tag(list_question_key_words, dict_cluster_lis
 
     return dict_cluster_intersect_count
 #-------------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------
+# 
+#-------------------------------------------------------------------------
+def p6_build_dict_dict_index_filter(list_ref, list_list_tag_target):
+    index_row=0
+    
+    dict_filter=dict()
+    for list_tag_target in list_list_tag_target:
+        #--------------------------------------------------------------
+        # list_tag_target is a list of target tags over a given row.
+        #--------------------------------------------------------------
+        row_tag_filter = np.zeros(len(list_ref), dtype=bool)
+        for tag_target in list_tag_target:
+            # -----------------------------------------------------------------------------------
+            # For a given tag from a row, a filter is built.
+            # This filer is issued from condition (np.array(list_ref)==tag_target
+            # row_tag_filter is then a list of booleans which size is size of list_ref.
+            # This filter is aggregated with all tags from the row, using bitwise operator "|".
+            # -----------------------------------------------------------------------------------
+            row_tag_filter = (row_tag_filter) | (np.array(list_ref)==tag_target)
+        #---------------------------------------------------------------------
+        # Filter dictionay for each row is built.
+        #---------------------------------------------------------------------        
+        dict_filter[index_row] = list(row_tag_filter)
+        index_row +=1
+    return dict_filter
+#-------------------------------------------------------------------------
+
+
+
+#-------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------
+def p6_encode_target(list_tags_ref, list_list_tags):
+    """One hot encode the given list_list_tags into values from list_tags_ref.
+    Returns a list of encoded values.
+    
+    """
+    dict_index_filter \
+    = p6_build_dict_dict_index_filter(list_tags_ref,list_list_tags)
+    
+    list_all_encoded_row=list()
+    for row, index_filter in dict_index_filter.items():
+        encoded_row = np.zeros(len(list_tags_ref), dtype=int)
+        #-----------------------------------------------------------------------------------
+        # np.where(condition) will return an array of indexes values.
+        #-----------------------------------------------------------------------------------
+        index_row_array = np.where(dict_index_filter[row])
+        
+        #-----------------------------------------------------------------------------------
+        # Row is encoded with value 1 for index values from index_row_array
+        #-----------------------------------------------------------------------------------
+        for i in index_row_array:
+            encoded_row[i]=1
+            
+        #-----------------------------------------------------------------------------------
+        # Encoded row is added to list of encoded rows 
+        #-----------------------------------------------------------------------------------
+        list_all_encoded_row.insert(row,list(encoded_row))
+    return list_all_encoded_row
+#-------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------
+def p6_get_tags_from_dict(row, dict_filter, list_all_tags):
+    index_array_tag = np.where(np.array(dict_filter[row])==1)
+    return np.array(list_all_tags)[index_array_tag]
+#-------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------
+def p6_get_list_tag_from_encoded_row(list_list_encoded_row,row,list_all_tags):
+    list_encoded_row = list_list_encoded_row[row]
+    arr_encoded_index = np.where(np.array(list_encoded_row)==1)
+    return np.array(list_all_tags)[arr_encoded_index]
+#-------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------
+def p6_get_list_all_tag(ser_tag):
+    """Returns a list of unique tags from a given Series.
+    """
+    list_all_tags=list()
+    #---------------------------------------------------------------------
+    # All tags lists from any row are aggregated as a unique list of tags.
+    # Tags may be duplicated onto this list.
+    #---------------------------------------------------------------------
+    for index, list_tags in ser_tag.items():
+        list_all_tags =   list_all_tags+list_tags    
+
+    #---------------------------------------------------------------------
+    # Tags are made unique thanks to set()
+    #---------------------------------------------------------------------
+    list_all_tags = list(set(list_all_tags))
+    return list_all_tags
+#-------------------------------------------------------------------------
     
