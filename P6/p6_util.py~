@@ -1,3 +1,5 @@
+
+
 import numpy as np
 import pandas as pd
 import re
@@ -7,10 +9,9 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.stem.porter import PorterStemmer
 from nltk.stem import SnowballStemmer
+from scipy import sparse
 
 from bs4 import BeautifulSoup
-
-import p5_util
 
 
 from nltk.stem import WordNetLemmatizer
@@ -21,7 +22,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 
 import p5_util
-import p6_util
+
 
 LIST_EMBEDDING_MODE=['tfidf','bow','ngram']
 #-------------------------------------------------------------------------------
@@ -82,41 +83,6 @@ def p6_df_standardization(ser, is_stemming=False, is_lem=True) :
     return ser
 #-------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------
-#
-#-------------------------------------------------------------------------------
-def p6_df_standardization_deprecated(df, is_stemming=False, is_lem=True) :
-    """ Applies all pre-processing actions over a dataframe df given as 
-    parameter.
-    Returned dataframe is a cleaned dataframe.
-    """
-
-    print("\nCleaning text in-between markers <code></code> markers...")
-    df["Body"] = df.Body.apply(cb_remove_marker,args=('code',))
-
-    print("\nCleaning LXML markers...")
-    df["Body"] = df.Body.apply(cb_clean_lxml)
-
-    print("\nRemove verbs from sentences...")
-    df["Body"] = df.Body.apply(cb_sentence_filter)
-
-    print("\nFiltering alpha-numeric words from sentences...")
-    df["Body"] = df.Body.apply(cb_remove_verb_from_sentence)
-
-    print("\nRemoving stopwords...")
-    df["Body"] = df.Body.apply(cb_remove_stopwords)
-
-    if is_lem is True:
-        print("\nLemmatization ...")
-        lemmatizer=WordNetLemmatizer()
-        df['Body']=df.Body.apply(p5_util.cb_lemmatizer,args=(lemmatizer,'lower'))
-
-    if is_stemming is True:
-        print("\nEnglish stemming ...")
-        stemmer=SnowballStemmer('english')
-        df['Body']=df.Body.apply(p5_util.cb_stemmer,args=(stemmer,'lower'))
-    return df
-#-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
@@ -541,9 +507,12 @@ def cb_remove_stopwords(item, lang='english', mode='lower') :
     
     """
     list_word=item.split()
-    item_no_stopwords_1=[ word for word in list_word if word.lower() not in stopwords.words(lang) \
+    item_no_stopwords_1=[ word for word in list_word \
+    if word.lower() not in stopwords.words(lang) \
                       and not str(word).isdigit()]
-    item_no_stopwords=[word for word in item_no_stopwords_1 if word.lower() not in ['cnn']]
+                      
+    item_no_stopwords=[word for word in item_no_stopwords_1 \
+    if word.lower() not in ['cnn','.','#','way','would','like']]
     
     item_no_stopwords=" ".join(item_no_stopwords)
     if mode == 'upper':
@@ -799,7 +768,7 @@ def get_list_cluster_tag(dict_corpus, vectorizer, cluster_labels\
         # we get all N-grams from document.
         # Number of TAGs is limited with p_tag_ratio.
         #-----------------------------------------------------------------------
-        list_cluster_tag_ = p6_util.get_list_tag_stat_tfidf(document\
+        list_cluster_tag_ = get_list_tag_stat_tfidf(document\
         , vectorizer, tag_ratio=p_tag_ratio)
         
         #-----------------------------------------------------------------------
@@ -1033,4 +1002,96 @@ def p6_get_list_all_tag(ser_tag):
     list_all_tags = list(set(list_all_tags))
     return list_all_tags
 #-------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_encode_target_in_csr_matrix(list_ref_tags, list_tags_to_be_encoded) :
+    """Returns a list of list of encoded TAGs that is compressed into a 
+    CSR matrix.
+    Input : 
+        *  list_ref_tags : list of TAGs used as reference for encoding
+        *  list_tags_to_be_encoded : list of TAGs to be encoded.
+    Output:
+        * CSR matrix of encoded TAGs
+        Format of returned value is a CSR matrix with expanded list of lists  : 
+            [
+       Row 1--->[tag_1.1, tag_1.2, ..... tag_1.K],
+                    .
+                    .
+                    .                
+       Row p--->[tag_p.1, tag_p.2, ..... tag_p.K],
+                    .
+                    .
+                    .                
+       Row N--->[tag_N.1, tag_N.2, ..... tag_N.K],            
+            ]
+    """
+    #---------------------------------------------------------------------------
+    # For each row, TAGs represented as a list of elementaries TAG are encoded
+    # Each row that is a string of TAGs is splitted into a list of elementary 
+    # TAGs all rows are aggregated into a list
+    #---------------------------------------------------------------------------
+    list_list_encoded_row = p6_encode_target(list_ref_tags\
+    , list_tags_to_be_encoded)
     
+    #---------------------------------------------------------------------------
+    # Conversion into CSR matrix fro easyness of computation
+    #---------------------------------------------------------------------------
+    csr_matrix_encoded_tag=sparse.csr_matrix(np.array(list_list_encoded_row))
+    
+    return csr_matrix_encoded_tag
+#-------------------------------------------------------------------------------    
+         
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_encode_ser_tag_2_csrmatrix(ser_tag, leading_marker='<'\
+, trailing_marker='>'):
+    """One hot encode a Series given as parameter.
+    Each row from Series content has following format : <tag1><tag2>...<tagN>
+    
+    Returned value is a CSR matrix with expanded list of lists format : 
+        [
+   Row 1   [tag_1.1, tag_1.2, ..... tag_1.K],
+                .
+                .
+                .                
+   Row p   [tag_p.1, tag_p.2, ..... tag_p.K],
+                .
+                .
+                .                
+   Row N   [tag_N.1, tag_N.2, ..... tag_N.K],            
+        ]
+    """
+    #---------------------------------------------------------------------------
+    # Markers '<' and '>' are removed from tags.
+    #---------------------------------------------------------------------------
+    ser_tag = ser_tag.apply(clean_marker_text, leading_marker=leading_marker\
+    , trailing_marker=trailing_marker)
+
+    #---------------------------------------------------------------------------
+    # A unique list of all TAGs is built : this is the vocabulary for TAGs**
+    # This list is supposed to be completed enough for covering test tags dataset.
+    #---------------------------------------------------------------------------
+    list_ref_tags = p6_get_list_all_tag(ser_tag)
+
+    csr_matrix_encoded_tag \
+    = p6_encode_target_in_csr_matrix(list_ref_tags, ser_tag.tolist())      
+    #---------------------------------------------------------------------------
+    # For each row, TAGs represented as a list of elementaries TAG are encoded
+    # Each row that is a string of TAGs is splitted into a list of elementary TAGs
+    # All rows are aggregated into a list
+    #---------------------------------------------------------------------------
+    # list_list_encoded_row = p6_encode_target(list_all_tags, ser_tag.tolist())
+
+    #---------------------------------------------------------------------------
+    # Conversion into CSR matrix fro easyness of computation
+    #---------------------------------------------------------------------------
+    #csr_matrix_encoded_tag=sparse.csr_matrix(np.array(list_list_encoded_row))
+
+    return csr_matrix_encoded_tag    
+#-------------------------------------------------------------------------------
+
