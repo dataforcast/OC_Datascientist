@@ -19,6 +19,8 @@ from nltk.stem import SnowballStemmer
 
 from sklearn.feature_extraction.text import CountVectorizer
 
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
 
 
 import p5_util
@@ -49,35 +51,41 @@ def clean_marker_text(text,leading_marker=None, trailing_marker=None):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p6_df_standardization(ser, is_stemming=False, is_lem=True) :
+def p6_df_standardization(ser, is_stemming=False, is_lem=True, verbose=True) :
     """ Applies all pre-processing actions over a Series ser given as 
     parameter.
     
     Returned Series is a cleaned one.
     """
-    
-    print("\nCleaning text in-between markers <code></code> markers...")
+    if verbose is True :
+        print("\nCleaning text in-between markers <code></code> markers...")
     ser = ser.apply(cb_remove_marker,args=('code',))
 
-    print("\nCleaning LXML markers...")
+    if verbose is True :
+        print("\nCleaning LXML markers...")
     ser = ser.apply(cb_clean_lxml)
 
-    print("\nRemove verbs from sentences...")
+    if verbose is True :
+        print("\nRemove verbs from sentences...")
     ser = ser.apply(cb_sentence_filter)
 
-    print("\nFiltering alpha-numeric words from sentences...")
+    if verbose is True :
+        print("\nFiltering alpha-numeric words from sentences...")
     ser = ser.apply(cb_remove_verb_from_sentence)
 
-    print("\nRemoving stopwords...")
+    if verbose is True :
+            print("\nRemoving stopwords...")
     ser= ser.apply(cb_remove_stopwords)
 
     if is_lem is True:
-        print("\nLemmatization ...")
+        if verbose is True :
+            print("\nLemmatization ...")
         lemmatizer=WordNetLemmatizer()
         ser=ser.apply(p5_util.cb_lemmatizer,args=(lemmatizer,'lower'))
 
     if is_stemming is True:
-        print("\nEnglish stemming ...")
+        if verbose is True :
+            print("\nEnglish stemming ...")
         stemmer=SnowballStemmer('english')
         ser=ser.apply(p5_util.cb_stemmer,args=(stemmer,'lower'))
     return ser
@@ -119,7 +127,7 @@ def get_list_tag_original(str_tag) :
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def get_list_tag_stat_tfidf(sentence, vectorizer, tag_ratio=1.0) :
+def get_list_tag_stat_tfidf(sentence, vectorizer, tag_original_count=0, tag_ratio=1.0) :
     """ Returns a list of TAGS from sentence given as parameter.
     List of returned TAGs count is a ratio from sentence words count.
     
@@ -161,9 +169,13 @@ def get_list_tag_stat_tfidf(sentence, vectorizer, tag_ratio=1.0) :
 
     #---------------------------------------------------------------------------
     # Get tag_count most greater value from dict_index
+    #
     #---------------------------------------------------------------------------
-    tag_count = int(len(list_term_sentence)*tag_ratio)
-
+    if tag_ratio is not None :
+        tag_count = int(len(list_term_sentence)*tag_ratio)
+    else :
+        tag_count = tag_original_count
+        
     df_row_tfidf = pd.DataFrame.from_dict(dict_tfidf, orient='index')
 
     if 0 < df_row_tfidf.shape[0] and 0< df_row_tfidf.shape[1]:
@@ -225,7 +237,8 @@ def get_dict_vocab_frequency(vectorizer, csr_matrix):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def get_list_tag_stat_ngram(sentence, vectorizer, csr_matrix, tag_ratio=1.0) :
+def get_list_tag_stat_ngram(sentence, vectorizer, csr_matrix\
+    , tag_ratio=1.0, tag_original_count=0) :
     #---------------------------------------------------------------------------
     # Checking parameters
     #---------------------------------------------------------------------------
@@ -273,8 +286,10 @@ def get_list_tag_stat_ngram(sentence, vectorizer, csr_matrix, tag_ratio=1.0) :
     # Get tag_count most greater value from dict_index
     #---------------------------------------------------------------------------
     list_term_sentence = sentence.split(' ')
-    tag_count = int(len(list_term_sentence)*tag_ratio)
-
+    if tag_ratio is not None :
+        tag_count = int(len(list_term_sentence)*tag_ratio)
+    else : 
+        tag_count = tag_original_count
     return sorted(list(df_row_frequency.index[:tag_count]))
 #-------------------------------------------------------------------------------
 
@@ -690,15 +705,28 @@ def taglist_stat_predict(df_corpus, document_index, embedding_mode, vectorizer\
     #---------------------------------------------------------------------------
     # Document is normalized
     #---------------------------------------------------------------------------
-    df_document_std = p6_df_standardization(df_document.Body)
+    ser_document_std = p6_df_standardization(df_document.Body, verbose=False)
 
 
     #---------------------------------------------------------------------------
     # Extract standardized sentence as a dictionary : {document_id:sentence}
     #---------------------------------------------------------------------------
-    dict_sentence = df_document_std.Body.to_dict()
+    dict_sentence = ser_document_std.to_dict()
     sentence_std = dict_sentence[document_index]
 
+    #---------------------------------------------------------------------------
+    # Get formated list of original TAGs for this document.
+    # Formating consists in changing TAGS under the form <tag1><tag2>...<tagN>
+    # into a list under the form [tag1,tag2,...,tagN]
+    #---------------------------------------------------------------------------
+    str_original_tag=df_document.Tags[document_index]
+    list_tag_original=get_list_tag_original(str_original_tag)
+
+    #---------------------------------------------------------------------------
+    # Number of TAGs assigned in this document (in this post)
+    #---------------------------------------------------------------------------
+    tag_original_count = len(list_tag_original)  
+    
     #---------------------------------------------------------------------------
     # Extract TAGs from standardized document using vectorizer that contains
     # vocabulary and statistical values upon each document word.
@@ -708,20 +736,15 @@ def taglist_stat_predict(df_corpus, document_index, embedding_mode, vectorizer\
     if embedding_mode == 'tfidf':
         list_predicted_tag \
         = get_list_tag_stat_tfidf(sentence_std, vectorizer\
-        , tag_ratio=p_tag_ratio)
+        , tag_ratio=p_tag_ratio, tag_original_count=tag_original_count)
     elif embedding_mode == 'bow' or embedding_mode == 'ngram':
         list_predicted_tag \
         = get_list_tag_stat_ngram(sentence_std, vectorizer\
-        , csr_matrix, tag_ratio=p_tag_ratio)
+        , csr_matrix, tag_ratio=p_tag_ratio\
+        , tag_original_count=tag_original_count)
     else :
         pass
-
-    #---------------------------------------------------------------------------
-    # Get formated list of original TAGs for this document
-    #---------------------------------------------------------------------------
-    str_original_tag=df_document.Tags[document_index]
-    list_tag_original=get_list_tag_original(str_original_tag)
-
+    
     #---------------------------------------------------------------------------
     # Record original document as long as original TAG list
     #---------------------------------------------------------------------------
@@ -1095,3 +1118,158 @@ def p6_encode_ser_tag_2_csrmatrix(ser_tag, leading_marker='<'\
     return csr_matrix_encoded_tag    
 #-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_extract_list_tag_from_sof_tag(list_sof_tag_1, list_tag_suggested_1 \
+    ,score_cutoff=0) :
+
+    """Returns a list of TAGs extracted from a list of referenced TAGs 
+    provided by Stack Over FLow.
+    Extracted list of TAGs are TAGs from a suggested list of TAGs with greater 
+    proximity with TAGs from Stack Over FLow list.
+    """
+    #---------------------------------------------------------------------------
+    # Initialization for avoiding None return.
+    #---------------------------------------------------------------------------
+    list_extracted_tag = list()
+
+    #---------------------------------------------------------------------------
+    # Extract Tags from SOF tags list given the suggested tag list.
+    #---------------------------------------------------------------------------
+    for tag_suggested in list_tag_suggested_1 :
+        tuple_extracted_tag = process.extractOne(tag_suggested, list_sof_tag_1\
+        , score_cutoff=score_cutoff)
+        if tuple_extracted_tag is not None :
+            list_extracted_tag.append(tuple_extracted_tag[0])
+
+    return list_extracted_tag
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_score_mean_string_simlarity(nb_test, df_corpus_test, list_sof_tag\
+    , vectorizer, csr_matrix,p_tag_ratio=0.1, embeding_mode='bow' ) :
+    """Returns mean similarity score for suggested tags.
+    Input :
+        * nb_test : number of tests to be evaluated
+        * df_corpus_test : corpus of documents to be tested
+        * vectorizer : vectorizer used for documents vectorization
+        * csr_matrix : vectorized documents as TF_IDF matrix
+        * p_tag_ratio : ratio of tags to be taking into account from TF-IDF 
+          vectorization
+        * embeding_mode : 
+    Output : 
+        * dictionary with, for each document evaluated, under the format:
+            -> the mean similarity ratio
+               If similarity ratio > 0 : they are more TAGs suggested 
+               then original list.
+            -> the number of matching TAGs between extracted TAGs and original 
+            TAGs
+        
+    """
+    idoc=0
+    dict_match_result = dict()
+    modulo = int(nb_test/10)
+    print("\nTest mode {} covering {} documents\n"\
+    .format(embeding_mode, nb_test))
+
+    for index_document in range(0, nb_test):
+        #-----------------------------------------------------------------------
+        # Document is extracted from corpus
+        #-----------------------------------------------------------------------
+        df_document = df_corpus_test[df_corpus_test.index==index_document]
+
+        #-----------------------------------------------------------------------
+        # List of suggested TAGs is returned from TF-IDF matrix; weights from 
+        # predicators with higher values are selected and related TAGs are
+        # returned.
+        #-----------------------------------------------------------------------
+        list_tag_suggested, list_tag_original, str_original_document \
+        = taglist_stat_predict(df_corpus_test, index_document\
+                                    , embeding_mode\
+                                   , vectorizer, csr_matrix, p_tag_ratio)
+            
+        #-----------------------------------------------------------------------
+        # Similarity of list of suggested TAGs with Stack Over Flow TAGs is 
+        # computed using Fuzzy module.
+        # Similarity value range from 0 to 100.
+        # When similarity value is 100, then evaluated TAGs are considered as 
+        # matching. If similarity value is >= 90, then 2 TAGs are considered 
+        # as similar.
+        #
+        # Result is returned in a list of extracted TAGs.
+        #-----------------------------------------------------------------------
+        if list_tag_suggested is not None:
+            list_tag_extracted = p6_extract_list_tag_from_sof_tag(list_sof_tag\
+            , list_tag_suggested, score_cutoff=90) 
+
+            
+            #-------------------------------------------------------------------
+            # For each document, a mean similarity ratio is computed dividing 
+            # number of extracted TAGs with number of original TAGs.
+            #-------------------------------------------------------------------
+            mean_similarity_ratio \
+            = (len(list_tag_extracted)/len(list_tag_original))*100
+            
+            #-------------------------------------------------------------------
+            # For each document, the matching count between extracted TAGs 
+            # and original TAGs is computed.
+            #-------------------------------------------------------------------
+            match_count = \
+            len(set(list_tag_extracted).intersection(set(list_tag_original)))
+        else : 
+            mean_similarity_ratio =0.
+            match_count=0
+            list_tag_extracted=list()
+
+        #-----------------------------------------------------------------------
+        # Result is stored into a dictionary along with list of extracted TAGs
+        #  and list of original TAGs.
+        #-----------------------------------------------------------------------
+        dict_match_result[index_document] = (mean_similarity_ratio\
+        , match_count/len(list_tag_original)\
+        , list_tag_extracted, list_tag_original)
+
+        #-----------------------------------------------------------------------
+        # Tracking computation...
+        #-----------------------------------------------------------------------
+        idoc += 1
+        if modulo > 0 :
+            if idoc %modulo == 0 :
+                print("Processed documents : {}/{}".format(idoc,nb_test ))
+        else:
+            print("Processed documents : {}/{}".format(idoc,nb_test ))
+                
+            
+    return dict_match_result
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_stat_compute_result(dict_match_result):
+
+    list_similarity_result = [value[0] for value in dict_match_result.values()]
+    arr_similarity_result = np.array(list(list_similarity_result))
+
+    list_matching_result = [value[1] for value in dict_match_result.values()]
+    arr_matching_result = np.array(list(list_matching_result))
+
+    #arr_result[0]=1
+    percent_result \
+    = (np.where(arr_similarity_result>=100)[0].shape[0]/len(list_similarity_result))*100
+    print("\n*** Mean similarity indice >100: {0:1.2F} %".format(percent_result))
+
+    percent_result \
+    = (np.where(arr_similarity_result==0)[0].shape[0]/len(list_similarity_result))*100
+    print("\n*** Mean similarity indice = 0: {0:1.2F} %".format(percent_result))
+
+
+    percent_result = (np.where(arr_matching_result>0)[0].shape[0]/len(list_matching_result))*100
+    print("\n*** Matching results : {0:1.2F} %".format(percent_result))
+    
+    return arr_similarity_result, arr_matching_result
+#-------------------------------------------------------------------------------
+    
