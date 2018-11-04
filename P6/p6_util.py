@@ -1037,7 +1037,8 @@ def p6_encode_target_in_csr_matrix(list_ref_tags, list_tags_to_be_encoded) :
         *  list_tags_to_be_encoded : list of TAGs to be encoded.
     Output:
         * CSR matrix of encoded TAGs
-        Format of returned value is a CSR matrix with expanded list of lists  : 
+        Format of returned value is a CSR matrix with expanded list of lists  :
+                ref_1     ref_2         ref_K
             [
        Row 1--->[tag_1.1, tag_1.2, ..... tag_1.K],
                     .
@@ -1049,9 +1050,15 @@ def p6_encode_target_in_csr_matrix(list_ref_tags, list_tags_to_be_encoded) :
                     .                
        Row N--->[tag_N.1, tag_N.2, ..... tag_N.K],            
             ]
+            
+    where : 
+        * ref_1,..., ref_K are TAGs named (string type) used as references 
+          for encoding process.
+        * tag_p_j value is 1 if row p contains TAG ref_j, 0 otherwise. 
+    
     """
     #---------------------------------------------------------------------------
-    # For each row, TAGs represented as a list of elementaries TAG are encoded
+    # For each row, TAGs represented as a list of elementaries TAG are encoded.
     # Each row that is a string of TAGs is splitted into a list of elementary 
     # TAGs all rows are aggregated into a list
     #---------------------------------------------------------------------------
@@ -1059,7 +1066,7 @@ def p6_encode_target_in_csr_matrix(list_ref_tags, list_tags_to_be_encoded) :
     , list_tags_to_be_encoded)
     
     #---------------------------------------------------------------------------
-    # Conversion into CSR matrix fro easyness of computation
+    # Conversion into CSR matrix for memory optimisation
     #---------------------------------------------------------------------------
     csr_matrix_encoded_tag=sparse.csr_matrix(np.array(list_list_encoded_row))
     
@@ -1073,8 +1080,10 @@ def p6_encode_target_in_csr_matrix(list_ref_tags, list_tags_to_be_encoded) :
 #-------------------------------------------------------------------------------
 def p6_encode_ser_tag_2_csrmatrix(ser_tag, leading_marker='<'\
 , trailing_marker='>'):
-    """One hot encode a Series given as parameter.
-    Each row from Series content has following format : <tag1><tag2>...<tagN>
+    """One hot encode the Series named ser_tag that is given as parameter.
+    
+    As input, each one of the rows from Series content has following 
+    format : <tag1><tag2>...<tagN>
     
     Returned value is a CSR matrix with expanded list of lists format : 
         [
@@ -1088,6 +1097,8 @@ def p6_encode_ser_tag_2_csrmatrix(ser_tag, leading_marker='<'\
                 .                
    Row N   [tag_N.1, tag_N.2, ..... tag_N.K],            
         ]
+        
+        where tag_i_j has values 0 or 1.
     """
     #---------------------------------------------------------------------------
     # Markers '<' and '>' are removed from tags.
@@ -1096,7 +1107,7 @@ def p6_encode_ser_tag_2_csrmatrix(ser_tag, leading_marker='<'\
     , trailing_marker=trailing_marker)
 
     #---------------------------------------------------------------------------
-    # A unique list of all TAGs is built : this is the vocabulary for TAGs**
+    # A unique list of all TAGs is built : this is the vocabulary for TAGs
     # This list is supposed to be completed enough for covering test tags dataset.
     #---------------------------------------------------------------------------
     list_ref_tags = p6_get_list_all_tag(ser_tag)
@@ -1115,7 +1126,7 @@ def p6_encode_ser_tag_2_csrmatrix(ser_tag, leading_marker='<'\
     #---------------------------------------------------------------------------
     #csr_matrix_encoded_tag=sparse.csr_matrix(np.array(list_list_encoded_row))
 
-    return csr_matrix_encoded_tag    
+    return csr_matrix_encoded_tag, list_ref_tags
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -1152,6 +1163,12 @@ def p6_extract_list_tag_from_sof_tag(list_sof_tag_1, list_tag_suggested_1 \
 def p6_score_mean_string_simlarity(nb_test, df_corpus_test, list_sof_tag\
     , vectorizer, csr_matrix,p_tag_ratio=0.1, embeding_mode='bow' ) :
     """Returns mean similarity score for suggested tags.
+    
+    Suggested TAGs are those suggested from calling a prediction TAG 
+    method such as `taglist_stat_predict`. Predictions are performed using 
+    vectorizer and csr_matrix parameters.
+
+
     Input :
         * nb_test : number of tests to be evaluated
         * df_corpus_test : corpus of documents to be tested
@@ -1193,7 +1210,7 @@ def p6_score_mean_string_simlarity(nb_test, df_corpus_test, list_sof_tag\
             
         #-----------------------------------------------------------------------
         # Similarity of list of suggested TAGs with Stack Over Flow TAGs is 
-        # computed using Fuzzy module.
+        # computed usingtaglist_stat_predicttaglist_stat_predict Fuzzy module.
         # Similarity value range from 0 to 100.
         # When similarity value is 100, then evaluated TAGs are considered as 
         # matching. If similarity value is >= 90, then 2 TAGs are considered 
