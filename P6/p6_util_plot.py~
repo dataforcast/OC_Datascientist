@@ -40,7 +40,7 @@ def display_word_cloud(dict_word_freq, file_name=None):
     """Display a cloud of words from fiven dictionary formated as follow : 
     {word:word_count}.
     """
-    wordcloud_generator = wordcloud.WordCloud(background_color='white', max_words=100)
+    wordcloud_generator = WordCloud(background_color='white', max_words=100)
     wordcloud_generator.generate_from_frequencies(dict_word_freq)
     
     if file_name is not None:
