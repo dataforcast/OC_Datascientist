@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 import re
+import random
 
 import nltk
 from nltk.corpus import stopwords
@@ -21,7 +22,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
-
+from sklearn.decomposition import LatentDirichletAllocation
 
 import p5_util
 
@@ -51,7 +52,8 @@ def clean_marker_text(text,leading_marker=None, trailing_marker=None):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p6_df_standardization(ser, is_stemming=False, is_lem=True, verbose=True) :
+def p6_df_standardization(ser, is_stemming=False, is_lem=True\
+    , is_stopword=True, verbose=True) :
     """ Applies all pre-processing actions over a Series ser given as 
     parameter.
     
@@ -66,16 +68,17 @@ def p6_df_standardization(ser, is_stemming=False, is_lem=True, verbose=True) :
     ser = ser.apply(cb_clean_lxml)
 
     if verbose is True :
-        print("\nRemove verbs from sentences...")
+        print("\nRemove non alpha-numeric words from sentences...")
     ser = ser.apply(cb_sentence_filter)
 
     if verbose is True :
-        print("\nFiltering alpha-numeric words from sentences...")
+        print("\nRemove verbs from sentences...")
     ser = ser.apply(cb_remove_verb_from_sentence)
-
-    if verbose is True :
+    
+    if is_stopword is True :
+        if verbose is True :
             print("\nRemoving stopwords...")
-    ser= ser.apply(cb_remove_stopwords)
+        ser= ser.apply(cb_remove_stopwords)
 
     if is_lem is True:
         if verbose is True :
@@ -89,6 +92,62 @@ def p6_df_standardization(ser, is_stemming=False, is_lem=True, verbose=True) :
         stemmer=SnowballStemmer('english')
         ser=ser.apply(p5_util.cb_stemmer,args=(stemmer,'lower'))
     return ser
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_str_standardization(post, is_stemming=False, is_lem=True, is_stopword=True\
+    ,is_stopverb=True, is_stopalfanum=True):
+    """Applies to a given POST all transformations in order to clean 
+    text model.
+        Input : 
+            * post : suite of words forming a POST
+            * is_stemming : when True, stemming is applied on given post.
+            * is_lem : when True, lemmatization is applied on given post.
+            * is_stopword : when True, engish stopwords are filtered from post.
+            * is_stopverb : when True, engish verbs are filtered from post.
+            * is_stopalfanum : when True, non alpha-numeric characters are filtered 
+            from given POST.
+        Output :
+            * dataframe with  standardized Body column.
+    """
+    df = pd.DataFrame({'Body':post}, index=[0,])
+   
+    #print("\nCleaning text in-between markers <code></code> markers...")
+    df["Body"] = df.Body.apply(cb_remove_marker,args=('code',))
+    if True :
+        ser = p6_df_standardization(df["Body"], is_stemming=is_stemming\
+        , is_lem=is_lem, verbose=False)
+        return ser
+    else :
+        #print("\nCleaning LXML markers...")
+        df["Body"] = df.Body.apply(cb_clean_lxml)
+
+        if is_stopalfanum is True : 
+            #print("\nRemove non alfa-numeric patterns")
+            df["Body"] = df.Body.apply(cb_sentence_filter)
+
+        if is_stopverb is True : 
+            #print("\nFiltering sentences...")
+            df["Body"] = df.Body.apply(cb_remove_verb_from_sentence)
+
+        if is_stopword is True : 
+            #print("\nRemoving stopwords...")
+            df["Body"] = df.Body.apply(cb_remove_stopwords)
+
+        if is_lem is True:
+            #print("\nLemmatization ...")
+            lemmatizer=WordNetLemmatizer()
+            df['Body']=df.Body.apply(p5_util.cb_lemmatizer,args=(lemmatizer,'lower'))
+
+        if is_stemming is True:
+            #print("\nEnglish stemming ...")
+            stemmer=SnowballStemmer('english')
+            df['Body']=df.Body.apply(p5_util.cb_stemmer,args=(stemmer,'lower'))
+
+
+
+        return df
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -569,58 +628,7 @@ def compute_frequency_sentence(dict_content, token_mode='split'):
 
     return freq_content
 #-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
-#
-#-------------------------------------------------------------------------------
-def preprocess_post(question, is_stemming=False, is_lem=True, is_stopword=True\
-    ,is_stopverb=True, is_stopalfanum=True):
-    """Applies to a given question all transformations in order to clean 
-    text model.
-        Input : 
-            * question : suite of words forming a question
-            * is_stemming : when True, stemming is applied on given post.
-            * is_lem : when True, lemmatization is applied on given post.
-            * is_stopword : when True, engish stopwords are filtered from post.
-            * is_stopverb : when True, engish verbs are filtered from post.
-            * is_stopalfanum : when True, non alpha-numeric characters are filtered 
-            from given question.
-        Output :
-            * dataframe with  standardized Body column.
-    """
-    df = pd.DataFrame({'Body':question}, index=[0,])
-   
-    #print("\nCleaning text in-between markers <code></code> markers...")
-    df["Body"] = df.Body.apply(cb_remove_marker,args=('code',))
 
-    #print("\nCleaning LXML markers...")
-    df["Body"] = df.Body.apply(cb_clean_lxml)
-
-    if is_stopalfanum is True : 
-        #print("\nRemove non alfa-numeric patterns")
-        df["Body"] = df.Body.apply(cb_sentence_filter)
-
-    if is_stopverb is True : 
-        #print("\nFiltering sentences...")
-        df["Body"] = df.Body.apply(cb_remove_verb_from_sentence)
-
-    if is_stopword is True : 
-        #print("\nRemoving stopwords...")
-        df["Body"] = df.Body.apply(cb_remove_stopwords)
-
-    if is_lem is True:
-        #print("\nLemmatization ...")
-        lemmatizer=WordNetLemmatizer()
-        df['Body']=df.Body.apply(p5_util.cb_lemmatizer,args=(lemmatizer,'lower'))
-
-    if is_stemming is True:
-        #print("\nEnglish stemming ...")
-        stemmer=SnowballStemmer('english')
-        df['Body']=df.Body.apply(p5_util.cb_stemmer,args=(stemmer,'lower'))
-
-
-
-    return df
-#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 #
@@ -1210,7 +1218,7 @@ def p6_score_mean_string_simlarity(nb_test, df_corpus_test, list_sof_tag\
             
         #-----------------------------------------------------------------------
         # Similarity of list of suggested TAGs with Stack Over Flow TAGs is 
-        # computed usingtaglist_stat_predicttaglist_stat_predict Fuzzy module.
+        # computed using taglist_stat_predict Fuzzy module.
         # Similarity value range from 0 to 100.
         # When similarity value is 100, then evaluated TAGs are considered as 
         # matching. If similarity value is >= 90, then 2 TAGs are considered 
@@ -1276,17 +1284,196 @@ def p6_stat_compute_result(dict_match_result):
 
     #arr_result[0]=1
     percent_result \
-    = (np.where(arr_similarity_result>=100)[0].shape[0]/len(list_similarity_result))*100
+    = (np.where(arr_similarity_result>=100)[0].shape[0]\
+    /len(list_similarity_result))*100
     print("\n*** Mean similarity indice >100: {0:1.2F} %".format(percent_result))
 
     percent_result \
-    = (np.where(arr_similarity_result==0)[0].shape[0]/len(list_similarity_result))*100
+    = (np.where(arr_similarity_result==0)[0].shape[0]\
+    /len(list_similarity_result))*100
     print("\n*** Mean similarity indice = 0: {0:1.2F} %".format(percent_result))
 
 
-    percent_result = (np.where(arr_matching_result>0)[0].shape[0]/len(list_matching_result))*100
+    percent_result = (np.where(arr_matching_result>0)[0].shape[0]\
+    /len(list_matching_result))*100
+
     print("\n*** Matching results : {0:1.2F} %".format(percent_result))
     
     return arr_similarity_result, arr_matching_result
 #-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_lda_display_topics(lda_model, feature_names, no_top_words, verbose=False):
+    """Display topics issued from LDA.
+    Most weighted topics are selected from LDA model.
     
+    Input : 
+        * lda_model : model issued from LDA .
+        * no_top_words : number of words defining a topic 
+        * verbose : when activated to True, then words modelizing atopic are 
+        displayed.
+    Output : 
+        * dict_topic : dictionary formated as {topic_id:[list_of_words]}
+        where list_of_words is selected among the most no_top_words weighted 
+        values from lda_model 
+        
+    """
+    #---------------------------------------------------------------------------
+    # Length of LDA words erpresenting topics is used to limit 
+    #---------------------------------------------------------------------------
+    len_feature_names = len(feature_names)
+    dict_topic = dict()
+    
+    
+    for topic_idx, topic in enumerate(lda_model.components_):
+        if verbose is True :
+            message = "Topic %d: " % (topic_idx)
+            message += " / ".join([lda_feature_names[i] \
+                               for i in topic.argsort()[:-no_top_words - 1:-1] \
+                               if i<len_feature_names])
+            print(message)
+        else :
+            pass
+            
+        dict_topic[topic_idx] = [feature_names[i] \
+        for i in topic.argsort()[:-no_top_words - 1:-1] if i<len_feature_names]
+    return dict_topic
+#-------------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_get_topic_from_list_word(dict_lda_topic, list_body_word):
+    dict_topic_result = dict()
+    for topic_id, list_lda_word in dict_lda_topic.items():
+        #print(topic_id, list_lda_word)
+        list_intersection = list(set(list_body_word).intersection(list_lda_word))
+        intersection_count = len(list_intersection)
+        dict_topic_result[topic_id] = (intersection_count,list_intersection)
+    return dict_topic_result
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
+, verbose=False):
+    """ Returns mean score of suggested TAGs issued from LDA
+    process matching with TAGs issued from a POST.
+    
+    """
+    dict_result = dict()
+    mean_score = 0.
+    #---------------------------------------------------------------------------
+    # POST is standadardized
+    #---------------------------------------------------------------------------
+    ser_post = p6_str_standardization(post)
+
+
+    #----------------------------------------------------
+    # Words from any topic matching with list of words 
+    # issued from POST are extracted from dict_lda_topic
+    #----------------------------------------------------
+    list_post_word = ser_post.iloc[0].split()
+    dict_topic_result = p6_get_topic_from_list_word(dict_lda_topic, list_post_word)
+
+    df_topic_result = pd.DataFrame.from_dict( dict_topic_result, orient='index')
+    df_topic_result.rename(columns={0:'Count', 1:'Words'}, inplace=True)
+    
+    #---------------------------------------------------------------------------
+    # Get topics having count >= 1
+    #---------------------------------------------------------------------------
+    df_topic_result_pos = df_topic_result[df_topic_result.Count>=1]
+
+    #---------------------------------------------------------------------------
+    # Building the list of unique words belonging to topics from 
+    # LDA.
+    #---------------------------------------------------------------------------
+    list_all_word = list()
+    for list_word in df_topic_result_pos.Words.tolist() :
+        list_all_word += [word for word in list_word]
+        
+    list_word_result = list(set(list_all_word))
+
+    #---------------------------------------------------------------------------
+    # TAGs from POST is converted into a list of TAGs.
+    #---------------------------------------------------------------------------
+    list_test_tag \
+    = clean_marker_text(tags,leading_marker='<', trailing_marker='>')
+
+    #---------------------------------------------------------------------------
+    # TAGs issued from LDA that are matching with SOF TAGs list are kept
+    #---------------------------------------------------------------------------
+    list_intersection_sof \
+    = list(set(list_word_result).intersection(list_sof_tags))
+
+    #---------------------------------------------------------------------------
+    # List of matching TAGs issued from LDA is built 
+    # against list of TAGs from POST.
+    #---------------------------------------------------------------------------
+    if len(list_intersection_sof) > 0 :
+        list_intersection_result \
+        = list(set(list_test_tag).intersection(list_intersection_sof))    
+    else :
+        list_intersection_result \
+        = list(set(list_test_tag).intersection(list_word_result))
+    score_accuracy = len(list_intersection_result)/len(list_test_tag)
+    
+    if verbose is True :
+        print("\nList of TAGs from POST : "+str(list_test_tag))
+        print("\nList of result TAGs : "+str(list_word_result))
+
+        print("\nList intersection SOF : "+str(list_intersection_sof))
+        print("\nList intersection result : "+str(list_intersection_result))
+        print("\nAccuracy = "+str(dict_result[post_id]))
+        print()
+        print(post)
+    return score_accuracy    
+#-------------------------------------------------------------------------------
+    
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_lda_build_range(range_topic,embedding_type, csr_matrix):
+    for nb_topic in range_topic :
+        print("Building LDA model with "+str(nb_topic)+" topics")
+        file_name="./data/lda_"+embedding_type+"_"+str(nb_topic)+"topics.dump"
+        # Build LDA
+        lda = LatentDirichletAllocation(n_topics=nb_topic, max_iter=5\
+                                        , learning_method='online'\
+                                        , learning_offset=50.,random_state=0).fit(csr_matrix)
+        p5_util.object_dump(lda,file_name)
+
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
+                        ,list_sof_tags, vectorizer, nb_top_words = 10) :
+    feature_names = vectorizer.get_feature_names()
+    
+    for nb_topic in range_topic :
+        file_name="./data/lda_"+str(embedding_type)+"_"+str(nb_topic)+"topics.dump"
+        lda = p5_util.object_load(file_name)
+        dict_score_lda = dict()
+        for i_test in range(0,nb_test):
+            post_id = random.choice(range(0, df_sof_test.shape[0]))
+
+            body= df_sof_test.Body.iloc[post_id]
+            title= df_sof_test.Title.iloc[post_id]
+            tags =  df_sof_test.Tags.iloc[post_id]
+            post = body+title
+
+            
+            dict_lda_topic = p6_lda_display_topics(lda, feature_names, nb_top_words)
+
+            score = p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags, verbose=False)
+            dict_score_lda[post_id] = score
+        fileName = "./data/dict_score_lda_"+str(embedding_type)+"_"+str(nb_topic)+".dump"
+        p5_util.object_dump(dict_score_lda,fileName)    
+#-------------------------------------------------------------------------------
+        

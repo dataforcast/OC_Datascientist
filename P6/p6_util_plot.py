@@ -102,7 +102,8 @@ import matplotlib.pyplot as plt
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def ser_item_occurency_plot(ser_item_name, ser_item_count, item_count=None, title=None):
+def ser_item_occurency_plot(ser_item_name, ser_item_count
+, item_count=None, title=None, p_reverse=True):
     """Plot values issued form 2 Series as following : 
     First Series contains items names
     Second Series contains items occutencies.
@@ -112,7 +113,7 @@ def ser_item_occurency_plot(ser_item_name, ser_item_count, item_count=None, titl
     in zip(ser_item_name, ser_item_count)}
 
     list_item_sorted \
-    = sorted(df_item_dict.items(), key=lambda x: x[1], reverse=False)
+    = sorted(df_item_dict.items(), key=lambda x: x[1], reverse=p_reverse)
 
     dict_item_sorted = dict()
     for tuple_value in list_item_sorted :
