@@ -1449,7 +1449,7 @@ def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p6_lda_build_range(range_topic,embedding_type, csr_matrix, rangeName='None'):
+def p6_lda_build_range(range_topic,embedding_type, csr_matrix, rangeName=None):
     for nb_topic in range_topic :
         if rangeName is None :                
             print("Building LDA model with "+str(nb_topic)+" topics")

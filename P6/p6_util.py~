@@ -1449,7 +1449,7 @@ def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p6_lda_build_range(range_topic,embedding_type, csr_matrix, rangeName='None'):
+def p6_lda_build_range(range_topic,embedding_type, csr_matrix, rangeName=None'):
     for nb_topic in range_topic :
         if rangeName is None :                
             print("Building LDA model with "+str(nb_topic)+" topics")
@@ -1458,7 +1458,8 @@ def p6_lda_build_range(range_topic,embedding_type, csr_matrix, rangeName='None')
         else : 
             print("Building LDA model with "+str(nb_topic)+" topics / "+rangeName)
             file_name \
-            = "./data/lda_"+embedding_type+"_"+str(nb_topic)+"topics_"+rangeName+".dump"
+            = "./data/lda_"+embedding_type+"_"+str(nb_topic)+"topics_"\
+            +rangeName+".dump"
         # Training LDA model 
         lda = LatentDirichletAllocation(n_topics=nb_topic, max_iter=5\
                                         , learning_method='online'\
@@ -1482,7 +1483,8 @@ def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
             "./data/lda_"+str(embedding_type)+"_"+str(nb_topic)+"topics.dump"
         else :
             file_name \
-            = "./data/lda_"+embedding_type+"_"+str(nb_topic)+"topics_"+rangeName+".dump"
+            = "./data/lda_"+embedding_type+"_"+str(nb_topic)+"topics_"\
+            +rangeName+".dump"
             
         lda = p5_util.object_load(file_name)
         dict_score_lda = dict()
@@ -1495,16 +1497,19 @@ def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
             post = body+title
 
             
-            dict_lda_topic = p6_lda_display_topics(lda, feature_names, nb_top_words)
+            dict_lda_topic \
+            = p6_lda_display_topics(lda, feature_names, nb_top_words)
 
-            score = p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags, verbose=False)
+            score = p6_lda_mean_score_post(post, tags, dict_lda_topic\
+            , list_sof_tags, verbose=False)
             dict_score_lda[post_id] = score
         if rangeName is None :
             fileName \
             = "./data/dict_score_lda_"+str(embedding_type)+"_"+str(nb_topic)+".dump"
         else :
             fileName \
-            = "./data/dict_score_lda_"+str(embedding_type)+"_"+str(nb_topic)+"_"+rangeName+".dump"
+            = "./data/dict_score_lda_"+str(embedding_type)+"_"+str(nb_topic)\
+            +"_"+rangeName+".dump"
         p5_util.object_dump(dict_score_lda,fileName)    
 #-------------------------------------------------------------------------------
         

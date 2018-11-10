@@ -72,9 +72,11 @@ def X_y_plot(X,y,item_count, title, p_x_title, p_y_title) :
     ax.plot(X_plot,y_plot)
     
     if item_count is not None:
-        ax.set_xticklabels(X[:item_count], rotation=90)
+        #ax.set_xticklabels(X[:item_count], rotation=90)
+        pass
     else:
-        ax.set_xticklabels(X, rotation=90)
+        #ax.set_xticklabels(X, rotation=90)
+        pass
 
     if p_x_title is None :
         ax.set_xlabel('Accuracy')

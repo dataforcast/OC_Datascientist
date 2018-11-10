@@ -1,9 +1,6 @@
 import pandas as pd
 from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
-
-
-
 from PIL import Image
 
 import p6_util
