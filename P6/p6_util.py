@@ -1512,4 +1512,34 @@ def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
             +"_"+rangeName+".dump"
         p5_util.object_dump(dict_score_lda,fileName)    
 #-------------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_lda_build_accuracy_result(embedding_type, range_topic ) :
+    dict_lda_mean_accuracy = dict()
+    
+    if str(embedding_type) == 'bow' :
+        pass
+    elif str(embedding_type) == 'tfidf' :
+        pass
+    else :
+        print("\n*** ERROR : unknow embredding type = "+str(embedding_type))
+        return None
+
+    for nb_topic in range_topic:
+        fileName \
+        = "./data/dict_score_lda_"+str(embedding_type)+"_"+str(nb_topic)+".dump"
+        dict_score_lda = p5_util.object_load(fileName)
+
+        sumScore=0.
+        for key in dict_score_lda.keys():
+            sumScore += dict_score_lda[key]
+        lda_mean_accuracy = 100*sumScore/len(dict_score_lda)
+
+        dict_lda_mean_accuracy[nb_topic] = lda_mean_accuracy
+
+    return dict_lda_mean_accuracy
+#-------------------------------------------------------------------------------
         
