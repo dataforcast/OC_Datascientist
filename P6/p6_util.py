@@ -1346,11 +1346,23 @@ def p6_lda_display_topics(lda_model, feature_names, no_top_words, verbose=False)
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p6_get_topic_from_list_word(dict_lda_topic, list_body_word):
+def p6_lda_get_topic_from_list_word(dict_lda_topic, list_of_word):
+    """Returns a dictionary containing with following format :
+    {topic_id:(count,list_matching_word)} where : 
+    * topic_id : is the key from  dict_lda_topic
+    * list_matching_word : is issued from intersection of a given 
+    list_of_word and words contained into dict_lda_topic
+
+    Input : 
+        * dict_lda_topic : dictionary with format : {topic_id:[list_of_word_topic]}
+        * list_of_word : list of words to be matched with list_of_word_topic
+    Output : 
+        * dict_topic_result : a subset of dict_lda_topic (see above)
+    
+    """
     dict_topic_result = dict()
     for topic_id, list_lda_word in dict_lda_topic.items():
-        #print(topic_id, list_lda_word)
-        list_intersection = list(set(list_body_word).intersection(list_lda_word))
+        list_intersection = list(set(list_of_word).intersection(list_lda_word))
         intersection_count = len(list_intersection)
         dict_topic_result[topic_id] = (intersection_count,list_intersection)
     return dict_topic_result
@@ -1374,11 +1386,12 @@ def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
 
 
     #----------------------------------------------------
-    # Words from any topic matching with list of words 
+    # Words from any LDA topic matching with list of words 
     # issued from POST are extracted from dict_lda_topic
     #----------------------------------------------------
     list_post_word = ser_post.iloc[0].split()
-    dict_topic_result = p6_get_topic_from_list_word(dict_lda_topic, list_post_word)
+    dict_topic_result \
+    = p6_lda_get_topic_from_list_word(dict_lda_topic, list_post_word)
 
     df_topic_result = pd.DataFrame.from_dict( dict_topic_result, orient='index')
     df_topic_result.rename(columns={0:'Count', 1:'Words'}, inplace=True)
@@ -1389,8 +1402,7 @@ def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
     df_topic_result_pos = df_topic_result[df_topic_result.Count>=1]
 
     #---------------------------------------------------------------------------
-    # Building the list of unique words belonging to topics from 
-    # LDA.
+    # Building the list of unique words belonging to LDA topics.
     #---------------------------------------------------------------------------
     list_all_word = list()
     for list_word in df_topic_result_pos.Words.tolist() :
@@ -1401,11 +1413,11 @@ def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
     #---------------------------------------------------------------------------
     # TAGs from POST is converted into a list of TAGs.
     #---------------------------------------------------------------------------
-    list_test_tag \
+    list_post_tag \
     = clean_marker_text(tags,leading_marker='<', trailing_marker='>')
 
     #---------------------------------------------------------------------------
-    # TAGs issued from LDA that are matching with SOF TAGs list are kept
+    # TAGs issued from LDA matching with SOF TAGs list are extracted.
     #---------------------------------------------------------------------------
     list_intersection_sof \
     = list(set(list_word_result).intersection(list_sof_tags))
@@ -1416,14 +1428,14 @@ def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
     #---------------------------------------------------------------------------
     if len(list_intersection_sof) > 0 :
         list_intersection_result \
-        = list(set(list_test_tag).intersection(list_intersection_sof))    
+        = list(set(list_post_tag).intersection(list_intersection_sof))    
     else :
         list_intersection_result \
-        = list(set(list_test_tag).intersection(list_word_result))
-    score_accuracy = len(list_intersection_result)/len(list_test_tag)
+        = list(set(list_post_tag).intersection(list_word_result))
+    score_accuracy = len(list_intersection_result)/len(list_post_tag)
     
     if verbose is True :
-        print("\nList of TAGs from POST : "+str(list_test_tag))
+        print("\nList of TAGs from POST : "+str(list_post_tag))
         print("\nList of result TAGs : "+str(list_word_result))
 
         print("\nList intersection SOF : "+str(list_intersection_sof))
@@ -1437,14 +1449,22 @@ def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p6_lda_build_range(range_topic,embedding_type, csr_matrix):
+def p6_lda_build_range(range_topic,embedding_type, csr_matrix, rangeName='None'):
     for nb_topic in range_topic :
-        print("Building LDA model with "+str(nb_topic)+" topics")
-        file_name="./data/lda_"+embedding_type+"_"+str(nb_topic)+"topics.dump"
-        # Build LDA
+        if rangeName is None :                
+            print("Building LDA model with "+str(nb_topic)+" topics")
+            file_name \
+            = "./data/lda_"+embedding_type+"_"+str(nb_topic)+"topics.dump"
+        else : 
+            print("Building LDA model with "+str(nb_topic)+" topics / "+rangeName)
+            file_name \
+            = "./data/lda_"+embedding_type+"_"+str(nb_topic)+"topics_"\
+            +rangeName+".dump"
+        # Training LDA model 
         lda = LatentDirichletAllocation(n_topics=nb_topic, max_iter=5\
                                         , learning_method='online'\
-                                        , learning_offset=50.,random_state=0).fit(csr_matrix)
+                                        , learning_offset=50.\
+                                        ,random_state=0).fit(csr_matrix)
         p5_util.object_dump(lda,file_name)
 
 #-------------------------------------------------------------------------------
@@ -1453,11 +1473,19 @@ def p6_lda_build_range(range_topic,embedding_type, csr_matrix):
 #
 #-------------------------------------------------------------------------------
 def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
-                        ,list_sof_tags, vectorizer, nb_top_words = 10) :
+                        ,list_sof_tags, vectorizer, nb_top_words = 10\
+                        , rangeName = None) :
     feature_names = vectorizer.get_feature_names()
     
     for nb_topic in range_topic :
-        file_name="./data/lda_"+str(embedding_type)+"_"+str(nb_topic)+"topics.dump"
+        if rangeName is None :
+            file_name = \
+            "./data/lda_"+str(embedding_type)+"_"+str(nb_topic)+"topics.dump"
+        else :
+            file_name \
+            = "./data/lda_"+embedding_type+"_"+str(nb_topic)+"topics_"\
+            +rangeName+".dump"
+            
         lda = p5_util.object_load(file_name)
         dict_score_lda = dict()
         for i_test in range(0,nb_test):
@@ -1469,11 +1497,19 @@ def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
             post = body+title
 
             
-            dict_lda_topic = p6_lda_display_topics(lda, feature_names, nb_top_words)
+            dict_lda_topic \
+            = p6_lda_display_topics(lda, feature_names, nb_top_words)
 
-            score = p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags, verbose=False)
+            score = p6_lda_mean_score_post(post, tags, dict_lda_topic\
+            , list_sof_tags, verbose=False)
             dict_score_lda[post_id] = score
-        fileName = "./data/dict_score_lda_"+str(embedding_type)+"_"+str(nb_topic)+".dump"
+        if rangeName is None :
+            fileName \
+            = "./data/dict_score_lda_"+str(embedding_type)+"_"+str(nb_topic)+".dump"
+        else :
+            fileName \
+            = "./data/dict_score_lda_"+str(embedding_type)+"_"+str(nb_topic)\
+            +"_"+rangeName+".dump"
         p5_util.object_dump(dict_score_lda,fileName)    
 #-------------------------------------------------------------------------------
         

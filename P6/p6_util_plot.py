@@ -55,55 +55,53 @@ def display_word_cloud(dict_word_freq, file_name=None):
     plt.show()
 #-------------------------------------------------------------------------------
 
-
-
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def ser_item_occurency_plot_deprecated(ser_item_name, ser_item_count, item_count, title):
-    """Plot values issued form 2 Series as following : 
-    First Series contains items names
-    Second Series contains items occutencies.
-    
-    """
-    df_item_dict={item:count for item, count \
-    in zip(ser_item_name, ser_item_count)}
-
-    list_item_sorted \
-    = sorted(df_item_dict.items(), key=lambda x: x[1], reverse=True)
-
-    dict_item_sorted = dict()
-    for tuple_value in list_item_sorted :
-        dict_item_sorted[tuple_value[0]] = tuple_value[1]
-
-
-    X = list(dict_item_sorted.keys())
-    y = list(dict_item_sorted.values())
-
+def X_y_plot(X,y,item_count, title, p_x_title, p_y_title) :
     fig, ax = plt.subplots(figsize=(20,10))
 
+    if item_count is not None:
+        X_plot = X[:item_count]
+        y_plot = y[:item_count]
+    else:
+        X_plot = X.copy()
+        y_plot = y.copy()
     
 
-    ax.plot(X[:item_count],y[:item_count])
-    ax.set_xticklabels(X[:item_count], rotation=90)
-    ax.set_xlabel('Items')
-    ax.set_ylabel('Count')
-    ax.set_title(title)
+    ax.plot(X_plot,y_plot)
+    
+    if item_count is not None:
+        #ax.set_xticklabels(X[:item_count], rotation=90)
+        pass
+    else:
+        #ax.set_xticklabels(X, rotation=90)
+        pass
+
+    if p_x_title is None :
+        ax.set_xlabel('Accuracy')
+    else :
+        ax.set_xlabel(p_x_title)
+
+    if p_y_title is None :
+        ax.set_ylabel('Classifiers')
+    else : 
+        ax.set_ylabel(p_y_title)
+        
+    if title is not None : 
+        ax.set_title(title)
+        
     ax.grid(linestyle='-', linewidth='0.1', color='grey')
     fig.patch.set_facecolor('#E0E0E0')
 
     plt.show()
 #-------------------------------------------------------------------------------
 
-
-
-import matplotlib.pyplot as plt
-
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
 def ser_item_occurency_plot(ser_item_name, ser_item_count
-, item_count=None, title=None, p_reverse=True):
+, item_count=None, title=None, p_reverse=True, p_x_title=None, p_y_title=None):
     """Plot values issued form 2 Series as following : 
     First Series contains items names
     Second Series contains items occutencies.
@@ -119,10 +117,12 @@ def ser_item_occurency_plot(ser_item_name, ser_item_count
     for tuple_value in list_item_sorted :
         dict_item_sorted[tuple_value[0]] = tuple_value[1]
 
+    
 
     X = list(dict_item_sorted.keys())
     y = list(dict_item_sorted.values())
-
+    
+    #X_y_plot(X,y,item_count)
     fig, ax = plt.subplots(figsize=(20,10))
 
     if item_count is not None:
@@ -134,8 +134,17 @@ def ser_item_occurency_plot(ser_item_name, ser_item_count
     
     ax.plot(X_plot,y_plot)
     ax.set_xticklabels(X[:item_count], rotation=90)
-    ax.set_xlabel('Accuracy')
-    ax.set_ylabel('Classifiers')
+
+    if p_x_title is None :
+        ax.set_xlabel('Accuracy')
+    else :
+        ax.set_xlabel(p_x_title)
+
+    if p_y_title is None :
+        ax.set_ylabel('Classifiers')
+    else : 
+        ax.set_ylabel(p_y_title)
+        
     if title is not None : 
         ax.set_title(title)
     ax.grid(linestyle='-', linewidth='0.1', color='grey')
