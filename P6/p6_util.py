@@ -1082,11 +1082,51 @@ def p6_encode_target_in_csr_matrix(list_ref_tags, list_tags_to_be_encoded) :
 #-------------------------------------------------------------------------------    
          
 #-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_encode_ser_tag_2_csrmatrix(ser_tag, list_ref_tags, leading_marker='<'\
+, trailing_marker='>'):
+    """One hot encode the Series named ser_tag that is given as parameter.
+    Input : 
+        * ser_tag : Series with rows formated as following : 
+                    <tag1><tag2>...<tagN>
+        * list_ref_tags : list of unique TAGSsto be encoded in.
+        * leading_marker : marker format for any TAG
+        * trailing_marker : marker format for any TAG
+ 
+    Output :
+        * Returned value is a CSR matrix with expanded list of lists format : 
+            [
+       Row 1   [tag_1.1, tag_1.2, ..... tag_1.K],
+                    .
+                    .
+                    .                
+       Row p   [tag_p.1, tag_p.2, ..... tag_p.K],
+                    .
+                    .
+                    .                
+       Row N   [tag_N.1, tag_N.2, ..... tag_N.K],            
+            ]
+            
+            where tag_i_j has values 0 or 1.
+    """
+    #---------------------------------------------------------------------------
+    # Markers '<' and '>' are removed from tags.
+    #---------------------------------------------------------------------------
+    ser_tag = ser_tag.apply(clean_marker_text, leading_marker=leading_marker\
+    , trailing_marker=trailing_marker)
+
+    csr_matrix_encoded_tag \
+    = p6_encode_target_in_csr_matrix(list_ref_tags, ser_tag.tolist())    
+      
+
+    return csr_matrix_encoded_tag, list_ref_tags
+#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p6_encode_ser_tag_2_csrmatrix(ser_tag, leading_marker='<'\
+def p6_encode_ser_tag_2_csrmatrix_deprecated(ser_tag, leading_marker='<'\
 , trailing_marker='>'):
     """One hot encode the Series named ser_tag that is given as parameter.
     
