@@ -1346,8 +1346,8 @@ def p6_stat_compute_result(dict_match_result):
 #
 #-------------------------------------------------------------------------------
 def p6_lda_display_topics(lda_model, feature_names, no_top_words, verbose=False):
-    """Display topics issued from LDA.
-    Most weighted topics are selected from LDA model.
+    """Display topics issued from LDA model.
+    Most weighted topics among feature_names list are selected from LDA model.
     
     Input : 
         * lda_model : model issued from LDA .
@@ -1355,13 +1355,13 @@ def p6_lda_display_topics(lda_model, feature_names, no_top_words, verbose=False)
         * verbose : when activated to True, then words modelizing atopic are 
         displayed.
     Output : 
-        * dict_topic : dictionary formated as {topic_id:[list_of_words]}
-        where list_of_words is selected among the most no_top_words weighted 
-        values from lda_model 
+        * dict_topic : dictionary formated as {topic_id:[list_of_features]}
+        where list_of_features is a subset of feature_names selected among the 
+        most no_top_words weighted values from lda_model 
         
     """
     #---------------------------------------------------------------------------
-    # Length of LDA words erpresenting topics is used to limit 
+    # Length of LDA words representing topics is used to limit 
     #---------------------------------------------------------------------------
     len_feature_names = len(feature_names)
     dict_topic = dict()
@@ -1413,26 +1413,29 @@ def p6_lda_get_topic_from_list_word(dict_lda_topic, list_of_word):
 #-------------------------------------------------------------------------------
 def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
 , verbose=False):
-    """ Returns mean score of suggested TAGs issued from LDA
-    process matching with TAGs issued from a POST.
+    """ Returns mean accuracy score of suggested TAGs issued from LDA
+    process, matching with TAGs issued from a POST.
     
     """
     dict_result = dict()
     mean_score = 0.
+    
     #---------------------------------------------------------------------------
     # POST is standadardized
     #---------------------------------------------------------------------------
     ser_post = p6_str_standardization(post)
 
-
-    #----------------------------------------------------
+    #---------------------------------------------------------------------------
     # Words from any LDA topic matching with list of words 
     # issued from POST are extracted from dict_lda_topic
-    #----------------------------------------------------
+    #---------------------------------------------------------------------------
     list_post_word = ser_post.iloc[0].split()
     dict_topic_result \
     = p6_lda_get_topic_from_list_word(dict_lda_topic, list_post_word)
 
+    #---------------------------------------------------------------------------
+    # Dictionary is converted into a dataframe with 2 columns : Count and Words.
+    #---------------------------------------------------------------------------
     df_topic_result = pd.DataFrame.from_dict( dict_topic_result, orient='index')
     df_topic_result.rename(columns={0:'Count', 1:'Words'}, inplace=True)
     
@@ -1463,15 +1466,20 @@ def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
     = list(set(list_word_result).intersection(list_sof_tags))
 
     #---------------------------------------------------------------------------
-    # List of matching TAGs issued from LDA is built 
-    # against list of TAGs from POST.
+    # List of matching TAGs issued from LDA is built against list of TAGs from 
+    # POST.
     #---------------------------------------------------------------------------
-    if len(list_intersection_sof) > 0 :
+    if False :
+        if len(list_intersection_sof) > 0 :
+            list_intersection_result \
+            = list(set(list_post_tag).intersection(list_intersection_sof))    
+        else :
+            list_intersection_result \
+            = list(set(list_post_tag).intersection(list_word_result))
+    else : 
         list_intersection_result \
-        = list(set(list_post_tag).intersection(list_intersection_sof))    
-    else :
-        list_intersection_result \
-        = list(set(list_post_tag).intersection(list_word_result))
+            = list(set(list_post_tag).intersection(list_intersection_sof))
+    
     score_accuracy = len(list_intersection_result)/len(list_post_tag)
     
     if verbose is True :
@@ -1515,9 +1523,34 @@ def p6_lda_build_range(range_topic,embedding_type, csr_matrix, rangeName=None):
 def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
                         ,list_sof_tags, vectorizer, nb_top_words = 10\
                         , rangeName = None) :
+    """
+        Input : 
+            * nb_test : for each LDA model, number of POSTs used for accuracy.
+            * range_topic :  range of topics used to build LDA models.
+            This mean, LDA models with 10, 100... topics each.
+            * embedding_type :  BOW, TF-IDF, ... : embedding algorithm.
+            * df_sof_test :  test data-set
+            * list_sof_tags : list of the whole Stack Over Flow (SOF) TAGs 
+            issued from SOF database.
+            * vectorizer : operator used for words embedding. It allows to 
+            access predictive features list.
+            * nb_top_words : max number of features for each topic that will be 
+            selected from LDA words characterizing a topic.
+        Output : 
+            A dictionary that is dumped into a file named `dict_score_lda_XXX`
+    """                        
+                        
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------    
     feature_names = vectorizer.get_feature_names()
     
     for nb_topic in range_topic :
+        #-----------------------------------------------------------------------
+        # Load, from dumped file, LDA model built for each topic range.
+        # Such models have been built and dumped from within function 
+        # `p6_lda_build_range`
+        #-----------------------------------------------------------------------
         if rangeName is None :
             file_name = \
             "./data/lda_"+str(embedding_type)+"_"+str(nb_topic)+"topics.dump"
@@ -1527,22 +1560,38 @@ def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
             +rangeName+".dump"
             
         lda = p5_util.object_load(file_name)
+
+        #-----------------------------------------------------------------------
+        # Accuracy is computed by randomly selecting nb_test POSTs from 
+        # Test dataset.
+        #-----------------------------------------------------------------------
         dict_score_lda = dict()
         for i_test in range(0,nb_test):
             post_id = random.choice(range(0, df_sof_test.shape[0]))
 
-            body= df_sof_test.Body.iloc[post_id]
-            title= df_sof_test.Title.iloc[post_id]
-            tags =  df_sof_test.Tags.iloc[post_id]
-            post = body+title
+            #-------------------------------------------------------------------
+            # Build a POST from Body and Title, extract assigned TAGs.
+            #-------------------------------------------------------------------
+            body  = df_sof_test.Body.iloc[post_id]
+            title = df_sof_test.Title.iloc[post_id]
+            tags  = df_sof_test.Tags.iloc[post_id]
+            post  = body+title
 
-            
+            #-------------------------------------------------------------------
+            # LDA model (that handles weights) is used in order to extract, 
+            # for each topic,  the most weighted features from feature_names.
+            # By the way, nb_top_words are extracted from each topic.
+            #-------------------------------------------------------------------
             dict_lda_topic \
             = p6_lda_display_topics(lda, feature_names, nb_top_words)
 
             score = p6_lda_mean_score_post(post, tags, dict_lda_topic\
             , list_sof_tags, verbose=False)
             dict_score_lda[post_id] = score
+        
+        #-----------------------------------------------------------------------
+        # Dump intoa file dictionary containing mean score.
+        #-----------------------------------------------------------------------
         if rangeName is None :
             fileName \
             = "./data/dict_score_lda_"+str(embedding_type)+"_"+str(nb_topic)+".dump"
@@ -1582,4 +1631,59 @@ def p6_lda_build_accuracy_result(embedding_type, range_topic ) :
 
     return dict_lda_mean_accuracy
 #-------------------------------------------------------------------------------
-        
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_get_dict_row_col_from_csrmatrix(csrmatrix) :
+    tuple_index = np.where(csrmatrix.A >0)
+    len(tuple_index)
+    dict_row_col = dict()
+    for row, col in zip(tuple_index[0],tuple_index[1]) :
+        #print(row, col)
+        if row in dict_row_col.keys() :
+            list_row_col = dict_row_col[row]
+            list_row_col.append(col)
+            dict_row_col[row] = list_row_col
+        else :
+            dict_row_col[row] = [col]
+    return dict_row_col
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_supervized_mean_accuracy_score(y_true, y_pred):
+    """ Computes mean accuracy score as the follwoing : 
+    for each row from y_true, number of TAGs issue from 
+    intersection between y_true and y_pred is cumulated.
+    The total sum is devided by the cumulated sum of TAGs issued from 
+    y_true.
+    Input : 
+        *   y_true : true labels
+        *   y_pred : predicted labels.
+    """
+    #---------------------------------------------------------------------------
+    # For y_true and y_pred, dictionaries results are computed under the format :
+    # {row:[col1,...,colK]} where colX is the column number in the referecend 
+    # list of TAGs used for one hot encoding.
+    #---------------------------------------------------------------------------
+    dict_row_col_true = p6_get_dict_row_col_from_csrmatrix(y_true)
+    dict_row_col_pred = p6_get_dict_row_col_from_csrmatrix(y_pred)
+    
+    #---------------------------------------------------------------------------
+    # Compute, from each row, intersection of TAGs.
+    #---------------------------------------------------------------------------
+    count_tag = 0
+    tag_row_count = 0
+    not_empty_row_count = 0
+    for row, list_col in dict_row_col_true.items() :
+        if row in dict_row_col_pred.keys():
+            count_tag += len(set(list_col).intersection(dict_row_col_pred[row]))
+        else : 
+            pass
+        tag_row_count += len(list_col)
+    print(tag_row_count)
+    return count_tag/tag_row_count        
+#-------------------------------------------------------------------------------
+    
