@@ -1413,8 +1413,12 @@ def p6_lda_get_topic_from_list_word(dict_lda_topic, list_of_word):
 #-------------------------------------------------------------------------------
 def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
 , verbose=False):
-    """ Returns mean accuracy score of suggested TAGs issued from LDA
-    process, matching with TAGs issued from a POST.
+    """ For a given POST assigned with given TAGs, this funciton returns mean 
+    accuracy score of suggested TAGs issued from LDA process.
+    Mean accuracy score is computed by dividing :
+        * the number of elements from intersection of TAGs issued from a POST and LDA.
+        with 
+        * the number of TAGs from given POST.
     
     """
     dict_result = dict()
@@ -1460,14 +1464,14 @@ def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
     = clean_marker_text(tags,leading_marker='<', trailing_marker='>')
 
     #---------------------------------------------------------------------------
-    # TAGs issued from LDA matching with SOF TAGs list are extracted.
+    # TAGs issued from LDA are filtered with SOF TAGs list.
     #---------------------------------------------------------------------------
     list_intersection_sof \
     = list(set(list_word_result).intersection(list_sof_tags))
 
     #---------------------------------------------------------------------------
-    # List of matching TAGs issued from LDA is built against list of TAGs from 
-    # POST.
+    # Building intersection between list of TAGs issued from LDA model and 
+    # list of TAGs from POST.
     #---------------------------------------------------------------------------
     if False :
         if len(list_intersection_sof) > 0 :
@@ -1585,12 +1589,12 @@ def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
             dict_lda_topic \
             = p6_lda_display_topics(lda, feature_names, nb_top_words)
 
-            score = p6_lda_mean_score_post(post, tags, dict_lda_topic\
+            mean_score = p6_lda_mean_score_post(post, tags, dict_lda_topic\
             , list_sof_tags, verbose=False)
-            dict_score_lda[post_id] = score
+            dict_score_lda[post_id] = mean_score
         
         #-----------------------------------------------------------------------
-        # Dump intoa file dictionary containing mean score.
+        # Dump dictionary into a file containing mean score for any POST.
         #-----------------------------------------------------------------------
         if rangeName is None :
             fileName \
@@ -1602,6 +1606,27 @@ def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
         p5_util.object_dump(dict_score_lda,fileName)    
 #-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_w2vec_mean_score(w2vec_model, df_sof_test, list_sof_tags, vectorizer\
+                        , nb_top_words = 10) :
+    for i_post in range(0,len(df_sof_test)) :
+    
+        #-------------------------------------------------------------------
+        # Build a POST from Body and Title, extract assigned TAGs.
+        #-------------------------------------------------------------------
+        body  = df_sof_test.Body.iloc[post_id]
+        title = df_sof_test.Title.iloc[post_id]
+        tags  = df_sof_test.Tags.iloc[post_id]
+        post  = body+title
+        
+        #-------------------------------------------------------------------
+        # Get top words 
+        #-------------------------------------------------------------------
+        
+
+#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 #
@@ -1686,4 +1711,49 @@ def p6_supervized_mean_accuracy_score(y_true, y_pred):
     print(tag_row_count)
     return count_tag/tag_row_count        
 #-------------------------------------------------------------------------------
-    
+
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_w2vec_mean_accuracy(word2vec_model, df_sof_test):
+    count_match = 0
+    list_w2vec_vocab = [key for key in word2vec_model.wv.vocab.keys()]
+    for post_id in range(0,len(df_sof_test)) :
+
+        #-----------------------------------------------------------------------
+        # Build a POST from Body and Title, extract assigned TAGs.
+        #-----------------------------------------------------------------------
+        body  = df_sof_test.Body.iloc[post_id]
+        title = df_sof_test.Title.iloc[post_id]
+        tags  = df_sof_test.Tags.iloc[post_id]
+        post  = body+title
+
+        #-----------------------------------------------------------------------
+        # POST is standadardized
+        #-----------------------------------------------------------------------
+        ser_post = p6_str_standardization(post)
+
+        #-----------------------------------------------------------------------
+        # List of words issued from standardized POST is filtered with w2vec 
+        # vocabulary.
+        #-----------------------------------------------------------------------
+        list_post_word = ser_post.iloc[0].split()
+        list_post_word = set(list_post_word).intersection(list_w2vec_vocab)
+
+        #-----------------------------------------------------------------------
+        # Post TAGs are normalized are converted into a list
+        #-----------------------------------------------------------------------
+        list_post_tag \
+        = clean_marker_text(tags,leading_marker='<', trailing_marker='>')
+
+        #-----------------------------------------------------------------------
+        # Empy list not supported 
+        #-----------------------------------------------------------------------
+        if(len(list_post_word) >0) :
+            result_words = word2vec_model.wv.most_similar(list_post_word)
+            list_predicted_tag = [ tuple_tag[0] for tuple_tag in result_words ]
+            count_match += len(set(list_predicted_tag).intersection(list_post_tag))
+    return count_match/len(df_sof_test)
+#-------------------------------------------------------------------------------
+
