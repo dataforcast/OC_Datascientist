@@ -1201,7 +1201,7 @@ def p6_extract_list_tag_from_sof_tag(list_sof_tag_1, list_tag_suggested_1 \
         , score_cutoff=score_cutoff)
         if tuple_extracted_tag is not None :
             list_extracted_tag.append(tuple_extracted_tag[0])
-
+        
     return list_extracted_tag
 #-------------------------------------------------------------------------------
 
@@ -1248,8 +1248,8 @@ def p6_score_mean_string_simlarity(nb_test, df_corpus_test, list_sof_tag\
 
         #-----------------------------------------------------------------------
         # List of suggested TAGs is returned from TF-IDF matrix; weights from 
-        # predicators with higher values are selected and related TAGs are
-        # returned.
+        # predicators variables with higher values are selected and related 
+        # TAGs are returned.
         #-----------------------------------------------------------------------
         list_tag_suggested, list_tag_original, str_original_document \
         = taglist_stat_predict(df_corpus_test, index_document\
@@ -1267,35 +1267,42 @@ def p6_score_mean_string_simlarity(nb_test, df_corpus_test, list_sof_tag\
         # Result is returned in a list of extracted TAGs.
         #-----------------------------------------------------------------------
         if list_tag_suggested is not None:
-            list_tag_extracted = p6_extract_list_tag_from_sof_tag(list_sof_tag\
-            , list_tag_suggested, score_cutoff=90) 
-
+            if False :
+                list_tag_suggested = p6_extract_list_tag_from_sof_tag(list_sof_tag\
+                , list_tag_suggested, score_cutoff=90) 
+            else :
+                #---------------------------------------------------------------
+                # Extracted TAGs are filtered against list of SOF TAGs.
+                #---------------------------------------------------------------
+                list_tag_suggested \
+                = list(set(list_tag_suggested).intersection(list_sof_tag))
             
             #-------------------------------------------------------------------
             # For each document, a mean similarity ratio is computed dividing 
             # number of extracted TAGs with number of original TAGs.
             #-------------------------------------------------------------------
             mean_similarity_ratio \
-            = (len(list_tag_extracted)/len(list_tag_original))*100
+            = (len(list_tag_suggested)/len(list_tag_original))*100
             
             #-------------------------------------------------------------------
             # For each document, the matching count between extracted TAGs 
             # and original TAGs is computed.
             #-------------------------------------------------------------------
             match_count = \
-            len(set(list_tag_extracted).intersection(set(list_tag_original)))
+            len(set(list_tag_suggested).intersection(set(list_tag_original)))
         else : 
             mean_similarity_ratio =0.
             match_count=0
-            list_tag_extracted=list()
+            list_tag_suggested=list()
 
         #-----------------------------------------------------------------------
         # Result is stored into a dictionary along with list of extracted TAGs
         #  and list of original TAGs.
         #-----------------------------------------------------------------------
+        dict_element \
+        = {'original':list_tag_original,'suggested':list_tag_suggested}
         dict_match_result[index_document] = (mean_similarity_ratio\
-        , match_count/len(list_tag_original)\
-        , list_tag_extracted, list_tag_original)
+        , match_count/len(list_tag_original), dict_element)
 
         #-----------------------------------------------------------------------
         # Tracking computation...
@@ -1314,7 +1321,7 @@ def p6_score_mean_string_simlarity(nb_test, df_corpus_test, list_sof_tag\
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p6_stat_compute_result(dict_match_result):
+def p6_stat_compute_result(dict_match_result, verbose=False):
 
     list_similarity_result = [value[0] for value in dict_match_result.values()]
     arr_similarity_result = np.array(list(list_similarity_result))
@@ -1323,23 +1330,28 @@ def p6_stat_compute_result(dict_match_result):
     arr_matching_result = np.array(list(list_matching_result))
 
     #arr_result[0]=1
-    percent_result \
-    = (np.where(arr_similarity_result>=100)[0].shape[0]\
-    /len(list_similarity_result))*100
-    print("\n*** Mean similarity indice >100: {0:1.2F} %".format(percent_result))
 
-    percent_result \
-    = (np.where(arr_similarity_result==0)[0].shape[0]\
-    /len(list_similarity_result))*100
-    print("\n*** Mean similarity indice = 0: {0:1.2F} %".format(percent_result))
+    if False :
+        percent_result \
+        = (np.where(arr_similarity_result>=100)[0].shape[0]\
+        /len(list_similarity_result))*100
+        print("\n*** Mean similarity indice >100: {0:1.2F} %".format(percent_result))
+
+        percent_result \
+        = (np.where(arr_similarity_result==0)[0].shape[0]\
+        /len(list_similarity_result))*100
+        print("\n*** Mean similarity indice = 0: {0:1.2F} %".format(percent_result))
 
 
-    percent_result = (np.where(arr_matching_result>0)[0].shape[0]\
-    /len(list_matching_result))*100
+        percent_result = (np.where(arr_matching_result>0)[0].shape[0]\
+        /len(list_matching_result))*100
+    else :
+        percent_result = arr_matching_result.sum()/len(arr_matching_result)
+
 
     print("\n*** Matching results : {0:1.2F} %".format(percent_result))
+    return arr_similarity_result, arr_matching_result, percent_result
     
-    return arr_similarity_result, arr_matching_result
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
