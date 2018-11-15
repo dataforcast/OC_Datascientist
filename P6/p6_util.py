@@ -1728,7 +1728,56 @@ def p6_supervized_mean_accuracy_score(y_true, y_pred):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p6_w2vec_mean_accuracy(word2vec_model, df_sof_test):
+def p6_w2vec_mean_accuracy(word2vec_model, df_sof_test, ratio=0.1):
+    accuracy = 0.0
+    if ratio is None :
+        nb_test = len(df_sof_test)
+    else :
+        ratio = min(ratio, 1.)
+        nb_test = int( len(df_sof_test)*ratio )
+        if nb_test == 0 :
+            ratio = 0.1
+            nb_test = int(len(df_sof_test)*ratio)
+            print("*** WARNING : ratio for total test is fixed to value= "+str(ratio))
+        else :
+            pass
+    print("\n*** INFO : NB test= "+str(nb_test))
+    for post_id in range(0,nb_test) :
+        #post_id = random.choice(range(0, nb_test))
+        #print(post_id)
+
+        body  = df_sof_test.Body.iloc[post_id]
+        title = df_sof_test.Title.iloc[post_id]
+        tags  = df_sof_test.Tags.iloc[post_id]
+        post  = body+title
+
+        #-----------------------------------------------------------------------
+        # POST is standadardized
+        #-----------------------------------------------------------------------
+        ser_post = p6_str_standardization(post)
+        list_post_word = ser_post.tolist()[0].split()
+
+        list_computed_tag \
+        = word2vec_model.predict_output_word(list_post_word, topn=10)
+
+        if list_computed_tag is not None :
+            list_suggested_tag = [tuple_computed_tag[0] \
+            for tuple_computed_tag in list_computed_tag]
+
+            list_tags \
+            = clean_marker_text(tags,leading_marker='<', trailing_marker='>')
+
+            list_match = list(set(list_tags).intersection(list_suggested_tag))
+            accuracy \
+            += len(set(list_tags).intersection(list_suggested_tag))/len(list_tags)
+
+    return accuracy/nb_test
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_w2vec_mean_accuracy_deprecated(word2vec_model, df_sof_test):
     count_match = 0
     list_w2vec_vocab = [key for key in word2vec_model.wv.vocab.keys()]
     for post_id in range(0,len(df_sof_test)) :
@@ -1762,10 +1811,14 @@ def p6_w2vec_mean_accuracy(word2vec_model, df_sof_test):
         #-----------------------------------------------------------------------
         # Empy list not supported 
         #-----------------------------------------------------------------------
-        if(len(list_post_word) >0) :
-            result_words = word2vec_model.wv.most_similar(list_post_word)
-            list_predicted_tag = [ tuple_tag[0] for tuple_tag in result_words ]
-            count_match += len(set(list_predicted_tag).intersection(list_post_tag))
+        if False :
+            if(len(list_post_word) >0) :
+                result_words = word2vec_model.wv.most_similar(list_post_word)
+                list_predicted_tag = [ tuple_tag[0] for tuple_tag in result_words ]
+                count_match += len(set(list_predicted_tag).intersection(list_post_tag))
+        else :
+            list_suggested \
+            = word2vec_model.predict_output_word(ser_post.tolist()[0].split(), topn=10)
     return count_match/len(df_sof_test)
 #-------------------------------------------------------------------------------
 
