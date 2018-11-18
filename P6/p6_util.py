@@ -1401,7 +1401,7 @@ def p6_lda_display_topics(lda_model, feature_names, no_top_words, verbose=False)
 def p6_lda_get_topic_from_list_word(dict_lda_topic, list_of_word):
     """Returns a dictionary containing with following format :
     {topic_id:(count,list_matching_word)} where : 
-    * topic_id : is the key from  dict_lda_topic
+    * topic_id : is the key from dict_lda_topic identifying a topic.
     * list_matching_word : is issued from intersection of a given 
     list_of_word and words contained into dict_lda_topic
 

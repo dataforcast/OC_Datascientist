@@ -1,9 +1,6 @@
 import pandas as pd
 from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
-
-
-
 from PIL import Image
 
 import p6_util
@@ -109,14 +106,16 @@ def ser_item_occurency_plot(ser_item_name, ser_item_count
     """
     df_item_dict={item:count for item, count \
     in zip(ser_item_name, ser_item_count)}
+    
+    if p_reverse is not None :
+        list_item_sorted \
+        = sorted(df_item_dict.items(), key=lambda x: x[1], reverse=p_reverse)
 
-    list_item_sorted \
-    = sorted(df_item_dict.items(), key=lambda x: x[1], reverse=p_reverse)
-
-    dict_item_sorted = dict()
-    for tuple_value in list_item_sorted :
-        dict_item_sorted[tuple_value[0]] = tuple_value[1]
-
+        dict_item_sorted = dict()
+        for tuple_value in list_item_sorted :
+            dict_item_sorted[tuple_value[0]] = tuple_value[1]
+    else :
+        dict_item_sorted = df_item_dict.copy()
     
 
     X = list(dict_item_sorted.keys())
