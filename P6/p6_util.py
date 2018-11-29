@@ -1,4 +1,6 @@
-
+"""This file contains all utilities functions used in for project 
+issue by Open Classromm in the context od Data Scientist master.
+"""
 
 import numpy as np
 import pandas as pd
@@ -10,13 +12,11 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.stem.porter import PorterStemmer
 from nltk.stem import SnowballStemmer
+
 from scipy import sparse
 
 from bs4 import BeautifulSoup
 
-
-from nltk.stem import WordNetLemmatizer
-from nltk.stem import SnowballStemmer
 
 from sklearn.feature_extraction.text import CountVectorizer
 
@@ -53,12 +53,16 @@ def clean_marker_text(text,leading_marker=None, trailing_marker=None):
 #
 #-------------------------------------------------------------------------------
 def p6_df_standardization(ser, is_stemming=False, is_lem=True\
-    , is_stopword=True, verbose=True) :
+    , is_stopword=True, verbose=True, list_to_keep=None
+    , is_sentence_filter=True) :
     """ Applies all pre-processing actions over a Series ser given as 
     parameter.
     
     Returned Series is a cleaned one.
     """
+    if list_to_keep is None :
+        list_to_keep = list()
+        
     if verbose is True :
         print("\nCleaning text in-between markers <code></code> markers...")
     ser = ser.apply(cb_remove_marker,args=('code',))
@@ -67,18 +71,20 @@ def p6_df_standardization(ser, is_stemming=False, is_lem=True\
         print("\nCleaning LXML markers...")
     ser = ser.apply(cb_clean_lxml)
 
-    if verbose is True :
-        print("\nRemove non alpha-numeric words from sentences...")
-    ser = ser.apply(cb_sentence_filter)
+    if is_sentence_filter is True :
+        if verbose is True :
+            print("\nRemove non alpha-numeric words from sentences...")
+        ser = ser.apply(cb_sentence_filter)
 
     if verbose is True :
         print("\nRemove verbs from sentences...")
-    ser = ser.apply(cb_remove_verb_from_sentence)
+    ser = ser.apply(cb_remove_verb_from_sentence, args=(list_to_keep,))
+
     
     if is_stopword is True :
         if verbose is True :
             print("\nRemoving stopwords...")
-        ser= ser.apply(cb_remove_stopwords)
+        ser= ser.apply(cb_remove_stopwords, args=(list_to_keep,))
 
     if is_lem is True:
         if verbose is True :
@@ -97,7 +103,7 @@ def p6_df_standardization(ser, is_stemming=False, is_lem=True\
 #
 #-------------------------------------------------------------------------------
 def p6_str_standardization(post, is_stemming=False, is_lem=True, is_stopword=True\
-    ,is_stopverb=True, is_stopalfanum=True):
+    ,is_stopverb=True, is_stopalfanum=True, list_to_keep=list(), verbose=False):
     """Applies to a given POST all transformations in order to clean 
     text model.
         Input : 
@@ -115,39 +121,11 @@ def p6_str_standardization(post, is_stemming=False, is_lem=True, is_stopword=Tru
    
     #print("\nCleaning text in-between markers <code></code> markers...")
     df["Body"] = df.Body.apply(cb_remove_marker,args=('code',))
-    if True :
-        ser = p6_df_standardization(df["Body"], is_stemming=is_stemming\
-        , is_lem=is_lem, verbose=False)
-        return ser
-    else :
-        #print("\nCleaning LXML markers...")
-        df["Body"] = df.Body.apply(cb_clean_lxml)
 
-        if is_stopalfanum is True : 
-            #print("\nRemove non alfa-numeric patterns")
-            df["Body"] = df.Body.apply(cb_sentence_filter)
+    ser = p6_df_standardization(df["Body"], is_stemming=is_stemming\
+    , is_lem=is_lem, verbose=verbose, list_to_keep=list_to_keep)
+    return ser
 
-        if is_stopverb is True : 
-            #print("\nFiltering sentences...")
-            df["Body"] = df.Body.apply(cb_remove_verb_from_sentence)
-
-        if is_stopword is True : 
-            #print("\nRemoving stopwords...")
-            df["Body"] = df.Body.apply(cb_remove_stopwords)
-
-        if is_lem is True:
-            #print("\nLemmatization ...")
-            lemmatizer=WordNetLemmatizer()
-            df['Body']=df.Body.apply(p5_util.cb_lemmatizer,args=(lemmatizer,'lower'))
-
-        if is_stemming is True:
-            #print("\nEnglish stemming ...")
-            stemmer=SnowballStemmer('english')
-            df['Body']=df.Body.apply(p5_util.cb_stemmer,args=(stemmer,'lower'))
-
-
-
-        return df
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -429,9 +407,7 @@ def cb_clean_lxml(str_lxml, mode='lower'):
     string is returned in lower mode.
     """
 
-    if 'lower' == mode : 
-        soup = BeautifulSoup(str_lxml.lower(),"lxml") 
-    elif 'uper' == mode : 
+    if 'upper' == mode : 
         soup = BeautifulSoup(str_lxml.upper(),"lxml") 
     else : 
         soup = BeautifulSoup(str_lxml.lower(),"lxml") 
@@ -449,9 +425,7 @@ def cb_sentence_filter(sentence, mode='lower'):
     """
     
     sentence_filtered = re.sub("[^a-zA-Z0-9=++# ]", " ", sentence )
-    if mode=='lower' :
-        sentence_filtered = sentence_filtered.lower()
-    elif mode=="upper" :
+    if mode=="upper" :
         sentence_filtered = sentence_filtered.upper()
     else:
         sentence_filtered = sentence_filtered.lower()
@@ -543,11 +517,13 @@ def get_list_tag_from_post(post, ml_model, max_tag=5):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def cb_remove_verb_from_sentence(sentence):
+def cb_remove_verb_from_sentence(sentence, list_to_keep):
     """Remove verbs from sentence given as parameter and returns a sentence
     without any verb
     """
     
+    if list_to_keep is None :
+        list_to_keep = list()
     #---------------------------------------------------------------------------
     # All sentences are tokenized and words are tagged.
     #---------------------------------------------------------------------------
@@ -556,15 +532,20 @@ def cb_remove_verb_from_sentence(sentence):
     list_tagged += nltk.pos_tag(tokenized_sentence)
     
     #-----------------------------------------------------------------------
-    # List of tagged words from sentence are filtered
+    # List of words tagged as verbs are filtered
     #-----------------------------------------------------------------------
-    list_word_filtered = list()
-    for tuple_word_tag in list_tagged:
-        tag = tuple_word_tag[1]
-        if 'V' == tag[0] :
-            pass
-        else:
-            list_word_filtered.append(tuple_word_tag[0])
+    if True :
+        list_word_filtered = [tuple_word_tag[0] for tuple_word_tag \
+        in list_tagged \
+        if tuple_word_tag[1][0] != 'V' or tuple_word_tag[0] in list_to_keep]
+    else :
+        list_word_filtered = list()    
+        for tuple_word_tag in list_tagged:
+            tag = tuple_word_tag[1]
+            if 'V' == tag[0] and tuple_word_tag[0] not in list_to_keep:
+                pass
+            else:
+                list_word_filtered.append(tuple_word_tag[0])
     #-----------------------------------------------------------------------
     # Tokenized words that have been filtered are compound into a sentence
     #-----------------------------------------------------------------------
@@ -575,16 +556,24 @@ def cb_remove_verb_from_sentence(sentence):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def cb_remove_stopwords(item, lang='english', mode='lower') :
+def cb_remove_stopwords(item, list_to_keep, lang='english', mode='lower') :
     """This function removes some stopwords form item given as parameter.
     Removed stopwords are issued from 'nltk.corpus.stopwords'.
     
     """
+    
     list_word=item.split()
+    list_stop_words_lang = stopwords.words(lang)
+    list_stop_words = [word for word in list_stop_words_lang if word not in list_to_keep]
+
+    
+#    item_no_stopwords_1=[ word for word in list_word if word.lower() not in list_stop_words ]
+
     item_no_stopwords_1=[ word for word in list_word \
-    if word.lower() not in stopwords.words(lang) \
-                      and not str(word).isdigit()]
-                      
+    if word.lower() not in list_stop_words 
+                          and not str(word).isdigit()]
+               
+               
     item_no_stopwords=[word for word in item_no_stopwords_1 \
     if word.lower() not in ['cnn','.','#','way','would','like']]
     
@@ -601,12 +590,53 @@ def cb_remove_stopwords(item, lang='english', mode='lower') :
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
+def corpus_tokenization(dict_content, token_mode='split'):
+    """Tokenize each document from a corpus represented as a dictionary.
+
+    Input :
+        * dict_content : dictionary where values contain a document. The whole
+        dictionary represents a corpus.
+        * token_mode : split or nltk
+    Output :
+        dict_tokenized : dictionary of tokenized documents. Each value of 
+        dictionary is a list of tokenized documents.
+    """
+    
+    dict_tokenized = dict()
+    if token_mode == 'split' :
+        for root_name in dict_content.keys():
+            content= dict_content[root_name]
+            dict_tokenized[root_name] = content.split(' ')
+
+    elif token_mode == 'nltk' :
+        for root_name in dict_content.keys():
+            content= dict_content[root_name]
+            dict_tokenized[root_name] = nltk.word_tokenize(content)
+    else :
+        print("*** ERROR : unknown tokenization mode= "+str(token_mode))
+        return None
+
+    return dict_tokenized
+#-------------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
 def compute_frequency_sentence(dict_content, token_mode='split'):
     """Computes each word frequency from a dictionary of contents.
     Contents from dict_content are tokenized using split() method as default 
     mode.
     
     Other mode option is nltk to tokenize contents.
+    Input :
+        * dict_content : dictionary where values contain a tokenized document. 
+        The whole dictionary represents a corpus.
+        * token_mode : split or nltk
+    Output :
+        freq_content : nltk.FreqDist type object mapping a token with its 
+        frequency in the corpus. 
+        dict_tokenized : dictionary of tokenized documents.
     """
     
     list_content = list()
@@ -615,11 +645,13 @@ def compute_frequency_sentence(dict_content, token_mode='split'):
             content= dict_content[root_name]
             tokenized_content = content.split(' ')
             list_content += tokenized_content
+
     elif token_mode == 'nltk' :
         for root_name in dict_content.keys():
             content= dict_content[root_name]
             tokenized_content = nltk.word_tokenize(content)
             list_content += tokenized_content
+
     else :
         print("*** ERROR : unknown tokenization mode= "+str(token_mode))
         return None
@@ -1424,7 +1456,7 @@ def p6_lda_get_topic_from_list_word(dict_lda_topic, list_of_word):
 #
 #-------------------------------------------------------------------------------
 def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
-, verbose=False):
+, verbose=False, dict_expert_tag=None):
     """ For a given POST assigned with given TAGs, this funciton returns mean 
     accuracy score of suggested TAGs issued from LDA process.
     Mean accuracy score is computed by dividing :
@@ -1538,7 +1570,7 @@ def p6_lda_build_range(range_topic,embedding_type, csr_matrix, rangeName=None):
 #-------------------------------------------------------------------------------
 def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
                         ,list_sof_tags, vectorizer, nb_top_words = 10\
-                        , rangeName = None) :
+                        , rangeName = None,dict_expert_tag=None) :
     """
         Input : 
             * nb_test : for each LDA model, number of POSTs used for accuracy.
@@ -1602,7 +1634,7 @@ def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
             = p6_lda_display_topics(lda, feature_names, nb_top_words)
 
             mean_score = p6_lda_mean_score_post(post, tags, dict_lda_topic\
-            , list_sof_tags, verbose=False)
+            , list_sof_tags, verbose=False, dict_expert_tag=dict_expert_tag)
             dict_score_lda[post_id] = mean_score
         
         #-----------------------------------------------------------------------
@@ -1644,6 +1676,10 @@ def p6_w2vec_mean_score(w2vec_model, df_sof_test, list_sof_tags, vectorizer\
 #
 #-------------------------------------------------------------------------------
 def p6_lda_build_accuracy_result(embedding_type, range_topic ) :
+    """This function loads dictionaries of results that have been dumped 
+    on mass storage per LDA model.
+    Once loaded, a mean accuracy value is computed per LDA model.
+    """
     dict_lda_mean_accuracy = dict()
     
     if str(embedding_type) == 'bow' :
@@ -1820,5 +1856,98 @@ def p6_w2vec_mean_accuracy_deprecated(word2vec_model, df_sof_test):
             list_suggested \
             = word2vec_model.predict_output_word(ser_post.tolist()[0].split(), topn=10)
     return count_match/len(df_sof_test)
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def ser_corpus_2_df_word_count(ser_corpus, token_mode='nltk'):
+    """Converts a Series containing sentences from corpus into a Dataframe 
+    containing words from sentences and number of words.
+    Input : 
+        * ser_corpus Series from which, each index contains a list of tokens 
+        named as a sentence.
+        * token_mode : tokenization type; sentences are splitted as list of 
+        words.
+    Output : 
+        * DataFrame with 2 columns : Word, Count.
+    """
+    
+    dict_corpus = ser_corpus.to_dict()
+    freq_token\
+    = compute_frequency_sentence(dict_corpus, token_mode=token_mode)
+
+    dict_word = dict()
+    dict_count = dict()
+    index =0
+    for tuple_item in freq_token.items():
+        dict_word[index] = tuple_item[0]
+        dict_count[index] = tuple_item[1]
+        index += 1
+
+    df_word = pd.DataFrame.from_dict( dict_word, orient='index')
+    df_count = pd.DataFrame.from_dict( dict_count, orient='index')
+
+    df_word_count = pd.DataFrame({'Word':df_word[0],"Count":df_count[0]})
+    return df_word_count
+
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def w2vec_build_dict_post_tag(w2vec_model , df_corpus, nb_test, topn=10):
+    """ Build a dicitonary formated as following : {doc_id:[list_word_suggested]}
+    
+    Input :
+        * w2vec : Word2Vec model used to build a list of suggested words
+        * df_corpus : dataframe containing documents from which W2VEC model will
+        compute suggested words.
+        * topn : number of words picked in w2vec model for each sentence.
+    Output
+        * dictionary formated as  {doc_id:[list_word_suggested]}
+        
+    """
+    dict_doc_w2vec_word = dict()
+    nb_fail = 0
+    for i_test in range(0,nb_test):
+        post_id = random.choice(range(0, df_corpus.shape[0]))
+
+        #-------------------------------------------------------------------
+        # Build a POST from Body and Title, extract assigned TAGs.
+        #-------------------------------------------------------------------
+        body  = df_corpus.Body.iloc[post_id]
+        title = df_corpus.Title.iloc[post_id]
+        post  = body+title
+
+        #-----------------------------------------------------------------------
+        # POST is standadardized
+        #-----------------------------------------------------------------------
+        ser_post = p6_str_standardization(post)
+
+        #-----------------------------------------------------------------------
+        #
+        #-----------------------------------------------------------------------
+        list_post_word = ser_post.iloc[0].split()
+
+        #-----------------------------------------------------------------------
+        # Words with highest weights are picked up from model
+        #-----------------------------------------------------------------------
+        list_tag_weight_suggested \
+        = w2vec_model.predict_output_word(list_post_word, topn=topn)
+
+        #-----------------------------------------------------------------------
+        # Words list dictionay is built foe each document.
+        #-----------------------------------------------------------------------
+        if(list_tag_weight_suggested is None):
+            print("POST= "+str(post_id)+" Nb suggested TAG= None")
+            nb_fail +=1
+        else : 
+            dict_doc_w2vec_word[post_id] \
+            =[tuple_result[0] for tuple_result \
+            in list_tag_weight_suggested if list_tag_weight_suggested is not None]
+
+
+    return dict_doc_w2vec_word, nb_fail
 #-------------------------------------------------------------------------------
 

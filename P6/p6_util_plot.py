@@ -99,9 +99,12 @@ def X_y_plot(X,y,item_count, title, p_x_title, p_y_title) :
 #-------------------------------------------------------------------------------
 def ser_item_occurency_plot(ser_item_name, ser_item_count
 , item_count=None, title=None, p_reverse=True, p_x_title=None, p_y_title=None):
-    """Plot values issued form 2 Series as following : 
-    First Series contains items names
-    Second Series contains items occutencies.
+    """Plot values issued from 2 inout Series as following : 
+    Input :
+        * ser_item_name :  first Series contains names of items to be plot;
+        these name will be ticked on X axis.
+        * ser_item_count : second Series contains occurrencies for each item.
+        They contribute to Y axis.
     
     """
     df_item_dict={item:count for item, count \

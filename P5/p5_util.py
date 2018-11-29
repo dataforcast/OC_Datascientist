@@ -507,7 +507,7 @@ def cb_remove_stopwords(item) :
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def cb_stemmer(item, stemmer, mode='upper'):
+def cb_stemmer(item, stemmer, mode='lower'):
     list_word=item.split()
     stemmed_item=[ stemmer.stem(word.lower()) for word in list_word ]
     stemmed_item=" ".join(stemmed_item)
@@ -523,7 +523,7 @@ def cb_stemmer(item, stemmer, mode='upper'):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def cb_lemmatizer(item, lemmatizer, mode='upper'):
+def cb_lemmatizer(item, lemmatizer, mode='lower'):
     list_item=item.split()
     lemmatized_item=[ lemmatizer.lemmatize(word.lower()) \
     for word in list_item ]
