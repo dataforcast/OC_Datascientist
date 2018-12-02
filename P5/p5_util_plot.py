@@ -214,14 +214,26 @@ def plot_kmeans_interInertia(dict_kmeans, cluster_start, cluster_end\
    #----------------------------------------------------------------------------
    # Display graphics inside each areas
    #----------------------------------------------------------------------------
-   list_title = ['Inerties internes', 'Variation inerties internes']
-   for col in range(0,p_cols):
-      ax[col].plot(range(cluster_start,cluster_end+1),list_display[col])
-      ax[col].scatter(range(cluster_start,cluster_end+1),list_display[col])
-      ax[col].set_title(list_title[col],color='blue')
-      ax[col].set_xlabel(list_x_label[col])
-      ax[col].set_xticklabels(range(cluster_start,cluster_end+1))
-      ax[col].grid(True)
+   if p_cols >=2 :
+       list_title = ['Inerties internes', 'Variation inerties internes']
+       for col in range(0,p_cols):
+          ax[col].plot(range(cluster_start,cluster_end+1),list_display[col])
+          ax[col].scatter(range(cluster_start,cluster_end+1),list_display[col])
+          ax[col].set_title(list_title[col],color='blue')
+          ax[col].set_xlabel(list_x_label[col])
+          ax[col].set_xticklabels(range(cluster_start*10,(cluster_end+1)*10))
+          ax[col].grid(True)
+   else :
+       col=0
+       list_title = ['Inerties internes']
+       list_display = [list_inter_inertia]
+       ax.plot(range(cluster_start,cluster_end+1),list_display[col])
+       ax.scatter(range(cluster_start,cluster_end+1),list_display[col])
+       ax.set_title(list_title[col],color='blue')
+       ax.set_xlabel(list_x_label[col])
+       ax.set_xticklabels(range(cluster_start*10,(cluster_end+1)*10))
+       ax.grid(True)
+    
 
    plt.show()
 #-------------------------------------------------------------------------------

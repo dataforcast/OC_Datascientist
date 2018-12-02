@@ -28,6 +28,28 @@ import p5_util
 
 
 LIST_EMBEDDING_MODE=['tfidf','bow','ngram']
+
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_get_vectorized_doc(vectorizer, doc) :
+    """Returns a vectorized document issued from vectorizer operator.
+    Document given as function parameter is expressed in a natiral language.
+    Vectorization process includes document standardization.
+    
+    Input : 
+        * vectorizer : operator used for document vectorization.
+        * doc : document to be vectorized.
+    Output : 
+        * X : vectorized document
+    """
+    ser_post_std = p6_str_standardization(doc)
+    X = vectorizer.transform(ser_post_std)
+    return X
+#-------------------------------------------------------------------------------
+
+
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
@@ -164,13 +186,20 @@ def get_list_tag_original(str_tag) :
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def get_list_tag_stat_tfidf(sentence, vectorizer, tag_original_count=0, tag_ratio=1.0) :
-    """ Returns a list of TAGS from sentence given as parameter.
-    List of returned TAGs count is a ratio from sentence words count.
+def get_list_tag_stat_tfidf(sentence, vectorizer, tag_original_count=0\
+                            , tag_ratio=1.0) :
+    """ Returns a list of suggested TAGS from sentence given as parameter.
+
+    List of returned TAGs is a ratio from sentence words count.
     
-    This fuction appplies for TFIDF vectorization only. This mean, documents are
-    vectors from which components values are TFIDF values of 
+    This fuction appplies for TFIDF vectorization only. This mean, sentence is
+    represented as a vector from which components values are TFIDF values of 
     terms from vocabulary.
+             +---------+-----+---------+-----+---------+
+             | vocab_1 | ... | vocab_i | ... | vocab_K |<--issue from vectorizer
+    ---------+---------+-----+---------+-----+---------+
+    sentence | tfidf_1 | ... | tfidf_i | ... | tfidf_K |<--issue from vectorizer
+    ---------+---------+-----+---------+-----+---------+
     
     Those values are stored into csr_matrix given as parameter 
     while terms from vocabulary are stored into vectorizer.
@@ -179,9 +208,22 @@ def get_list_tag_stat_tfidf(sentence, vectorizer, tag_original_count=0, tag_rati
 
     Terms from vocabulary having greater occurence value are selected as TAGs.
     
+    Input :
+        * sentence : words separated by an empty space.
+        * vectorizer : operator used for TF-IDF vectorization process and 
+        containing words vocabulary.
+        * tag_original_count : number of assigned TAG for the sentence.
+        * tag_ratio : ratio of suggested TAG foro the number of words in the 
+        sentence.
+     Output : 
+        * dictionary structured as following : 
+            {word:TFIDF} where TFIDF are sorted values, reversed order.
+    
     """
-
+    df_value_name = 'TFIDF'
+    # Sentence is splitted as alist of words.
     list_term_sentence = sentence.split(' ')
+    
     #---------------------------------------------------------------------------
     # Using vectorized sentence in csrmatrix, get indexes from all features 
     # with frequencies >0 
@@ -191,7 +233,7 @@ def get_list_tag_stat_tfidf(sentence, vectorizer, tag_original_count=0, tag_rati
 
     #---------------------------------------------------------------------------
     # Using array of indexes from features contained in sentence, 
-    # vocabulary terms are extracted and regarded as TAGs.
+    # vocabulary terms are extracted and so forth, are suggested TAG.
     #---------------------------------------------------------------------------
     list_tag_sentence= [tag for tag, index in vectorizer.vocabulary_.items() \
     if index in arr_index]
@@ -205,8 +247,7 @@ def get_list_tag_stat_tfidf(sentence, vectorizer, tag_original_count=0, tag_rati
         dict_tfidf[tag_sentence]= vectorizer.idf_[index]
 
     #---------------------------------------------------------------------------
-    # Get tag_count most greater value from dict_index
-    #
+    # Get tag_count, from dict_index, with highest TF-IDF values.
     #---------------------------------------------------------------------------
     if tag_ratio is not None :
         tag_count = int(len(list_term_sentence)*tag_ratio)
@@ -217,14 +258,14 @@ def get_list_tag_stat_tfidf(sentence, vectorizer, tag_original_count=0, tag_rati
 
     if 0 < df_row_tfidf.shape[0] and 0< df_row_tfidf.shape[1]:
         df_row_tfidf = df_row_tfidf.rename(columns={0:'TFIDF'}, inplace=False)
-        df_row_tfidf.sort_values(by=['TFIDF'],  ascending=False, inplace=True)
+        df_row_tfidf.sort_values(by=[df_value_name],  ascending=False, inplace=True)
     else : 
         return None
 
     #---------------------------------------------------------------------------
     # TFIDF tag_count greatest values are returned.
     #---------------------------------------------------------------------------
-    return sorted(list(df_row_tfidf.index[:tag_count]))
+    return df_row_tfidf[:tag_count].to_dict()[df_value_name]
     
 #-------------------------------------------------------------------------------
 
@@ -276,6 +317,8 @@ def get_dict_vocab_frequency(vectorizer, csr_matrix):
 #-------------------------------------------------------------------------------
 def get_list_tag_stat_ngram(sentence, vectorizer, csr_matrix\
     , tag_ratio=1.0, tag_original_count=0) :
+    """
+    """
     #---------------------------------------------------------------------------
     # Checking parameters
     #---------------------------------------------------------------------------
@@ -285,6 +328,8 @@ def get_list_tag_stat_ngram(sentence, vectorizer, csr_matrix\
         return None
     else: 
         pass
+
+    df_value_name = 'Frequency'
 
     #---------------------------------------------------------------------------
     # Using vectorized sentence in csrmatrix, get indexes from all features 
@@ -316,18 +361,21 @@ def get_list_tag_stat_ngram(sentence, vectorizer, csr_matrix\
     df_row_frequency \
     = pd.DataFrame.from_dict(dict_frequency_row, orient='index')
     
-    df_row_frequency.rename(columns={0:'Frequency'}, inplace=True)
-    df_row_frequency.sort_values(by=['Frequency'],  ascending=False, inplace=True)
+    df_row_frequency.rename(columns={0:df_value_name}, inplace=True)
+    df_row_frequency.sort_values(by=[df_value_name],  ascending=False\
+    , inplace=True)
 
     #---------------------------------------------------------------------------
-    # Get tag_count most greater value from dict_index
+    # Get tag_count computed from ratio.
     #---------------------------------------------------------------------------
     list_term_sentence = sentence.split(' ')
     if tag_ratio is not None :
         tag_count = int(len(list_term_sentence)*tag_ratio)
     else : 
         tag_count = tag_original_count
-    return sorted(list(df_row_frequency.index[:tag_count]))
+
+    return df_row_frequency[:tag_count].to_dict()[df_value_name]
+
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -687,21 +735,29 @@ def taglist_stat_predict(df_corpus, document_index, embedding_mode, vectorizer\
     
     Prediction is based on statistics of terms over the whole corpus.
 
-    Given dataframe contains corpus of documents.
+    The given dataframe, df_corpus, contains corpus of documents.
 
-    Each row from Dataframe contains a document from which returned TAGs are 
-    predicted.
+    Each row from df_corpus contains a document from which returned TAGs are 
+    suggested.
 
     TAGs are extracted from vocabulary handled into vectorizer operator that 
     is given as parameter.
     
     Input : 
         * df_corpus : dataframe that is a corpus represented as a Bag Of Words .
-        * document_index : document identifier from corpus (dataframe) fro which 
-        TAGs will be extracted.
+        * document_index : document identifier from corpus (dataframe) from 
+        which suggested TAGs will be extracted.
         * vectorizer : operator that has been built in order to embbed documents
          words
-        * embeding_mode : may be TF-IDF, BOW, COO(co-occurence)
+        * csr_matrix : digitalized corpus structured as following : 
+            csr_matrix[doc_i] = [val_i1,...., val_iN] where : 
+                doc_i : is the #i document in the corpus
+                val_iX :are values issues from vectorization for N documents 
+                in corpus.
+                
+        * embeding_mode : may be TF-IDF, BOW, COO(co-occurency); this express
+        the way csr_matrix has been built.
+        
         * p_tag_ratio : ratio of extracted TAGs=number_of_tags/number_of_words
         This allows to compute the number of TAGs to be returned.
     Output :
@@ -774,7 +830,7 @@ def taglist_stat_predict(df_corpus, document_index, embedding_mode, vectorizer\
     # applies on number of words in docuement.
     #---------------------------------------------------------------------------
     if embedding_mode == 'tfidf':
-        list_predicted_tag \
+        dict_suggested_tag \
         = get_list_tag_stat_tfidf(sentence_std, vectorizer\
         , tag_ratio=p_tag_ratio, tag_original_count=tag_original_count)
     elif embedding_mode == 'bow' or embedding_mode == 'ngram':
@@ -790,24 +846,30 @@ def taglist_stat_predict(df_corpus, document_index, embedding_mode, vectorizer\
     #---------------------------------------------------------------------------
     str_original_document = df_corpus.iloc[document_index].Body
     
-    return list_predicted_tag, list_tag_original, str_original_document
+    return dict_suggested_tag, list_tag_original, str_original_document
     
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def get_list_cluster_tag(dict_corpus, vectorizer, cluster_labels\
+def get_dict_cluster_tag(dict_corpus, vectorizer, cluster_labels\
 , cluster_id, p_tag_ratio, is_log=True):
-    """Returns a list of tags for a given cluster.
+    """Returns a dictionary of suggested tags for a given cluster.
     Input : 
         * dict_corpus : dictionary : {index:document} for the whole corpus
+        where document is represented as a standardized sentence composed by 
+        words separated by an empty space.
+        
         * vectorizer : operator used for corpus vectorization
         * cluster_labels : list of clusters labels
         * cluster_id : a cluster identifier
         * p_tag_ratio : ration of tags considering question lentgh.
     Output : 
-        * list of tags from cluster given as parameter.
+        * dictionary for cluster, formated as follow :
+            {suggested_tag : value} where value is issued from corpus 
+            vectorization. 
+        * number of documents in cluster.
     """
     #---------------------------------------------------------------------------
     # Get corpus indexes for any document assigned with the given cluster;
@@ -818,34 +880,41 @@ def get_list_cluster_tag(dict_corpus, vectorizer, cluster_labels\
     #---------------------------------------------------------------------------
     # Initialization of list of TAGs relative to the cluster.
     #---------------------------------------------------------------------------
-    list_cluster_tag = list()
+    dict_cluster_tag = dict()
 
     #---------------------------------------------------------------------------
     # Process any document assigned with cluster_id
     #---------------------------------------------------------------------------
     document_count = len(arr_cluster_index)
     for index in arr_cluster_index :
-        document = dict_corpus[index]
+    
+        #-----------------------------------------------------------------------
+        # Each document is represented as a sentence structured as a list a 
+        # words separated by an empty character.
+        #-----------------------------------------------------------------------
+        doc_sentence = dict_corpus[index]
+        
         #-----------------------------------------------------------------------
         # Get TAGs from document assigned with cluster_id; 
         # we get all N-grams from document.
         # Number of TAGs is limited with p_tag_ratio.
+        # Suggested TAG in dictionary are sorted with TF-IDF descendant values.
         #-----------------------------------------------------------------------
-        list_cluster_tag_ = get_list_tag_stat_tfidf(document\
+        dict_suggested_tag = get_list_tag_stat_tfidf(doc_sentence\
         , vectorizer, tag_ratio=p_tag_ratio)
         
         #-----------------------------------------------------------------------
         # Aggregate into a single list all TAGs from cluster.
         # These aggragated TAGs will caracterized the cluster.
         #-----------------------------------------------------------------------
-        if list_cluster_tag_ is not None :
-            list_cluster_tag += list_cluster_tag_
+        if dict_suggested_tag is not None :
+            dict_cluster_tag.update(dict_suggested_tag) 
 
     if is_log is True:
         print("Cluster #"+str(cluster_id)+" : Number of documents= "\
         +str(document_count)+" : Done!")
 
-    return list_cluster_tag, document_count
+    return dict_cluster_tag, document_count
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -853,22 +922,37 @@ def get_list_cluster_tag(dict_corpus, vectorizer, cluster_labels\
 #-------------------------------------------------------------------------------
 def get_dict_list_cluster_tag( arr_cluster_label, dict_sof_document, vectorizer\
 , p_tag_ratio):
-    """Returns a dictionary formated as following : {cluster_id:list_tag}
-    where :
-    * cluster_id is a cluster identifier 
-    * list_tag is the list of selected TAGs for cluster_id
+    """Returns dictionaries issued from clusters analysis.
     Input : 
-        * arr_cluster_label : array containing cluster identifier for each row 
+        * arr_cluster_label : array containing clusters identifiers for each row 
         of vectorized corpus.
+        This array is structured as following : 
+            arr_cluster_label[cluster_id]=[doc_i1, doc_i2,.., doc_iN]
+            where #i is the cluster_id and {1,..N} the list of documents 
+            belonging the the cluster #i
         
         * dict_sof_document : standardized corpus formated 
         as following : {index:document}
         
         * vectorizer : operator used for corpus vectorization. 
-        Handled dictionary from which TAGs are picked up.
+        Handled dictionary of words from which TAG are picked up.
         
         * p_tag_ratio : number of TAGS / number of document terms. 
         It is applied for each document belonging a cluster.
+    Output : 
+        * dict_list_cluster_tag : a dictionary formated as following :
+            {cluster_id : str_cluster_tag_formated} where 
+            str_cluster_tag_formated is a sentence with standardized words.
+            
+        * dict_cluster_stat : a dictionary formated as following: 
+            {cluster_id : count} where count is the number of documents found 
+            in the cluster.
+                
+        * dict_df_freq_cluster_tag : a dictionary formated as following :
+            { cluster_id: dataframe} where dataframe is structured as follwing :
+                dataframe.index : list of words in the cluster cluster_id
+                dataframe.Freq : Series containing occurencies of each word 
+                referenced from index.
     """
     #---------------------------------------------------------------------------
     # Get all cluster identifiers from arr_cluster_label
@@ -882,25 +966,29 @@ def get_dict_list_cluster_tag( arr_cluster_label, dict_sof_document, vectorizer\
     #---------------------------------------------------------------------------
     dict_list_cluster_tag = dict()
     dict_df_freq_cluster_tag = dict()
+    dict_dict_cluster_tag = dict()
     for cluster_id in arr_cluster_id:
         #-----------------------------------------------------------------------
         # Get, from corpus, all indexes rows assigned with cluster_id
+        # Those indexes are documents identifier in the corpus.
         #-----------------------------------------------------------------------
         arr_corpus_index = np.where(arr_cluster_label==cluster_id)[0]
 
         #-----------------------------------------------------------------------
-        # Retrieve TAGs related to cluster_id.
+        # Retrieve TAGs related to cluster_id as a dictionary.
         # The number of returned TAGs is constrained with p_tag_ratio.
         #-----------------------------------------------------------------------
         is_activated = (0==cluster_id%10)
-        list_cluster_tag, document_count \
-        = get_list_cluster_tag(dict_sof_document, vectorizer\
+        dict_dict_cluster_tag[cluster_id], dict_cluster_stat[cluster_id] \
+        = get_dict_cluster_tag(dict_sof_document, vectorizer\
         , arr_cluster_label, cluster_id, p_tag_ratio, is_log=is_activated)
 
+
         #-----------------------------------------------------------------------
-        # For each TAG in list_cluster_tag, tags frequency is computed in order 
+        # For each TAG in dict_cluster_tag, tags frequency is computed in order 
         # to filter those tags with greater frequency.
         #-----------------------------------------------------------------------
+        list_cluster_tag = dict_dict_cluster_tag[cluster_id].keys()
         freq_cluster_tag = nltk.FreqDist(list_cluster_tag)
 
         df_freq_cluster_tag \
@@ -911,7 +999,7 @@ def get_dict_list_cluster_tag( arr_cluster_label, dict_sof_document, vectorizer\
         , inplace=True)
 
         #-----------------------------------------------------------------------
-        # For word clod display over a cluster
+        # For word cloud display over a cluster
         #-----------------------------------------------------------------------
         dict_df_freq_cluster_tag[cluster_id] = df_freq_cluster_tag
 
@@ -927,14 +1015,10 @@ def get_dict_list_cluster_tag( arr_cluster_label, dict_sof_document, vectorizer\
         str_cluster_tag_formated = ' '.join(list_cluster_tag_formated)
         
         dict_list_cluster_tag[cluster_id] = str_cluster_tag_formated
+                
         
-        #-----------------------------------------------------------------------
-        # For statistics over each cluster
-        #-----------------------------------------------------------------------
-        dict_cluster_stat[cluster_id] = document_count
-        
-        
-    return dict_list_cluster_tag, dict_cluster_stat, dict_df_freq_cluster_tag
+    return dict_list_cluster_tag, dict_cluster_stat, dict_df_freq_cluster_tag\
+    ,dict_dict_cluster_tag
 #-------------------------------------------------------------------------------
 
 
@@ -1710,7 +1794,7 @@ def p6_lda_build_accuracy_result(embedding_type, range_topic ) :
 #-------------------------------------------------------------------------------
 def p6_get_dict_row_col_from_csrmatrix(csrmatrix) :
     tuple_index = np.where(csrmatrix.A >0)
-    len(tuple_index)
+
     dict_row_col = dict()
     for row, col in zip(tuple_index[0],tuple_index[1]) :
         #print(row, col)
@@ -1727,8 +1811,8 @@ def p6_get_dict_row_col_from_csrmatrix(csrmatrix) :
 #
 #-------------------------------------------------------------------------------
 def p6_supervized_mean_accuracy_score(y_true, y_pred):
-    """ Computes mean accuracy score as the follwoing : 
-    for each row from y_true, number of TAGs issue from 
+    """ Computes mean accuracy score as following : 
+    for each row from y_true vector, number of TAGs issue from 
     intersection between y_true and y_pred is cumulated.
     The total sum is devided by the cumulated sum of TAGs issued from 
     y_true.
@@ -1738,7 +1822,7 @@ def p6_supervized_mean_accuracy_score(y_true, y_pred):
     """
     #---------------------------------------------------------------------------
     # For y_true and y_pred, dictionaries results are computed under the format :
-    # {row:[col1,...,colK]} where colX is the column number in the referecend 
+    # {row:[col1,...,colK]} where colX is the column number in the referenced 
     # list of TAGs used for one hot encoding.
     #---------------------------------------------------------------------------
     dict_row_col_true = p6_get_dict_row_col_from_csrmatrix(y_true)
@@ -1810,53 +1894,6 @@ def p6_w2vec_mean_accuracy(word2vec_model, df_sof_test, ratio=0.1):
     return accuracy/nb_test
 #-------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------
-#
-#-------------------------------------------------------------------------------
-def p6_w2vec_mean_accuracy_deprecated(word2vec_model, df_sof_test):
-    count_match = 0
-    list_w2vec_vocab = [key for key in word2vec_model.wv.vocab.keys()]
-    for post_id in range(0,len(df_sof_test)) :
-
-        #-----------------------------------------------------------------------
-        # Build a POST from Body and Title, extract assigned TAGs.
-        #-----------------------------------------------------------------------
-        body  = df_sof_test.Body.iloc[post_id]
-        title = df_sof_test.Title.iloc[post_id]
-        tags  = df_sof_test.Tags.iloc[post_id]
-        post  = body+title
-
-        #-----------------------------------------------------------------------
-        # POST is standadardized
-        #-----------------------------------------------------------------------
-        ser_post = p6_str_standardization(post)
-
-        #-----------------------------------------------------------------------
-        # List of words issued from standardized POST is filtered with w2vec 
-        # vocabulary.
-        #-----------------------------------------------------------------------
-        list_post_word = ser_post.iloc[0].split()
-        list_post_word = set(list_post_word).intersection(list_w2vec_vocab)
-
-        #-----------------------------------------------------------------------
-        # Post TAGs are normalized are converted into a list
-        #-----------------------------------------------------------------------
-        list_post_tag \
-        = clean_marker_text(tags,leading_marker='<', trailing_marker='>')
-
-        #-----------------------------------------------------------------------
-        # Empy list not supported 
-        #-----------------------------------------------------------------------
-        if False :
-            if(len(list_post_word) >0) :
-                result_words = word2vec_model.wv.most_similar(list_post_word)
-                list_predicted_tag = [ tuple_tag[0] for tuple_tag in result_words ]
-                count_match += len(set(list_predicted_tag).intersection(list_post_tag))
-        else :
-            list_suggested \
-            = word2vec_model.predict_output_word(ser_post.tolist()[0].split(), topn=10)
-    return count_match/len(df_sof_test)
-#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 #
