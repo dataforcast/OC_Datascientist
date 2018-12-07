@@ -75,16 +75,14 @@ def clean_marker_text(text,leading_marker=None, trailing_marker=None):
 #
 #-------------------------------------------------------------------------------
 def p6_df_standardization(ser, is_stemming=False, is_lem=True\
-    , is_stopword=True, verbose=True, list_to_keep=None
-    , is_sentence_filter=True) :
+    , is_stopword=True, verbose=True, list_to_keep=list()
+    , is_sentence_filter=False) :
     """ Applies all pre-processing actions over a Series ser given as 
     parameter.
     
     Returned Series is a cleaned one.
     """
-    if list_to_keep is None :
-        list_to_keep = list()
-        
+
     if verbose is True :
         print("\nCleaning text in-between markers <code></code> markers...")
     ser = ser.apply(cb_remove_marker,args=('code',))
@@ -96,7 +94,7 @@ def p6_df_standardization(ser, is_stemming=False, is_lem=True\
     if is_sentence_filter is True :
         if verbose is True :
             print("\nRemove non alpha-numeric words from sentences...")
-        ser = ser.apply(cb_sentence_filter)
+        ser = ser.apply(cb_sentence_filter, args=(list_to_keep,))
 
     if verbose is True :
         print("\nRemove verbs from sentences...")
@@ -125,7 +123,7 @@ def p6_df_standardization(ser, is_stemming=False, is_lem=True\
 #
 #-------------------------------------------------------------------------------
 def p6_str_standardization(post, is_stemming=False, is_lem=True, is_stopword=True\
-    ,is_stopverb=True, is_stopalfanum=True, list_to_keep=list(), verbose=False):
+    ,is_stopverb=True, is_stopalfanum=False, list_to_keep=list(), verbose=False):
     """Applies to a given POST all transformations in order to clean 
     text model.
         Input : 
@@ -145,7 +143,8 @@ def p6_str_standardization(post, is_stemming=False, is_lem=True, is_stopword=Tru
     df["Body"] = df.Body.apply(cb_remove_marker,args=('code',))
 
     ser = p6_df_standardization(df["Body"], is_stemming=is_stemming\
-    , is_lem=is_lem, verbose=verbose, list_to_keep=list_to_keep)
+    , is_lem=is_lem, verbose=verbose, list_to_keep=list_to_keep\
+    , is_sentence_filter=is_stopalfanum)
     return ser
 
 #-------------------------------------------------------------------------------
@@ -188,11 +187,12 @@ def get_list_tag_original(str_tag) :
 #-------------------------------------------------------------------------------
 def get_list_tag_stat_tfidf(sentence, vectorizer, tag_original_count=0\
                             , tag_ratio=1.0) :
-    """ Returns a list of suggested TAGS from sentence given as parameter.
+    """ Returns a dictionary with suggested TAGS from sentence given as 
+    parameter.
 
-    List of returned TAGs is a ratio from sentence words count.
+    List of returned TAGs into dictionary is a ratio from sentence words count.
     
-    This fuction appplies for TFIDF vectorization only. This mean, sentence is
+    This function appplies for TFIDF vectorization only. This mean, sentence is
     represented as a vector from which components values are TFIDF values of 
     terms from vocabulary.
              +---------+-----+---------+-----+---------+
@@ -204,7 +204,7 @@ def get_list_tag_stat_tfidf(sentence, vectorizer, tag_original_count=0\
     Those values are stored into csr_matrix given as parameter 
     while terms from vocabulary are stored into vectorizer.
     
-    Selected tags belong both to vocabulary and words from given sentence.
+    Selected tags belong to both, vocabulary and words from given sentence.
 
     Terms from vocabulary having greater occurence value are selected as TAGs.
     
@@ -467,12 +467,12 @@ def cb_clean_lxml(str_lxml, mode='lower'):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def cb_sentence_filter(sentence, mode='lower'):
+def cb_sentence_filter(sentence, list_to_keep, mode='lower'):
     """Remove all patterns that are not alpha-digital words, 
     also not '=' nor '++' characters; replace then with ' ' character.    
     """
     
-    sentence_filtered = re.sub("[^a-zA-Z0-9=++# ]", " ", sentence )
+    sentence_filtered = re.sub("[^a-zA-Z0-9=++#]", " ", sentence )
     if mode=="upper" :
         sentence_filtered = sentence_filtered.upper()
     else:
@@ -560,12 +560,79 @@ def get_list_tag_from_post(post, ml_model, max_tag=5):
     return list_tag_returned
 #-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
 
+def cb_remove_verb_from_sentence(sentence, list_to_keep=list(), verbose=False) :
+    tokenized_sentence = nltk.word_tokenize(sentence.lower())
+
+    if verbose is True :
+        print(tokenized_sentence)
+        print()
+
+    #Rebuild c# 
+    i_offset=0
+    tokens=None
+    for i, token in enumerate(tokenized_sentence):
+        i -= i_offset
+        if token == '#' and i > 0:
+            left = tokenized_sentence[:i-1]
+            joined = [tokenized_sentence[i - 1] + token]
+            right = tokenized_sentence[i + 1:]
+            tokens = left + joined + right
+            i_offset += 1
+    
+    if tokens is not None:
+        tokenized_sentence = tokens
+    if verbose is True :
+        print(tokenized_sentence)
+        print()
+
+
+    list_tagged = nltk.pos_tag(tokenized_sentence)
+    if verbose is True :
+        print(list_tagged)
+        print()
+
+
+
+    list_pos_tag_excluded \
+        = ['PRP','VB','VBP','VBN','CD','VBD','JJ','PRP','VBZ','DET','VBG','MD','NN$'\
+           ,':',')','(','.','NNP','PDT',"``","''",'CC','POS',',','RB']
+
+    list_token_excluded = ['i','s','m',',','question','this','can','using']
+    list_token_filtered \
+        = [token for (token, tag) in list_tagged \
+        if str(tag) not in list_pos_tag_excluded \
+        and token not in list_token_excluded  or token in list_to_keep \
+        #or token in list_to_keep 
+        ]
+        
+        
+    if False :
+        for token, tag in list_tagged :
+            if tag == ':' :
+                print(token,tag,tag in list_pos_tag_excluded,list_pos_tag_excluded)
+
+    if verbose is True :
+        print(list_token_filtered)
+        print()
+    sentence = " ".join(list_token_filtered)
+    #sentence = nltk.Text(list_token_filtered)
+    if True:
+        tokenized_sentence \
+                    = nltk.regexp_tokenize(sentence, pattern=r"\s|[\,;]:!?()<>", gaps=True)
+        sentence = " ".join(tokenized_sentence)
+    else :
+        pass
+    return sentence
+#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def cb_remove_verb_from_sentence(sentence, list_to_keep):
+def cb_remove_verb_from_sentence_deprecated(sentence, list_to_keep=list()):
     """Remove verbs from sentence given as parameter and returns a sentence
     without any verb
     """
@@ -576,16 +643,64 @@ def cb_remove_verb_from_sentence(sentence, list_to_keep):
     # All sentences are tokenized and words are tagged.
     #---------------------------------------------------------------------------
     list_tagged = list()
-    tokenized_sentence = nltk.word_tokenize(sentence)
+    
+    #---------------------------------------------------------------------------
+    # Remove special characters except `#`
+    #---------------------------------------------------------------------------
+    if False :
+        if False :
+            patterns = [
+            (r'.*ing$', 'VBG'),               # gerunds
+            (r'.*ed$', 'VBD'),                # simple past
+            (r'.*es$', 'VBZ'),                # 3rd singular present
+            (r'.*ould$', 'MD'),               # modals
+            (r'.*\'s$', 'NN$'),               # possessive nouns
+            (r'.*s$', 'NNS'),                 # plural nouns
+            (r'^-?[0-9]+(.[0-9]+)?$', 'CD'),  # cardinal numbers
+            #(r'.*', 'NN')                     # nouns (default)
+            ]
+
+            regexp_tagger = nltk.RegexpTagger(patterns)
+            tokenized_sentence = regexp_tagger.tag(sentence)
+        else :        
+            tokenized_sentence \
+            = nltk.regexp_tokenize(sentence, pattern=r"\s|[\,;']:!?()<>", gaps=True)
+            #sentence = " ".join(tokenized_sentence)
+            #tokenized_sentence = nltk.word_tokenize(sentence)         
+    else :
+        tokenized_sentence = nltk.word_tokenize(sentence)
+        #-----------------------------------------------------------------------
+        # Rebuild c# 
+        #-----------------------------------------------------------------------
+        i_offset=0
+        for i, token in enumerate(tokenized_sentence):
+            i -= i_offset
+            if token == '#' and i > 0:
+                left = tokenized_sentence[:i-1]
+                joined = [tokenized_sentence[i - 1] + token]
+                right = tokenized_sentence[i + 1:]
+                tokens = left + joined + right
+                i_offset += 1
+        tokenized_sentence = tokens
+
     list_tagged += nltk.pos_tag(tokenized_sentence)
     
-    #-----------------------------------------------------------------------
+    
+    #---------------------------------------------------------------------------
     # List of words tagged as verbs are filtered
-    #-----------------------------------------------------------------------
+    #---------------------------------------------------------------------------
     if True :
-        list_word_filtered = [tuple_word_tag[0] for tuple_word_tag \
-        in list_tagged \
-        if tuple_word_tag[1][0] != 'V' or tuple_word_tag[0] in list_to_keep]
+
+        list_pos_tag_excluded \
+        = ['PRP','VB','VBP','VBN','CD','VBD','JJ','PRP','VBZ','DET','VBG','MD'\
+        ,'NN$',')','(','.','NNP','PDT']
+
+        list_word_filtered \
+            = [token for (token, tag) in list_tagged \
+            if tag not in list_pos_tag_excluded \
+            or token in list_to_keep \
+            and token.isalpha()]
+    
     else :
         list_word_filtered = list()    
         for tuple_word_tag in list_tagged:
@@ -598,6 +713,11 @@ def cb_remove_verb_from_sentence(sentence, list_to_keep):
     # Tokenized words that have been filtered are compound into a sentence
     #-----------------------------------------------------------------------
     sentence = " ".join(list_word_filtered)
+    if False :
+        tokenized_sentence \
+                = nltk.regexp_tokenize(sentence\
+                , pattern=r"\s|[\,;]:!?()<>\\", gaps=True)
+        sentence = " ".join(tokenized_sentence)
     return sentence
 
 #-------------------------------------------------------------------------------
@@ -638,7 +758,7 @@ def cb_remove_stopwords(item, list_to_keep, lang='english', mode='lower') :
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def corpus_tokenization(dict_content, token_mode='split'):
+def corpus_tokenization(dict_content, token_mode='split')   :
     """Tokenize each document from a corpus represented as a dictionary.
 
     Input :
@@ -834,12 +954,13 @@ def taglist_stat_predict(df_corpus, document_index, embedding_mode, vectorizer\
         = get_list_tag_stat_tfidf(sentence_std, vectorizer\
         , tag_ratio=p_tag_ratio, tag_original_count=tag_original_count)
     elif embedding_mode == 'bow' or embedding_mode == 'ngram':
-        list_predicted_tag \
+        dict_suggested_tag \
         = get_list_tag_stat_ngram(sentence_std, vectorizer\
         , csr_matrix, tag_ratio=p_tag_ratio\
         , tag_original_count=tag_original_count)
     else :
-        pass
+        print("*** ERROR : not supported embedding mode= "+str(embedding_mode))
+        return dict(), list_tag_original, str_original_document
     
     #---------------------------------------------------------------------------
     # Record original document as long as original TAG list

@@ -302,7 +302,7 @@ def p6_cluster_get_suggested_tag(cluster_model, vectorizer, csr_matrix_corpus\
     list_tags \
     = p6_util.clean_marker_text(tags,leading_marker='<' , trailing_marker='>')
     
-    return list_suggested_tag, list_tags, title, post 
+    return list_suggested_tag, list_tags, title, post, doc_dist
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -311,14 +311,13 @@ def p6_cluster_get_suggested_tag(cluster_model, vectorizer, csr_matrix_corpus\
 def p6_cluster_avg_accuracy(nb_test, cluster_kmean, vectorizer, csr_matrix\
                             , df_sof_test, cluster_type='kmeans'\
                             ,neighborhood=3, cross_cluster=True, verbose=False):
-
     range_test = range(0,nb_test,1)
     dict_suggested_tag = dict()
     #------------------------------------------------------------------------
     # For each document from test, get suggested TAG
     #------------------------------------------------------------------------
     for doc_id in range_test :
-        list_suggested_tag, list_assigned_tag, title, post \
+        list_suggested_tag, list_assigned_tag, title, post, doc_dist \
         =p6_cluster_get_suggested_tag(cluster_kmean, vectorizer, csr_matrix\
                               , df_sof_test, doc_id, cluster_type='kmeans'\
                           , neighborhood=3, cross_cluster=True, verbose=verbose)
@@ -328,7 +327,7 @@ def p6_cluster_avg_accuracy(nb_test, cluster_kmean, vectorizer, csr_matrix\
             accuracy = len(list_intersection_sa)/len(list_assigned_tag)
 
             dict_suggested_tag[doc_id] \
-            = (list_suggested_tag,list_assigned_tag,accuracy)
+            = (list_suggested_tag,list_assigned_tag,accuracy, doc_dist)
 
     #------------------------------------------------------------------------
     # Compute average accuracy
@@ -336,8 +335,8 @@ def p6_cluster_avg_accuracy(nb_test, cluster_kmean, vectorizer, csr_matrix\
     avg_accuracy=0.0
     for tuple_value in dict_suggested_tag.values():
         avg_accuracy += tuple_value[2]
-    avg_accuracy /=len(dict_suggested_tag)
-    return avg_accuracy
+    avg_accuracy /= nb_test #len(dict_suggested_tag)
+    return avg_accuracy, dict_suggested_tag
 #-------------------------------------------------------------------------------
 
 
