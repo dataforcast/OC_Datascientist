@@ -1914,32 +1914,45 @@ def p6_lda_build_accuracy_result(embedding_type, range_topic ) :
 #
 #-------------------------------------------------------------------------------
 def p6_get_dict_row_col_from_csrmatrix(csrmatrix) :
+    ''' Get a dictionary formated as following : {row:list_col}
+    where :
+        * row is the row number of CSR matrix given as parameter function
+        * list_col : is the list of values in the row of CSR matrix 
+        given as parameter function.
+    '''
     tuple_index = np.where(csrmatrix.A >0)
-
+    print('p6_get_dict_row_col_from_csrmatrix')
     dict_row_col = dict()
-    for row, col in zip(tuple_index[0],tuple_index[1]) :
-        #print(row, col)
+    for row,col in zip(tuple_index[0],tuple_index[1]):
         if row in dict_row_col.keys() :
-            list_row_col = dict_row_col[row]
-            list_row_col.append(col)
-            dict_row_col[row] = list_row_col
+            dict_row_col[row].append(col)
         else :
-            dict_row_col[row] = [col]
+            dict_row_col[row] = list()
+            dict_row_col[row].append(col)
+        
     return dict_row_col
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p6_supervized_mean_accuracy_score(y_true, y_pred):
+def p6_supervized_mean_accuracy_score(y_true, y_pred\
+    , mode_match='intersection_matching'):
     """ Computes mean accuracy score as following : 
     for each row from y_true vector, number of TAGs issue from 
     intersection between y_true and y_pred is cumulated.
     The total sum is devided by the cumulated sum of TAGs issued from 
     y_true.
     Input : 
-        *   y_true : true labels
-        *   y_pred : predicted labels.
+        * y_true : true labels
+        * y_pred : predicted labels.
+        * mode_match : intersection_matching or fuzzy_matching
+        In the first case, TAG issued from prediction matche with assigned 
+        TAG if TAG are exactly same.
+        In the second case, TAG issued from prediction matche with assigned
+        TAG if fuzzy similarity score between TAG if >= 95.
+
+        Note that intersection_matching is much more coercitive then other mode.
     """
     #---------------------------------------------------------------------------
     # For y_true and y_pred, dictionaries results are computed under the format :
@@ -1947,22 +1960,49 @@ def p6_supervized_mean_accuracy_score(y_true, y_pred):
     # list of TAGs used for one hot encoding.
     #---------------------------------------------------------------------------
     dict_row_col_true = p6_get_dict_row_col_from_csrmatrix(y_true)
-    dict_row_col_pred = p6_get_dict_row_col_from_csrmatrix(y_pred)
+    print(len(dict_row_col_true))
     
-    #---------------------------------------------------------------------------
-    # Compute, from each row, intersection of TAGs.
-    #---------------------------------------------------------------------------
-    count_tag = 0
+    dict_row_col_pred = p6_get_dict_row_col_from_csrmatrix(y_pred)
+    print(len(dict_row_col_pred))
+
+    count_tag_match = 0
     tag_row_count = 0
-    not_empty_row_count = 0
-    for row, list_col in dict_row_col_true.items() :
-        if row in dict_row_col_pred.keys():
-            count_tag += len(set(list_col).intersection(dict_row_col_pred[row]))
-        else : 
-            pass
-        tag_row_count += len(list_col)
-    print(tag_row_count)
-    return count_tag/tag_row_count        
+    if(mode_match == 'intersection_matching') :
+        #---------------------------------------------------------------------------
+        # Compute, from each row, intersection of TAGs.
+        #---------------------------------------------------------------------------
+        for row, list_col_true in dict_row_col_true.items() :
+            if row in dict_row_col_pred.keys():
+                #Row still contains a list; 
+                count_tag_match \
+                += len(set(list_col_true).intersection(dict_row_col_pred[row]))
+            else : 
+                pass
+            tag_row_count += len(list_col_true)
+        print(tag_row_count)
+
+    
+    elif mode_match == 'fuzzy_matching' :
+        for row, list_col_true in dict_row_col_true.items() :
+            if row in dict_row_col_pred.keys() :
+                list_col_pred = dict_row_col_pred[row]
+                for token_pred in list_col_pred :
+                    print(token_pred, list_col_true)
+                    list_tuple_score = process.extract(token_pred, list_col_true)
+                    for tuple_score in list_tuple_score :
+                        if 95<= tuple_score[0] :
+                            count_tag_match += 1
+                        else :
+                            pass
+                            
+            else :
+                pass
+            tag_row_count += len(list_col_true)
+    else:
+        print("*** ERROR : matching mode= "+mode_match+" NOT SUPPORTED!")
+    
+    mean_score = count_tag_match/tag_row_count 
+    return mean_score      
 #-------------------------------------------------------------------------------
 
 
