@@ -194,7 +194,7 @@ def p6_cluster_get_suggested_tag(cluster_model, vectorizer, csr_matrix_corpus\
             
             #-----------------------------------------------------------------------
             # For all documents in cluster, get sorted distances between each 
-            # document and cluster, reverse order.
+            # document and cluster centroid, reverse order.
             # Documents from cluster are extracted from corpus.
             #-------------------------------------------------------------------------
             list_dist_with_matrix \

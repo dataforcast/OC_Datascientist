@@ -1184,12 +1184,12 @@ def p6_build_dict_dict_index_filter(list_ref, list_list_tag_target):
         #--------------------------------------------------------------
         row_tag_filter = np.zeros(len(list_ref), dtype=bool)
         for tag_target in list_tag_target:
-            # -----------------------------------------------------------------------------------
+            # ------------------------------------------------------------------
             # For a given tag from a row, a filter is built.
             # This filer is issued from condition (np.array(list_ref)==tag_target
             # row_tag_filter is then a list of booleans which size is size of list_ref.
             # This filter is aggregated with all tags from the row, using bitwise operator "|".
-            # -----------------------------------------------------------------------------------
+            # ------------------------------------------------------------------
             row_tag_filter = (row_tag_filter) | (np.array(list_ref)==tag_target)
         #---------------------------------------------------------------------
         # Filter dictionay for each row is built.
@@ -1215,20 +1215,20 @@ def p6_encode_target(list_tags_ref, list_list_tags):
     list_all_encoded_row=list()
     for row, index_filter in dict_index_filter.items():
         encoded_row = np.zeros(len(list_tags_ref), dtype=int)
-        #-----------------------------------------------------------------------------------
+        #-----------------------------------------------------------------------
         # np.where(condition) will return an array of indexes values.
-        #-----------------------------------------------------------------------------------
+        #-----------------------------------------------------------------------
         index_row_array = np.where(dict_index_filter[row])
         
-        #-----------------------------------------------------------------------------------
+        #-----------------------------------------------------------------------
         # Row is encoded with value 1 for index values from index_row_array
-        #-----------------------------------------------------------------------------------
+        #-----------------------------------------------------------------------
         for i in index_row_array:
             encoded_row[i]=1
             
-        #-----------------------------------------------------------------------------------
+        #-----------------------------------------------------------------------
         # Encoded row is added to list of encoded rows 
-        #-----------------------------------------------------------------------------------
+        #-----------------------------------------------------------------------
         list_all_encoded_row.insert(row,list(encoded_row))
     return list_all_encoded_row
 #-------------------------------------------------------------------------
@@ -1283,7 +1283,7 @@ def p6_encode_target_in_csr_matrix(list_ref_tags, list_tags_to_be_encoded) :
     Output:
         * CSR matrix of encoded TAGs
         Format of returned value is a CSR matrix with expanded list of lists  :
-                ref_1     ref_2         ref_K
+                  ref_1     ref_2         ref_K
             [
        Row 1--->[tag_1.1, tag_1.2, ..... tag_1.K],
                     .
@@ -1332,7 +1332,7 @@ def p6_encode_ser_tag_2_csrmatrix(ser_tag, list_ref_tags, leading_marker='<'\
         * trailing_marker : marker format for any TAG
  
     Output :
-        * Returned value is a CSR matrix with expanded list of lists format : 
+        * Returned value is a CSR matrix with expanded list  : 
             [
        Row 1   [tag_1.1, tag_1.2, ..... tag_1.K],
                     .
@@ -1457,9 +1457,9 @@ def p6_score_mean_string_simlarity(nb_test, df_corpus_test, list_sof_tag\
     Input :
         * nb_test : number of tests to be evaluated
         * df_corpus_test : corpus of documents to be tested
-        * vectorizer : vectorizer used for documents vectorization
-        * csr_matrix : vectorized documents as TF_IDF matrix
-        * p_tag_ratio : ratio of tags to be taking into account from TF-IDF 
+        * vectorizer : operator used for documents vectorization
+        * csr_matrix : vectorized documents as a TF_IDF matrix
+        * p_tag_ratio : ratio of tags to be suggested and issued from TF-IDF 
           vectorization
         * embeding_mode : 
     Output : 
@@ -1467,7 +1467,10 @@ def p6_score_mean_string_simlarity(nb_test, df_corpus_test, list_sof_tag\
             -> the mean similarity ratio
                If similarity ratio > 0 : they are more TAGs suggested 
                then original list.
-            -> the number of matching TAGs between extracted TAGs and original 
+            -> the percentage of matching suggested TAGs considerung original 
+                tags.
+            -> a dictionary formated as following : 
+                {list_original_ag:list_suggested_tag}
             TAGs
         
     """
@@ -1486,7 +1489,7 @@ def p6_score_mean_string_simlarity(nb_test, df_corpus_test, list_sof_tag\
         #-----------------------------------------------------------------------
         # List of suggested TAGs is returned from TF-IDF matrix; weights from 
         # predicators variables with higher values are selected and related 
-        # TAGs are returned.
+        # TAGs are returned. The number of returned TAG depends of p_tag_ratio.
         #-----------------------------------------------------------------------
         list_tag_suggested, list_tag_original, str_original_document \
         = taglist_stat_predict(df_corpus_test, index_document\
@@ -1505,7 +1508,8 @@ def p6_score_mean_string_simlarity(nb_test, df_corpus_test, list_sof_tag\
         #-----------------------------------------------------------------------
         if list_tag_suggested is not None:
             if False :
-                list_tag_suggested = p6_extract_list_tag_from_sof_tag(list_sof_tag\
+                list_tag_suggested \
+                = p6_extract_list_tag_from_sof_tag(list_sof_tag\
                 , list_tag_suggested, score_cutoff=90) 
             else :
                 #---------------------------------------------------------------
@@ -1538,6 +1542,7 @@ def p6_score_mean_string_simlarity(nb_test, df_corpus_test, list_sof_tag\
         #-----------------------------------------------------------------------
         dict_element \
         = {'original':list_tag_original,'suggested':list_tag_suggested}
+        
         dict_match_result[index_document] = (mean_similarity_ratio\
         , match_count/len(list_tag_original), dict_element)
 
@@ -1921,7 +1926,7 @@ def p6_get_dict_row_col_from_csrmatrix(csrmatrix) :
         given as parameter function.
     '''
     tuple_index = np.where(csrmatrix.A >0)
-    print('p6_get_dict_row_col_from_csrmatrix')
+    #print('p6_get_dict_row_col_from_csrmatrix')
     dict_row_col = dict()
     for row,col in zip(tuple_index[0],tuple_index[1]):
         if row in dict_row_col.keys() :
@@ -1937,7 +1942,8 @@ def p6_get_dict_row_col_from_csrmatrix(csrmatrix) :
 #
 #-------------------------------------------------------------------------------
 def p6_supervized_mean_accuracy_score(y_true, y_pred\
-    , mode_match='intersection_matching'):
+    , mode_match='intersection_matching'\
+    , encoder=None, arr_encoded_filter=None):
     """ Computes mean accuracy score as following : 
     for each row from y_true vector, number of TAGs issue from 
     intersection between y_true and y_pred is cumulated.
@@ -1951,6 +1957,9 @@ def p6_supervized_mean_accuracy_score(y_true, y_pred\
         TAG if TAG are exactly same.
         In the second case, TAG issued from prediction matche with assigned
         TAG if fuzzy similarity score between TAG if >= 95.
+        * encoder : labelizer used if matching mode is fuzzy_matching
+        * arr_encoded_filter : allows to match values with string inssued from 
+        encoder
 
         Note that intersection_matching is much more coercitive then other mode.
     """
@@ -1960,10 +1969,10 @@ def p6_supervized_mean_accuracy_score(y_true, y_pred\
     # list of TAGs used for one hot encoding.
     #---------------------------------------------------------------------------
     dict_row_col_true = p6_get_dict_row_col_from_csrmatrix(y_true)
-    print(len(dict_row_col_true))
+    # print(len(dict_row_col_true))
     
     dict_row_col_pred = p6_get_dict_row_col_from_csrmatrix(y_pred)
-    print(len(dict_row_col_pred))
+    # print(len(dict_row_col_pred))
 
     count_tag_match = 0
     tag_row_count = 0
@@ -1973,13 +1982,17 @@ def p6_supervized_mean_accuracy_score(y_true, y_pred\
         #---------------------------------------------------------------------------
         for row, list_col_true in dict_row_col_true.items() :
             if row in dict_row_col_pred.keys():
-                #Row still contains a list; 
+                # Row still contains a list; 
                 count_tag_match \
                 += len(set(list_col_true).intersection(dict_row_col_pred[row]))
+                #print("list_col_true= {}".format(list_col_true))
+                #print("list_col_pred= {}".format(dict_row_col_pred[row]))
+                #print("Mached TAG= {}".format(count_tag_match))
+                #break
             else : 
                 pass
             tag_row_count += len(list_col_true)
-        print(tag_row_count)
+        #print(tag_row_count)
 
     
     elif mode_match == 'fuzzy_matching' :
@@ -1987,8 +2000,16 @@ def p6_supervized_mean_accuracy_score(y_true, y_pred\
             if row in dict_row_col_pred.keys() :
                 list_col_pred = dict_row_col_pred[row]
                 for token_pred in list_col_pred :
-                    print(token_pred, list_col_true)
-                    list_tuple_score = process.extract(token_pred, list_col_true)
+                    row = np.where(arr_encoded_filter==token_pred)[0][0]
+                    str_token_pred = encoder.classes_[row]
+                    list_str_col_true=list()
+                    for col_true in list_col_true :
+                        row = np.where(arr_encoded_filter==col_true)[0][0]
+                        list_str_col_true.append(encoder.classes_[row])
+
+                    list_tuple_score = process.extract(str_token_pred\
+                    , list_str_col_true)
+
                     for tuple_score in list_tuple_score :
                         if 95<= tuple_score[0] :
                             count_tag_match += 1
