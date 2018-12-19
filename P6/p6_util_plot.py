@@ -98,7 +98,8 @@ def X_y_plot(X,y,item_count, title, p_x_title, p_y_title) :
 #
 #-------------------------------------------------------------------------------
 def ser_item_occurency_plot(ser_item_name, ser_item_count
-, item_count=None, title=None, p_reverse=True, p_x_title=None, p_y_title=None):
+, item_count=None, title=None, p_reverse=True, p_x_title=None
+, p_y_title=None, shift=0):
     """Plot values issued from 2 inout Series as following : 
     Input :
         * ser_item_name :  Series containing names of items to be plot;
@@ -134,7 +135,7 @@ def ser_item_occurency_plot(ser_item_name, ser_item_count
         X_plot = X.copy()
         y_plot = y.copy()
     
-    ax.plot(X_plot[1:],y_plot[1:])
+    ax.plot(X_plot[shift:],y_plot[shift:])
     ax.set_xticklabels(X[:item_count], rotation=90)
 
     if p_x_title is None :

@@ -1327,7 +1327,7 @@ def p6_encode_ser_tag_2_csrmatrix(ser_tag, list_ref_tags, leading_marker='<'\
     Input : 
         * ser_tag : Series with rows formated as following : 
                     <tag1><tag2>...<tagN>
-        * list_ref_tags : list of unique TAGSsto be encoded in.
+        * list_ref_tags : list of unique TAGSs to be encoded in.
         * leading_marker : marker format for any TAG
         * trailing_marker : marker format for any TAG
  
