@@ -1945,7 +1945,7 @@ def p6_get_dict_row_col_from_csrmatrix(csrmatrix) :
 def p6_supervized_mean_accuracy_score(y_true, y_pred\
     , mode_match='intersection_matching'\
     , encoder=None, arr_encoded_filter=None):
-    """ Computes mean accuracy score as following : 
+    ''' Computes mean accuracy score as following : 
     for each row from y_true vector, number of TAGs issue from 
     intersection between y_true and y_pred is cumulated.
     The total sum is devided by the cumulated sum of TAGs issued from 
@@ -1963,33 +1963,27 @@ def p6_supervized_mean_accuracy_score(y_true, y_pred\
         encoder
 
         Note that intersection_matching is much more coercitive then other mode.
-    """
+    '''
     #---------------------------------------------------------------------------
     # For y_true and y_pred, dictionaries results are computed under the format :
     # {row:[col1,...,colK]} where colX is the column number in the referenced 
-    # list of TAGs used for one hot encoding.
+    # list of TAGs issued from one hot encoding operation.
     #---------------------------------------------------------------------------
     dict_row_col_true = p6_get_dict_row_col_from_csrmatrix(y_true)
-    # print(len(dict_row_col_true))
     
     dict_row_col_pred = p6_get_dict_row_col_from_csrmatrix(y_pred)
-    # print(len(dict_row_col_pred))
 
     count_tag_match = 0
     tag_row_count = 0
     if(mode_match == 'intersection_matching') :
-        #---------------------------------------------------------------------------
+        #-----------------------------------------------------------------------
         # Compute, from each row, intersection of TAGs.
-        #---------------------------------------------------------------------------
+        #-----------------------------------------------------------------------
         for row, list_col_true in dict_row_col_true.items() :
             if row in dict_row_col_pred.keys():
                 # Row still contains a list; 
                 count_tag_match \
                 += len(set(list_col_true).intersection(dict_row_col_pred[row]))
-                #print("list_col_true= {}".format(list_col_true))
-                #print("list_col_pred= {}".format(dict_row_col_pred[row]))
-                #print("Mached TAG= {}".format(count_tag_match))
-                #break
             else : 
                 pass
             tag_row_count += len(list_col_true)
