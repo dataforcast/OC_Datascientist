@@ -1667,13 +1667,12 @@ def p6_lda_get_topic_from_list_word(dict_lda_topic, list_of_word):
 #
 #-------------------------------------------------------------------------------
 def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
-, verbose=False, dict_expert_tag=None):
-    """ For a given POST assigned with given TAGs, this function returns mean 
-    accuracy score of suggested TAGs issued from LDA process.
+, verbose=False, dict_expert_tag=None,list_train_tags=None):
+    """ For a given POST assigned with given TAGa, this function returns mean 
+    accuracy score for suggested TAGs issued from LDA process.
     Mean accuracy score is computed by dividing :
-        * the number of elements from intersection of TAGs issued from a POST and LDA.
-        with 
-        * the number of TAGs from given POST.
+        the number of elements from intersection of TAGs issued from a POST and LDA
+        with the number of TAGs from a given POST.
     
     """
     dict_result = dict()
@@ -1713,16 +1712,31 @@ def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
     list_word_result = list(set(list_all_word))
 
     #---------------------------------------------------------------------------
-    # TAGs from POST is converted into a list of TAGs.
+    # TAGs are remapped over referenced TAGr using fuzzy-wuzzy measurement
+    # Referenced TAG are list of assigned TAG from train dataset.
     #---------------------------------------------------------------------------
-    list_post_tag \
+    if list_train_tags is not None :
+        list_tag_pred = list()
+        for word in list_word_result :
+            list_tuple_score = process.extract(word, list_train_tags)
+            list_tag_pred += [tuple_score[0] for tuple_score \
+            in list_tuple_score if tuple_score[1] >= 90]
+        list_word_result = list_tag_pred.copy()
+
+    #---------------------------------------------------------------------------
+    # Assigned TAGs from POST are converted into a list of TAGs.
+    #---------------------------------------------------------------------------
+    list_assigned_tag \
     = clean_marker_text(tags,leading_marker='<', trailing_marker='>')
 
     #---------------------------------------------------------------------------
     # TAGs issued from LDA are filtered with SOF TAGs list.
     #---------------------------------------------------------------------------
-    list_intersection_sof \
-    = list(set(list_word_result).intersection(list_sof_tags))
+    if list_train_tags is None :
+        list_intersection_sof \
+        = list(set(list_word_result).intersection(list_sof_tags))
+    else :
+        list_intersection_sof = list_word_result.copy()
 
     #---------------------------------------------------------------------------
     # Building intersection between list of TAGs issued from LDA model and 
@@ -1731,19 +1745,19 @@ def p6_lda_mean_score_post(post, tags, dict_lda_topic, list_sof_tags\
     if False :
         if len(list_intersection_sof) > 0 :
             list_intersection_result \
-            = list(set(list_post_tag).intersection(list_intersection_sof))    
+            = list(set(list_assigned_tag).intersection(list_intersection_sof))    
         else :
             list_intersection_result \
-            = list(set(list_post_tag).intersection(list_word_result))
+            = list(set(list_assigned_tag).intersection(list_word_result))
     else : 
         list_intersection_result \
-            = list(set(list_post_tag).intersection(list_intersection_sof))
+            = list(set(list_assigned_tag).intersection(list_intersection_sof))
     
-    score_accuracy = len(list_intersection_result)/len(list_post_tag)
+    score_accuracy = len(list_intersection_result)/len(list_assigned_tag)
     
     if verbose is True :
-        print("\nList of TAGs from POST : "+str(list_post_tag))
-        print("\nList of result TAGs : "+str(list_word_result))
+        print("\nList of assigned TAG from POST : "+str(list_assigned_tag))
+        print("\nList of suggested TAG : "+str(list_word_result))
 
         print("\nList intersection SOF : "+str(list_intersection_sof))
         print("\nList intersection result : "+str(list_intersection_result))
@@ -1781,7 +1795,8 @@ def p6_lda_build_range(range_topic,embedding_type, csr_matrix, rangeName=None):
 #-------------------------------------------------------------------------------
 def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
                         ,list_sof_tags, vectorizer, nb_top_words = 10\
-                        , rangeName = None,dict_expert_tag=None) :
+                        , rangeName = None,dict_expert_tag=None,is_dumped=True\
+                        ,list_train_tags=None) :
     """
         Input : 
             * nb_test : for each LDA model, number of POSTs used for accuracy.
@@ -1796,7 +1811,9 @@ def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
             * nb_top_words : max number of features for each topic that will be 
             selected from LDA words characterizing a topic.
         Output : 
-            A dictionary that is dumped into a file named `dict_score_lda_XXX`
+            A dictionary that is dumped into a file named 
+            `dict_score_lda_<embedding_type>_<nb_topic>` where `nb_topic` 
+            belongs to `range_topic`.
     """                        
                         
     #---------------------------------------------------------------------------
@@ -1845,20 +1862,23 @@ def p6_lda_range_mean_score(nb_test, range_topic, embedding_type, df_sof_test\
             = p6_lda_display_topics(lda, feature_names, nb_top_words)
 
             mean_score = p6_lda_mean_score_post(post, tags, dict_lda_topic\
-            , list_sof_tags, verbose=False, dict_expert_tag=dict_expert_tag)
+            , list_sof_tags, verbose=False, dict_expert_tag=dict_expert_tag\
+            ,list_train_tags=list_train_tags)
             dict_score_lda[post_id] = mean_score
         
         #-----------------------------------------------------------------------
         # Dump dictionary into a file containing mean score for any POST.
         #-----------------------------------------------------------------------
-        if rangeName is None :
-            fileName \
-            = "./data/dict_score_lda_"+str(embedding_type)+"_"+str(nb_topic)+".dump"
-        else :
-            fileName \
-            = "./data/dict_score_lda_"+str(embedding_type)+"_"+str(nb_topic)\
-            +"_"+rangeName+".dump"
-        p5_util.object_dump(dict_score_lda,fileName)    
+        if is_dumped is True :
+            if rangeName is None :
+                fileName \
+                = "./data/dict_score_lda_"+str(embedding_type)\
+                +"_"+str(nb_topic)+".dump"
+            else :
+                fileName \
+                = "./data/dict_score_lda_"+str(embedding_type)\
+                +"_"+str(nb_topic)+"_"+rangeName+".dump"
+            p5_util.object_dump(dict_score_lda,fileName)    
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------

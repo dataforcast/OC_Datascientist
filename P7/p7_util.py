@@ -29,9 +29,9 @@ def p7_filter_convolutional(image, kernel, size=(3,3), title=str()\
     #---------------------------------------------------------------------------------------------
     # L'histograme des pixels et des pixels cumulés est affiché
     #---------------------------------------------------------------------------------------------
-    image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel)
+    p7_image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel)
     
-    image_hist(image_filtered\
+    p7_image_hist(image_filtered\
                , title=title+' cumulé'\
                , xlabel=xlabel\
                , ylabel=ylabel+" cumulés"\
@@ -57,9 +57,9 @@ def p7_filter_convolutional(image, kernel, size=(3,3), title=str()\
 def p7_filter_median(image, size=3, title=str(), xlabel=str(), ylabel=str()\
 ,is_show=False) :
     image_filtered = image.filter(ImageFilter.MedianFilter(size=size))
-    image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel)
+    p7_image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel)
 
-    image_hist(image_filtered\
+    p7_image_hist(image_filtered\
                , title=title\
                , xlabel=xlabel\
                , ylabel=ylabel\
@@ -79,9 +79,9 @@ def p7_filter_median(image, size=3, title=str(), xlabel=str(), ylabel=str()\
 def p7_filter_gaussian(image, size=3, title=str(), xlabel=str(), ylabel=str()\
 , is_show=False) :
     image_filtered = image.filter(ImageFilter.GaussianBlur(size))
-    image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel)
+    p7_image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel)
 
-    image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel\
+    p7_image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel\
               ,cumulative=True)
     filename = "./data/image_filtered_gaussian_"+str(size)+".png"
     image_filtered.save(filename)
@@ -111,8 +111,8 @@ def p7_image_hist(image, title=None, xlabel=None, ylabel=None, cumulative=False)
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p7_image_load_deprecated(filename, is_verbose=True) :
-    '''Load an image from a file and returns it.
+def p7_pil_image_load(filename, is_verbose=True) :
+    '''Load an image from a file using PIL package and returns it.
     '''
     image = Image.open(filename) 
     if is_verbose is True:
@@ -128,9 +128,6 @@ def p7_image_load(filename, is_verbose=True) :
     '''
     with open(filename,"rb") as imageFile:
         image = imageFile.read() 
-
-    if is_verbose is True:
-        print("Format des pixels : {}".format(image.mode))
     return image
 #------------------------------------------------------------------------------
 
