@@ -1965,7 +1965,7 @@ def p6_get_dict_row_col_from_csrmatrix(csrmatrix) :
 def p6_supervized_mean_accuracy_score(y_true, y_pred\
     , mode_match='intersection_matching'\
     , encoder=None, arr_encoded_filter=None):
-    ''' Computes mean accuracy score as following : 
+    ''' Computes, for supervized models,mean accuracy score as following : 
     for each row from y_true vector, number of TAGs issue from 
     intersection between y_true and y_pred is cumulated.
     The total sum is devided by the cumulated sum of TAGs issued from 
@@ -2002,8 +2002,9 @@ def p6_supervized_mean_accuracy_score(y_true, y_pred\
         for row, list_col_true in dict_row_col_true.items() :
             if row in dict_row_col_pred.keys():
                 # Row still contains a list; 
+                list_col_pred = dict_row_col_pred[row]
                 count_tag_match \
-                += len(set(list_col_true).intersection(dict_row_col_pred[row]))
+                += len(set(list_col_true).intersection(list_col_pred))
             else : 
                 pass
             tag_row_count += len(list_col_true)
