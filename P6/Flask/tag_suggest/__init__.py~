@@ -17,7 +17,7 @@ from .views import app
 # --> FLASK_APP=run.py flask load
 # Then method views.load() will be called.
 
-# Inside views.load(), dumped file oLinearDelayPredictor.dump is loaded 
+# Inside views.load(), dumped file oP6_PostClassifier.dump is loaded 
 # into RAM.
 @app.cli.command()
 def load():

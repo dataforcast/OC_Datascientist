@@ -494,8 +494,31 @@ class P6_PostClassifier() :
 
         list_tag_suggested, list_tag_suggested_fw, list_assigned_tags\
         =self.suggest(body, title, tag_a)
+        #return self.json_builder(list_tag_suggested, list_tag_suggested_fw\
+        #, list_assigned_tags, body,title)
+        return list_tag_suggested, list_tag_suggested_fw, list_assigned_tags\
+        , body, title
+    #---------------------------------------------------------------------------
+    
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def json_builder(self, list_tag_suggested, list_tag_suggested_fw\
+    , list_assigned_tags, body, title):
+        '''Builds a JSON formated result from given function parameters.
+        Input : 
+            df_selection : a subset of dataframe issued from LinearDelayPredictor.
+        Output :
+            json_selection : a list with elements formated as json.
+        '''
+        json_result = '{"_result":[\n'
+        json_result += '{tag_s : '+ str(list_tag_suggested)+'},\n'
+        json_result += '{tag_a : '+ str(list_assigned_tags)+'},\n'
+        json_result += '{title : '+ str(title)+'},\n'
+        json_result += '{body : '+ str(body)+'},\n'
+        json_result += ']}'
+        return json_result
 
-        return list_tag_suggested, list_tag_suggested_fw, list_assigned_tags, body
     #---------------------------------------------------------------------------
     
 #-------------------------------------------------------------------------------        

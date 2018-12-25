@@ -21,7 +21,7 @@ app.config.from_object('config')
 def load() :
     '''Dumped model is loaded.
     '''
-   oP6_PostClassifier = P6_PostClassifier.load_dumped()
+    oP6_PostClassifier = P6_PostClassifier.load_dumped()
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -40,33 +40,37 @@ def load() :
 @app.route('/')
 @app.route('/predictor/')
 def predictor():
-   #oLinearDelayPredictor = LinearDelayPredictor.load_dumped(config.PATH_DUMPED_FILE)
+    #oLinearDelayPredictor = LinearDelayPredictor.load_dumped(config.PATH_DUMPED_FILE)
 
-   if 'flight_id' in request.args :
-      flight_id = int(request.args.get('flight_id'))
-      print("Flight ID= "+str(flight_id))
+    if 'post_id' in request.args :
+        post_id = int(request.args.get('post_id'))
+        print("POST ID= "+str(post_id))
+        list_tag_suggested, list_tag_suggested_fw, list_assigned_tags, body, title \
+        = config.oP6_PostClassifier.process_post(post_id)
+        print("Processing POST= "+str(post_id)+" done!\n")
 
-      json_result = config.oLinearDelayPredictor.evaluate_delay(flight_id)
-      return json_result
-   
-   elif '*' in request.args :
-      nb_flights = config.NB_FLIGHTS
+    elif '*' in request.args :
 
-      #-------------------------------------------------------------------------
-      # Building json structure with a list of nb_flights flights to be selected.
-      #-------------------------------------------------------------------------
-      print("\n Getting flight selection...")
-      df_selection = config.oLinearDelayPredictor.get_random_flights(nb_flights)
-      print("Getting flight selection done!\n")
+        #-----------------------------------------------------------------------
+        #
+        #-----------------------------------------------------------------------
+        print("\n Getting random POST...")
+        list_tag_suggested, list_tag_suggested_fw, list_assigned_tags, body, title \
+        = config.oP6_PostClassifier.process_post(None)
+        print("Processing random POST done!\n")
 
-      print("\n Json selection processing...")
-      json_selection = config.oLinearDelayPredictor.json_selection_builder(df_selection)
-      print("Json selection processing done!")
-      print(json_selection)
-      return json_selection
-   else :
-      json_result = "{\"_result\":[{\"id\":UNKNOWN / ERROR}]"
-      return json_result
+    else :
+        json_result = "{\"_result\":[{\"id\":UNKNOWN / ERROR}]"
+        return json_result
+    
+    print("\n Json processing...")
+    json_result \
+    = config.oP6_PostClassifier.json_builder(list_tag_suggested\
+    , list_tag_suggested_fw, list_assigned_tags, body, title)
+
+    print("Json processing done!")
+    print(json_result)
+    return json_result
       
 
 #-------------------------------------------------------------------------------
