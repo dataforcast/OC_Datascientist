@@ -291,7 +291,7 @@ def plot_cluster_frequency(df, p_title=None):
       p_title = 'Effectif par cluster'
    ax = df_.plot.bar(figsize=(7, 7), title=p_title, color='blue', fontsize=14)
    #ax = df_.plot.bar(figsize=(7, 7), title=p_title, color='blue', fontsize=14, kind='kde')
-   print(df_)
+   print(df_.sort_values(by=['Count'], ascending=False))
    return
 #-------------------------------------------------------------------------------
 
@@ -420,18 +420,21 @@ def gmm_models_plot_silhouette(df, dict_dict_silhouette_score\
    range_area = range(areas_raws-1,areas_colums)
    for hyper_parameter,col_area in zip(dict_dict_silhouette_score,range_area):
        dict_silhouette_score = dict_dict_silhouette_score[hyper_parameter]    
-       
+       if 1 == areas_raws:
+        ax_area = ax
+       else:
+        ax_area = ax[col_area]
        #------------------------------------------------------------------------
        # For any GMM model from list_gmm_model, plot both BIC and AIC 
        #------------------------------------------------------------------------
-       ax[col_area].plot(dict_silhouette_score.keys()\
+       ax_area.plot(dict_silhouette_score.keys()\
        , dict_silhouette_score.values(), label=str(hyper_parameter))
-       ax[col_area].scatter(dict_silhouette_score.keys()\
+       ax_area.scatter(dict_silhouette_score.keys()\
        , dict_silhouette_score.values(), label=str(hyper_parameter))
-       ax[col_area].legend(loc='best')
+       ax_area.legend(loc='best')
        
-       ax[col_area].set_title(p_title, color='blue')
-       ax[col_area].set_xlabel('Nb clusters', color='blue');
+       ax_area.set_title(p_title, color='blue')
+       ax_area.set_xlabel('Nb clusters', color='blue');
 
    return
 #-------------------------------------------------------------------------------

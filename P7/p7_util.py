@@ -123,13 +123,14 @@ def p7_pil_image_load(filename, is_verbose=True, std_size=(200,200)) :
     '''Load an image from a file using PIL package and returns it.
     '''
     image = Image.open(filename) 
+    image.load_end()
     if is_verbose is True:
         print("Format des pixels : {}".format(image.mode))
     if std_size is not None :
         image = image.resize(std_size)
     return image
 #-------------------------------------------------------------------------------
-
+ 
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
@@ -239,15 +240,25 @@ def p7_image_pil_show(dict_image_pil, std_image_size=(200,200),size_x=10) :
         image_count = len(list_image_pil)
         size_y = int(size_x/image_count)
         f, axs = plt.subplots(1, image_count, figsize=(size_x,size_y))
-        for index in range(0,len(list_image_pil)) :
-            image_pil = list_image_pil[index].copy()
-            axs[index].axis('off')
-            if std_image_size is not None :
-                axs[index].imshow(image_pil.resize(std_image_size))
-            else :
-                axs[index].imshow(image_pil)
-            axs[index].set_title(breed)
 
+        if( 1 < len(list_image_pil)) :
+            for index in range(0,len(list_image_pil)) :
+                image_pil = list_image_pil[index].copy()
+                axs[index].axis('off')
+                if std_image_size is not None :
+                    axs[index].imshow(image_pil.resize(std_image_size))
+                else :
+                    axs[index].imshow(image_pil)
+                axs[index].set_title(breed)
+        else :
+            for index in range(0,len(list_image_pil)) :
+                image_pil = list_image_pil[index].copy()
+                axs.axis('off')
+                if std_image_size is not None :
+                    axs.imshow(image_pil.resize(std_image_size))
+                else :
+                    axs.imshow(image_pil)
+                axs.set_title(breed)
     #plt.tight_layout(pad=-2)
     plt.show()
 #-------------------------------------------------------------------------------
@@ -298,17 +309,41 @@ def p7_get_std_size(dict_breed_filename):
 #-------------------------------------------------------------------------------
 def p7_load_breed_name(directory_name) :
     #---------------------------------------------------------------------------
-    # List of all directories, each directory conatains matches with a breed dog
+    # List of all directories, each directory contains a list of all 
+    # images from breed.
     #---------------------------------------------------------------------------
-    list_dir = os.listdir(directory_name)
+    list_dir_breed = os.listdir(directory_name)
+        
+    #---------------------------------------------------------------------------
+    # For each breed directory, list of all images files is loaded into a 
+    # dictionary
+    #---------------------------------------------------------------------------
+    dict_breed_list_filename = dict()
+    for dir_breed in list_dir_breed :
+        dict_breed_list_filename[dir_breed] \
+        = os.listdir(directory_name+'/'+dir_breed)
+    return dict_breed_list_filename
+#-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p7_load_data(directory_name) :
     #---------------------------------------------------------------------------
-    # Dogs breeds are extracted from files names and are loaded into a 
-    # dictionary structured as following : {dir_name:list_of_images}
+    # List of all directories, each directory contains a list of all 
+    # images from breed.
     #---------------------------------------------------------------------------
-    dict_breed_name = { breed_dir_name : breed_dir_name.split('-')[1] \
-                      for breed_dir_name in list_dir }
-    return dict_breed_name
+    list_dir_breed = os.listdir(directory_name)
+        
+    #---------------------------------------------------------------------------
+    # For each breed directory, list of all images files is loaded into a 
+    # dictionary
+    #---------------------------------------------------------------------------
+    dict_breed_list_filename = dict()
+    for dir_breed in list_dir_breed :
+        dict_breed_list_filename[dir_breed] \
+        = os.listdir(directory_name+'/'+dir_breed)
+    return dict_breed_list_filename
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
