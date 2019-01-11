@@ -420,7 +420,7 @@ def gmm_models_plot_silhouette(df, dict_dict_silhouette_score\
    range_area = range(areas_raws-1,areas_colums)
    for hyper_parameter,col_area in zip(dict_dict_silhouette_score,range_area):
        dict_silhouette_score = dict_dict_silhouette_score[hyper_parameter]    
-       if 1 == areas_raws:
+       if 1 == areas_colums:
         ax_area = ax
        else:
         ax_area = ax[col_area]

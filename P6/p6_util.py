@@ -13,6 +13,9 @@ from nltk.stem import WordNetLemmatizer
 from nltk.stem.porter import PorterStemmer
 from nltk.stem import SnowballStemmer
 
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.model_selection import GridSearchCV
+
 from scipy import sparse
 
 from bs4 import BeautifulSoup
@@ -28,6 +31,40 @@ import p5_util
 
 
 LIST_EMBEDDING_MODE=['tfidf','bow','ngram']
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_gscv_best_classifier(dict_param_grid, classifier, X_train, y_train\
+                              , X_test,y_test,cv=-1):
+    ovr_classifier = OneVsRestClassifier(classifier)
+    if 0 > cv :
+        gscv_classifier  = GridSearchCV(ovr_classifier, dict_param_grid)
+    else :
+        gscv_classifier  = GridSearchCV(ovr_classifier, dict_param_grid, cv=cv)
+    
+    gscv_classifier.fit(X_train, y_train)
+    print (gscv_classifier.best_score_)
+    print (gscv_classifier.best_params_)
+    y_pred = gscv_classifier.best_estimator_.predict(X_test)
+    return y_pred, gscv_classifier
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p6_gscv_best_classifier_result(dict_param_grid, classifier, X_train, y_train\
+                              , cls_name, X_test,y_test, dict_cls_score):
+    
+    y_pred , gscv_classifier = p6_gscv_best_classifier(dict_param_grid\
+    , classifier, X_train, y_train, X_test,y_test)
+    
+    cls_score = p6_util.p6_supervized_mean_accuracy_score(y_test, y_pred)
+    print("Mean accuracy score for "+cls_name+" : {0:1.2F} %".format(cls_score*100))
+    dict_cls_score[cls_name]=cls_score
+    return dict_cls_score, gscv_classifier.best_estimator_
+#-------------------------------------------------------------------------------
+
 
 
 #-------------------------------------------------------------------------------
