@@ -328,21 +328,30 @@ def p7_load_breed_name(directory_name) :
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p7_load_data(directory_name) :
+def p7_load_data(directory_name, dirbreed=None) :
     #---------------------------------------------------------------------------
     # List of all directories, each directory contains a list of all 
     # images from breed.
     #---------------------------------------------------------------------------
-    list_dir_breed = os.listdir(directory_name)
-        
+    list_dir_breed = None
+    list_dir_breed_image = None        
+    if dirbreed is None :
+        list_dir_breed = os.listdir(directory_name)
+    else :
+        list_dir_breed_image = os.listdir(directory_name+'/'+dirbreed)    
+
     #---------------------------------------------------------------------------
     # For each breed directory, list of all images files is loaded into a 
     # dictionary
     #---------------------------------------------------------------------------
     dict_breed_list_filename = dict()
-    for dir_breed in list_dir_breed :
-        dict_breed_list_filename[dir_breed] \
-        = os.listdir(directory_name+'/'+dir_breed)
+    if list_dir_breed is not None :
+        for dirbreed in list_dir_breed :
+            dict_breed_list_filename[dirbreed] \
+            = os.listdir(directory_name+'/'+dirbreed)
+    else : 
+        list_dirbreed = os.listdir(directory_name+'/'+dirbreed)
+        dict_breed_list_filename={dirbreed : [ filename for filename in list_dirbreed ]}
     return dict_breed_list_filename
 #-------------------------------------------------------------------------------
 

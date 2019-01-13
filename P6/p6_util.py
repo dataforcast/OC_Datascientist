@@ -36,12 +36,24 @@ LIST_EMBEDDING_MODE=['tfidf','bow','ngram']
 #
 #-------------------------------------------------------------------------------
 def p6_gscv_best_classifier(dict_param_grid, classifier, X_train, y_train\
-                              , X_test,y_test,cv=-1):
-    ovr_classifier = OneVsRestClassifier(classifier)
-    if 0 > cv :
-        gscv_classifier  = GridSearchCV(ovr_classifier, dict_param_grid)
+                              , X_test,y_test,cv=None,iid=None):
+                              
+
+    true_classifier = OneVsRestClassifier(classifier)
+    if cv is None :
+        if iid is None :
+            gscv_classifier  = GridSearchCV(true_classifier, dict_param_grid)
+        else :
+            gscv_classifier  = GridSearchCV(true_classifier, dict_param_grid\
+            , iid=iid)
+        
     else :
-        gscv_classifier  = GridSearchCV(ovr_classifier, dict_param_grid, cv=cv)
+        if iid is None :
+            gscv_classifier  = GridSearchCV(true_classifier, dict_param_grid\
+            , cv=cv)
+        else :
+            gscv_classifier  = GridSearchCV(true_classifier, dict_param_grid\
+            , cv=cv, iid=iid)
     
     gscv_classifier.fit(X_train, y_train)
     print (gscv_classifier.best_score_)

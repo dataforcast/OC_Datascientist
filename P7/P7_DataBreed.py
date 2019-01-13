@@ -4,6 +4,8 @@ from PIL import ImageOps
 import numpy as np
 import random
 from  sklearn import model_selection
+import p5_util
+import p6_util
 import p7_util
 
 #-------------------------------------------------------------------------------
@@ -84,6 +86,34 @@ def p7_read_image(imagepathname, image_type='PIL') :
 #-------------------------------------------------------------------------------
 class P7_DataBreed() :
     '''This class implements breeds data structure.
+        oP7_DataBreed
+            +
+            |
+            +-->load()
+            |   |
+            |   +--> p7_util.p7_load_data()
+            |   
+            +-->sampling()
+            |
+            +-->build_sift_desc()
+            |   |
+            |   +--> p7_util.p7_pil_image_load()
+            |   |
+            |   +--> kpdesc_build()
+            |
+            +-->build_arr_desc()
+            |
+            |   GMM clustering
+            +   p5_util.gmm_hyper_parameter_cv()
+            |
+            +-->build_datakp_bof()
+            |   |
+            |   +--> ylabel_encode()
+            |
+            +-->train_test_build()
+
+
+        
     '''
     #---------------------------------------------------------------------------
     #
@@ -97,7 +127,7 @@ class P7_DataBreed() :
         self._dict_data = dict()
         self._total_image =0
         self.is_verbose = True
-        self._std_size = (0,0)
+        self._std_size = (200,200)
         self._dict_img_pil = dict() 
         self._dict_breed_kpdesc = dict()
         self._dict_breed_sample = dict()
@@ -115,6 +145,10 @@ class P7_DataBreed() :
         self._dict_breedname_id = dict()
         self._is_splitted = False
         self._Xdesc = np.zeros(128)
+        self._ser_breed_number = pd.Series()
+        self._dict_classifier = dict()
+        self._classifier_name = str()
+        
         
     #---------------------------------------------------------------------------
 
@@ -188,7 +222,7 @@ class P7_DataBreed() :
         +self._cluster_model_name)
         self.strprint("Bag of features dataframe ..... : "\
         +str(self._df_bof.shape))
-        self.strprint("Labels from dataframe ......... : "\
+        self.strprint("Labels from dataset ........... : "\
         +str(self._y_label.shape))
         self.strprint("Number of breeds .............. : "\
         +str(len(self._dict_breedname_id)))
@@ -196,6 +230,10 @@ class P7_DataBreed() :
         +str(self._is_splitted))
         self.strprint("Key point descriptors ......... : "\
         +str(self._Xdesc.shape))
+        self.strprint("Classifier name ............... : "\
+        +str(self._classifier_name))
+        self.strprint("Supported classifiers ......... : "\
+        +str(list(self.dict_classifier.keys())))
         
         self.strprint("")
 
@@ -235,6 +273,9 @@ class P7_DataBreed() :
         self._dict_breedname_id = object._dict_breedname_id.copy()
         self._is_splitted = object._is_splitted
         self._Xdesc = object._Xdesc.copy()
+        self._ser_breed_number = object._ser_breed_number.copy()    
+        self._classifier_name = object._classifier_name
+        self._dict_classifier = object._dict_classifier.copy()
         
         if is_new_attribute is True :
             pass
@@ -353,6 +394,25 @@ class P7_DataBreed() :
     def _set_Xdesc(self, Xdesc) :
         print("\n*** WARN : method not authorized !\n")
 
+    def _get_classifier_name(self) :
+      return self._classifier_name
+    def _set_classifier_name(self, classifier_name) :
+        self._classifier_name = classifier_name
+
+    def _get_dict_classifier(self) :
+      return self._dict_classifier.copy()
+    def _set_dict_classifier(self, dict_classifier) :
+        self._dict_classifier = dict_classifier.copy()
+
+    def _get_classifier(self) :
+        classifier_name = self._classifier_name
+        classifier = self._dict_classifier[classifier_name]
+        return classifier
+    def _set_classifier(self, classifier) :
+        print("\n*** WARN : method not authorized !\n")
+        
+    
+
     dir_path = property(_get_dir_path,_set_dir_path)
     std_size = property(_get_std_size,_set_std_size)
     df_desc  = property(_get_df_desc, _set_df_desc)
@@ -378,6 +438,25 @@ class P7_DataBreed() :
     dict_breedname_id = property(_get_dict_breedname_id, _set_dict_breedname_id)
     is_splitted = property(_get_is_splitted, _set_is_splitted)
     Xdesc = property(_get_Xdesc, _set_Xdesc)
+    classifier_name = property(_get_classifier_name, _set_classifier_name)
+    dict_classifier = property(_get_dict_classifier, _set_dict_classifier)
+    classifier = property(_get_classifier,_set_classifier)
+    
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def predict_image(pil_image) :
+        pass
+    #---------------------------------------------------------------------------
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def dict_classifier_load(self,filename):
+        self.dict_classifier = p5_util.object_load(filename)
+    #---------------------------------------------------------------------------
+
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
@@ -389,14 +468,16 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def load(self) :
+    def load(self, dirbreed=None, imagename=None) :
         '''Read all images from data directory path .
         Imges are stored into a dictionary with such structure : 
         {breed_directory : list_of_breed_file_names} 
         where list_of_breed_file_names is the list of file names that 
         reference images from breed.
         '''
-        self._dict_data = p7_util.p7_load_data(self._dir_path)
+        self._dict_data = p7_util.p7_load_data(self._dir_path, dirbreed=dirbreed)
+        if imagename is not None :
+            self._dict_data = {dirbreed:[imagename]}
         
         #-----------------------------------------------------------------------
         # Total number of files
@@ -430,7 +511,8 @@ class P7_DataBreed() :
                 # List of resized images is stored into dictionary
                 #-------------------------------------------------------------------
                 self._dict_img_pil[dirbreedname] = list_image_pil
-        
+        else :
+            pass
         #-----------------------------------------------------------------------
         # Update sampling data
         #-----------------------------------------------------------------------
@@ -522,15 +604,37 @@ class P7_DataBreed() :
         
         return dict_pil_image
     #---------------------------------------------------------------------------
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def kpdesc_build(self, dirbreed, pil_image, image_count) :
+        dict_breed_kpdesc = dict()
+        breedname = get_breedname_from_dirbreed(dirbreed)
+
+        if self._is_splitted is True :
+            dict_split_pil_image = self.split_pil_image(pil_image,breedname)
+            for id_breedname, list_split_pil_image in dict_split_pil_image.items() :
+                for split_pil_image in list_split_pil_image :
+                    kp, desc = get_image_kpdesc(split_pil_image)
+                    dict_breed_kpdesc[image_count] = (desc,breedname)
+                    image_count +=1
+        else :            
+            kp, desc = get_image_kpdesc(pil_image)
+            dict_breed_kpdesc[image_count] = (desc,breedname)
+        return dict_breed_kpdesc, image_count
+    #---------------------------------------------------------------------------
     
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
     def build_sift_desc(self, is_splitted=False) :
         image_count=0
-        image_count_split = 0
+        #image_count_split = 0
         ratio = 5/100
         self._dict_breed_kpdesc = dict()
+        self._is_splitted = is_splitted
+
         for dirbreed, list_imagename in self._dict_breed_sample.items():
             
             for imagename  in list_imagename :
@@ -546,54 +650,43 @@ class P7_DataBreed() :
                 #---------------------------------------------------------------
                 try :
                     pil_image.resize(self._std_size)
+                    #-----------------------------------------------------------
+                    # Gray transformation
+                    #-----------------------------------------------------------
+                    pil_image = pil_2gray(pil_image)
+                    
+                    #-----------------------------------------------------------
+                    # Equalization
+                    #-----------------------------------------------------------
+                    pil_image = pil_equalize(pil_image)
+                    
+                    #-----------------------------------------------------------
+                    # Store descriptor along with breed name. This will be usefull
+                    # for classification.
+                    #-----------------------------------------------------------
+                    dict_breed_kpdesc, image_count\
+                    = self.kpdesc_build(dirbreed, pil_image,image_count)                
+
+                    self._dict_breed_kpdesc = dict_breed_kpdesc.copy()
+                    
+                    #-----------------------------------------------------------
+                    # Closing PIL image : all resources of PIL image are released.
+                    #-----------------------------------------------------------
+                    pil_image.close()
+
+                    #-----------------------------------------------------------
+                    # Display progress
+                    #-----------------------------------------------------------
+                    if(0 == (image_count)%500 ) :
+                        print("Images processed= "\
+                        +str(image_count)+"/"+str(self._total_image))
+
+                    if self._is_splitted is False :
+                        image_count +=1     
+                    
                 except AttributeError :
                     print("*** WARNING : attribute error for PIL image ")
-                    continue
-                #---------------------------------------------------------------
-                # Gray transformation
-                #---------------------------------------------------------------
-                pil_image = pil_2gray(pil_image)
-                
-                #---------------------------------------------------------------
-                # Equalization
-                #---------------------------------------------------------------
-                pil_image = pil_equalize(pil_image)
-                
-                #---------------------------------------------------------------
-                # Store descriptor along with breed name. This will be usefull
-                # for classification.
-                #---------------------------------------------------------------
-                breedname = get_breedname_from_dirbreed(dirbreed)
-                
-                self._is_splitted = is_splitted
-                if is_splitted is True :
-                    dict_split_pil_image \
-                    = self.split_pil_image(pil_image,breedname)
-                    for id_breedname, list_split_pil_image \
-                    in dict_split_pil_image.items() :
-                        for split_pil_image in list_split_pil_image :
-                            kp, desc = get_image_kpdesc(split_pil_image)
-                            self._dict_breed_kpdesc[image_count_split] \
-                            = (desc,breedname)
-                            image_count_split +=1
-                else :            
-                    kp, desc = get_image_kpdesc(pil_image)
-                    self._dict_breed_kpdesc[image_count] = (desc,breedname)
-                
-                
-                #---------------------------------------------------------------
-                # Closing PIL image
-                #---------------------------------------------------------------
-                pil_image.close()
-
-                #---------------------------------------------------------------
-                # Display progress
-                #---------------------------------------------------------------
-                if(0 == (image_count+1)%500 ) :
-                    print("Images processed= "\
-                    +str(image_count)+"/"+str(self._total_image))
-                image_count +=1     
-                
+                    continue                
 
     #---------------------------------------------------------------------------
         
@@ -668,12 +761,13 @@ class P7_DataBreed() :
         # Get current cluster modeler and number of clusters
         #-----------------------------------------------------------------------
         nb_cluster = self.nb_cluster
-        cluster_model = self.cluster_model
-        df=pd.DataFrame(np.zeros(nb_cluster, dtype=int))
+        df = None
         
         if 0 >= nb_cluster :
             print("\n*** ERROR : No cluster into data model!")
         else:
+            cluster_model = self.cluster_model
+            df=pd.DataFrame(np.zeros(nb_cluster, dtype=int))
             #-------------------------------------------------------------------
             # Initialization
             #-------------------------------------------------------------------
@@ -683,8 +777,12 @@ class P7_DataBreed() :
             #-------------------------------------------------------------------
             # Get cluster from image represented as Key points descriptors
             #-------------------------------------------------------------------
-            y_label = cluster_model.predict(desc)
-
+            try :
+                y_label = cluster_model.predict(desc)
+                #print("get_cluster_from_imagedesc : Label= "+str(y_label))
+            except ValueError:
+                print("\n*** get_cluster_from_imagedesc() : Error on desc array")
+                return None
             #-------------------------------------------------------------------
             # Build histogram of clusters for this image and convert it into 
             # dataframe.
@@ -696,7 +794,34 @@ class P7_DataBreed() :
             df =df_tmp.T
         return df
     #---------------------------------------------------------------------------
-    
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def get_breedlabel_from_breedname(self,breedname) :
+        label = np.where(np.array(self._ser_breed_number.values)==breedname)[0][0]
+        return label
+    #---------------------------------------------------------------------------
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def get_breedname_from_breedlabel(self, breedlabel) :
+        return self._ser_breed_number[breedlabel]
+    #---------------------------------------------------------------------------
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def ylabel_encode(self,dict_label):
+        list_tags_ref = list(self._ser_breed_number.keys())
+
+        list_list_tags = [[tag] for tag in set(dict_label.values())]
+
+        y_label = p6_util.p6_encode_target(list_tags_ref, list_list_tags)
+        self._y_label =  np.array(y_label).copy()
+    #---------------------------------------------------------------------------
+
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
@@ -711,17 +836,38 @@ class P7_DataBreed() :
         '''
         df = None
         dict_label = dict()
+        error =0
+        list_image_id_error = list()
         for image_id, (imagedesc, breedname) in self._dict_breed_kpdesc.items():
             df_tmp = self.get_cluster_from_imagedesc(imagedesc)
-            # Index is matched with image id
-            df_tmp.rename(index={0:image_id}, inplace=True)
-            if df is None :
-                df = df_tmp.copy()
-            else:
-                df = pd.concat([df, df_tmp])
-            # Used for Y
-            dict_label[image_id] = breedname
-        self._y_label = np.array(list(self._dict_breed_kpdesc.keys()))
+            if df_tmp is None :
+                error +=1
+                list_image_id_error.append(image_id)
+            else :            
+                # Index is matched with image id
+                df_tmp.rename(index={0:image_id}, inplace=True)
+                if df is None :
+                    df = df_tmp.copy()
+                else:
+                    df = pd.concat([df, df_tmp])
+                # Used for Y label
+                breedlabel = self.get_breedlabel_from_breedname(breedname)
+                dict_label[image_id] = breedlabel
+        #-----------------------------------------------------------------------
+        # Errors recorded during BOF construction are removed from dictionary.
+        #-----------------------------------------------------------------------
+        print("\n***Nb of errors= "+str(error))
+
+        for image_id_error in list_image_id_error :
+            del(self._dict_breed_kpdesc[image_id_error] )
+            #del(dict_label[image_id_error])         
+        
+        print(len(self._dict_breed_kpdesc), len(dict_label))
+        #-----------------------------------------------------------------------
+        # Label are encoded in a multi-class way
+        #-----------------------------------------------------------------------
+        self.ylabel_encode(dict_label) 
+        
         #-----------------------------------------------------------------------
         # L2 Normalization with :
         # * L2 per column is computed summing all terms for any column
@@ -732,6 +878,14 @@ class P7_DataBreed() :
         df = df/ser_sqrt
     
         self._df_bof = df.copy()
+        
+        #-----------------------------------------------------------------------
+        # Reset index removing gaps due to errors from cluster assignement.
+        #-----------------------------------------------------------------------
+        self._df_bof.reset_index(drop=True, inplace=True)
+        
+        if 0 < error:
+            print("\n***WARN : build_datakp_bof() : errors= "+str(error))
     #---------------------------------------------------------------------------
 
     #---------------------------------------------------------------------------
@@ -761,6 +915,19 @@ class P7_DataBreed() :
             print("\n*** WARN : empty breed in list!")
         
         self._dict_breedname_id = dict_breedname_id.copy()
+
+        #-----------------------------------------------------------------------
+        # Also build dictionary for label identifiers
+        #-----------------------------------------------------------------------
+        index = 0
+        dict_breed_number = dict()
+        for breed_name in self._dict_breedname_id.keys() :
+            dict_breed_number[index] = breed_name
+            index+=1
+            #print(dict_breed_number)
+        self._ser_breed_number = pd.Series(dict_breed_number).copy()
+
+        
     #---------------------------------------------------------------------------
     
     #---------------------------------------------------------------------------
@@ -818,6 +985,46 @@ class P7_DataBreed() :
         if 0 < error :
             print("\n*** WARN : Nb of exceptions during process ... : "+str(error))
         self._Xdesc = X_desc[1:].copy()
+    #---------------------------------------------------------------------------
+    
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def predict(self,dirbreed,imagename):
+        self.load(dirbreed=dirbreed, imagename=imagename)
+        self.build_sift_desc(is_splitted=True)
+        self.build_arr_desc()
+        #self.build_dict_breedname_id()
+
+        #-----------------------------------------------------------------------
+        # Bag Of Feature is built
+        #-----------------------------------------------------------------------
+        self.build_datakp_bof()
+        
+        #-----------------------------------------------------------------------
+        # Classification take place
+        #-----------------------------------------------------------------------
+        classifier = self.classifier
+        result = classifier.predict(self.df_bof)
+        #print(classifier.predict_proba(self.df_bof))
+
+        #-----------------------------------------------------------------------
+        # Sum over each column
+        #-----------------------------------------------------------------------
+        ser = pd.DataFrame(result).apply(lambda x:x.sum())
+        ser_max = ser.max()
+
+        #-----------------------------------------------------------------------
+        # Get breed label
+        #-----------------------------------------------------------------------
+        breedlabel = np.where(ser.values==ser_max)[0][0]
+        print(breedlabel)
+
+        #-----------------------------------------------------------------------
+        # return breed name
+        #-----------------------------------------------------------------------
+        return self.get_breedname_from_breedlabel(breedlabel)
+
     #---------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 
