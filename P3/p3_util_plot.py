@@ -111,7 +111,8 @@ def draw_vector(v0, v1, ax=None):
 #
 # ------------------------------------------------------------------------------
 def df_boxplot_display(df, column) :
-    z = pd.DataFrame(df[column]).boxplot(showfliers= False, patch_artist=True, medianprops=medianprops,showmeans=True, meanprops=meanprops)
+    z = pd.DataFrame(df[column]).boxplot(showfliers= False, patch_artist=True\
+    , medianprops=medianprops,showmeans=True, meanprops=meanprops)
 # ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
@@ -139,7 +140,8 @@ def df_display_linear_regression_from_list(df_param, var_pivot,list_var) :
 # ------------------------------------------------------------------------------
 def df_sns_joint_plot(df, var1, var2, parameter_kind='reg', parameter_color='grey') :
     with sns.axes_style('white') :
-        sns.jointplot(var1, var2, data=df, kind = parameter_kind, color = parameter_color)
+        sns.jointplot(var1, var2, data=df, kind = parameter_kind\
+        , color = parameter_color)
 # ------------------------------------------------------------------------------
         
 # ------------------------------------------------------------------------------
@@ -148,7 +150,8 @@ def df_sns_joint_plot(df, var1, var2, parameter_kind='reg', parameter_color='gre
 def df_display_hist_from_list(df_food, list_columns) :
     """ Display histograms issued from dataframe and filetered from list given 
     as parameter.
-    Histogram represents frequencies from dataframe for each column from list_columns.
+    Histogram represents frequencies from dataframe for each column from 
+    list_columns.
     """
     z = plt.figure(figsize=(4,4))
     for column in list_columns :
@@ -170,7 +173,8 @@ def df_display_hist_from_list(df_food, list_columns) :
 # ------------------------------------------------------------------------------
 #
 # ------------------------------------------------------------------------------
-def df_display_dict_hist(dict_to_display, title, xlabel, ylabel, fontSize=12, color='blue'):
+def df_display_dict_hist(dict_to_display, title, xlabel, ylabel, fontSize=12\
+, color='blue'):
     """Display content from a dictionary where :
     * keys from dictionary are mapped on X axe 
     * values from dictionary are mapped on Y axe
@@ -233,7 +237,8 @@ def pca_all_plot(X, plot=True) :
          print("** Component = "+str(ind_components))
        ind_components += 1
 
-   # Le dernier incrément est retiré; il correspond à ind_components = n_components_max+1
+   # Le dernier incrément est retiré; 
+   # il correspond à ind_components = n_components_max+1
    ind_components -=1   
 
    # Affichage de la courbe de la variance expliquée
@@ -267,7 +272,8 @@ def df_pca_all_plot(df, plot=True) :
          print("** Component = "+str(ind_components))
        ind_components += 1
 
-   # Le dernier incrément est retiré; il correspond à ind_components = n_components_max+1
+   # Le dernier incrément est retiré; 
+   # il correspond à ind_components = n_components_max+1
    ind_components -=1   
 
    # Affichage de la courbe de la variance expliquée
@@ -280,7 +286,8 @@ def df_pca_all_plot(df, plot=True) :
 #
 # ------------------------------------------------------------------------------
 def df_kpca_all_plot(df, kernel_pca= 'rbf', plot=True) :
-   ''' Affiche, pour le PCA avec noyau les contributions cumulées à la variance des composantes principales.'''
+   ''' Affiche, pour le PCA avec noyau les contributions cumulées à la variance 
+   des composantes principales.'''
    #kernel : “linear” | “poly” | “rbf” | “sigmoid” | “cosine” | “precomputed”
    X = df.values
    std_scale = preprocessing.StandardScaler().fit(X)
@@ -294,13 +301,15 @@ def df_kpca_all_plot(df, kernel_pca= 'rbf', plot=True) :
    ind_components = 1
    parameter_gamma = 1./df.shape[1]
    while ind_components <= n_components_max :
-       kpca = decomposition.KernelPCA(n_components=ind_components, kernel=kernel_pca, gamma=parameter_gamma)
+       kpca = decomposition.KernelPCA(n_components=ind_components\
+       , kernel=kernel_pca, gamma=parameter_gamma)
 
        kpca.fit(X_scaled)
        list_explained_variance_ratio.append(kpca.lambdas_.sum())
        ind_components += 1
 
-   # Le dernier incrément est retiré; il correspond à ind_components = n_components_max+1
+   # Le dernier incrément est retiré; 
+   # il correspond à ind_components = n_components_max+1
    ind_components -=1   
 
    # Affichage de la courbe de la variance expliquée
@@ -316,7 +325,8 @@ def df_kpca_all_plot(df, kernel_pca= 'rbf', plot=True) :
 # ------------------------------------------------------------------------------
 def df_pca_components_plot(df, color_feature, nb_components=2\
                             , param_title=None, ratio=1.) :
-    '''Displays projection of X_scaled over 1<= nb_components <= 2 principals components. 
+    '''Displays projection of X_scaled over 1<= nb_components <= 2 principals 
+    components. 
     Plot are colored depending on color_feature parameter magnetude.
     Return : pca
 
@@ -373,17 +383,19 @@ def df_pca_components_plot(df, color_feature, nb_components=2\
       if color_feature in df.columns :
          spectral_value = df.describe()[color_feature].loc['max']
          # Colorier en utilisant les valeurs de la variable color_feature
-         plt.scatter(X_projected[:, 0], X_projected[:, 1], c=df[color_feature] , edgecolor='none', alpha=0.2,
+         plt.scatter(X_projected[:, 0], X_projected[:, 1], c=df[color_feature] 
+         \, edgecolor='none', alpha=0.2,
          cmap=plt.cm.get_cmap('nipy_spectral', spectral_value))   
-         #plt.scatter(X_projected[:, 0], X_projected[:, 1],c=df.get(color_feature), alpha=0.2)
+
       else :
          plt.scatter(X_projected[:, 0], X_projected[:, 1], c='r', alpha=0.2)
     elif  1 == nb_components :
       if color_feature in df.columns :
          # Colorier en utilisant les valeurs de la variable color_feature
-         plt.scatter(X_projected[:, 0], np.zeros(X_scaled[:, 0].shape), c=df[color_feature] , edgecolor='none',
+         plt.scatter(X_projected[:, 0], np.zeros(X_scaled[:, 0].shape)\
+         , c=df[color_feature] , edgecolor='none',
          cmap=plt.cm.get_cmap('nipy_spectral', spectral_value))   
-         #plt.scatter(X_projected[:, 0], np.zeros(X_scaled[:, 0].shape),c=df.get(color_feature))
+
       else :
          plt.scatter(X_projected[:, 0], np.zeros(X_scaled[:, 0].shape),c='r')
 
@@ -431,16 +443,20 @@ def df_pcs2_plot(df, pca) :
 # ------------------------------------------------------------------------------
 #
 # ------------------------------------------------------------------------------
-def df_data_pca_1_plot(df, model, model_1D, X, parameter_title=None,original=False) :
+def df_data_pca_1_plot(df, model, model_1D, X, parameter_title=None\
+,original=False) :
     
-    '''Plot data given as X along with 1st principal component from model_1D algorithme.
+    '''Plot data given as X along with 1st principal component from model_1D 
+    algorithm.
     model_1D algorithme is initialized by caller.
     Input : 
         model : algorithm for PCA; initialization has been performed by caller.
-        model_1D : algorithm for PCA for 1 dimension; initialization has been performed by caller.
+        model_1D : algorithm for PCA for 1 dimension; initialization has been 
+        performed by caller.
         X        : data to be plotted. 
         original : when True, then X_scaled is plotted from original space.
-                    when False, then X_scaled is plotted from princpals components space.
+                    when False, then X_scaled is plotted from princpals 
+                    components space.
     '''
 
     #pca_1 = PCA(n_components=1)
@@ -484,22 +500,35 @@ def df_data_pca_1_plot(df, model, model_1D, X, parameter_title=None,original=Fal
 # ------------------------------------------------------------------------------
 #
 # ------------------------------------------------------------------------------
-def df_kpca_components_plot(df, X_scaled, color_feature, gamma_parameter=15, nb_components=2, original_data=False) :
+def df_kpca_components_plot(df, X_scaled, color_feature, gamma_parameter=15\
+, nb_components=2, original_data=False) :
 
    z = plt.figure(figsize=(10,10))
 
-   kpca = KernelPCA(n_components=nb_components, kernel='rbf', gamma=gamma_parameter)
+   kpca = KernelPCA(n_components=nb_components, kernel='rbf'\
+   , gamma=gamma_parameter)
+
+   #----------------------------------------------------------------------------
    #kpca = KernelPCA(n_components=2,  gamma=30)
+   #----------------------------------------------------------------------------
    X_projected = kpca.fit_transform(X_scaled)
    print(X_projected.shape)
 
+   #----------------------------------------------------------------------------
    # Projection selon la 1er composante principale.
-   kpca_1 = KernelPCA(n_components=1, kernel='rbf', gamma=gamma_parameter, fit_inverse_transform=True)
+   #----------------------------------------------------------------------------
+   kpca_1 = KernelPCA(n_components=1, kernel='rbf', gamma=gamma_parameter\
+   , fit_inverse_transform=True)
    X_projected_1 = kpca_1.fit_transform(X_scaled)
+
+   #----------------------------------------------------------------------------
    # Retour à l'espace originel
+   #----------------------------------------------------------------------------
    X_inv_1 = kpca_1.inverse_transform(X_projected_1)
 
+   #----------------------------------------------------------------------------
    # Cadrage de l'affichage selon X et Y
+   #----------------------------------------------------------------------------
    xmin, xmax = np.min(X_projected[:,0]),np.max(X_projected[:,0])
    plt.xlim([xmin-1, xmax+1])
    
@@ -512,7 +541,10 @@ def df_kpca_components_plot(df, X_scaled, color_feature, gamma_parameter=15, nb_
    plt.scatter(X_inv_1[:, 0], X_inv_1[:, 1], c='r', s=20)
 
    if color_feature in df.columns :
-      # colorer en utilisant la variable color_feature
+         #----------------------------------------------------------------------------
+         # colorer en utilisant la variable color_feature
+         #----------------------------------------------------------------------------
+
       if original_data is False :
           plt.xlabel('Composante Pcple 1', color='b', size=14)
           plt.ylabel('Composante Pcple 2', color='b', size=14)
@@ -563,7 +595,8 @@ def plot_gmm(gmm, X, label=True, ax=None):
 # ------------------------------------------------------------------------------
 #
 # ------------------------------------------------------------------------------
-def clustering_plot(X_clustered, cluster_labels, nclusters, title=None, X_center=None):
+def clustering_plot(X_clustered, cluster_labels, nclusters, title=None\
+, X_center=None):
     z= plt.figure(figsize=(10, 10))
 
     if len(cluster_labels) > 0 :
@@ -656,14 +689,16 @@ def plot_3D(X, title, parameter_figsize=(10,10), colordir=1):
 # ------------------------------------------------------------------------------
 #
 # ------------------------------------------------------------------------------
-def clustering_dbscan_plot_and_metrics(X_projected_train,X_projected_test,parameter_eps=5, parameter_min_samples=10) :
+def clustering_dbscan_plot_and_metrics(X_projected_train\
+    ,X_projected_test,parameter_eps=5, parameter_min_samples=10) :
     #----------------------------------------------------
     # Building cluster 
     #----------------------------------------------------
     print(X_projected_train.shape)
     
     #dbscan = DBSCAN(eps=6, min_samples=10).fit(X_projected_train)
-    dbscan = DBSCAN(eps=parameter_eps, min_samples=parameter_min_samples).fit(X_projected_train)
+    dbscan = DBSCAN(eps=parameter_eps\
+    , min_samples=parameter_min_samples).fit(X_projected_train)
     
     labels_trained = dbscan.labels_
     # Number of clusters in labels, ignoring noise if present.
@@ -686,13 +721,15 @@ def clustering_dbscan_plot_and_metrics(X_projected_train,X_projected_test,parame
         #----------------------------------------------------
         clustering_dbscan = dbscan.fit(X_projected_test)
         labels_predicted = clustering_dbscan.labels_
-        clustering_compute_metrics(X_projected_train, labels_trained, labels_predicted)
+        clustering_compute_metrics(X_projected_train, labels_trained\
+        , labels_predicted)
         return labels_trained, labels_predicted
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 #
 # ------------------------------------------------------------------------------
-def clustering_kmeans_plot_and_metrics(X_train, X_test ,parameter_clusters=20, md=True) :
+def clustering_kmeans_plot_and_metrics(X_train, X_test ,parameter_clusters=20\
+, md=True) :
 
     from sklearn.cluster import KMeans
 

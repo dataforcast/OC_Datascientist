@@ -291,7 +291,7 @@ def kmeans_scan_silhouette(df, n_cluster_start, n_cluster_end) :
    """ Scan and compute silhouettte score for a range of Kmeans clusters 
    over given dataframe values.
    Input : 
-      df : given dataframe containing values on which clusturing applies
+      df : given dataframe containing values on which clustering applies
       n_cluster_start : minimum number of clusters
       n_cluster_end : maximum number odf clusters
    Output :
@@ -363,7 +363,7 @@ def gmm_scan_score(X, n_cluster_start, n_cluster_end\
 #-------------------------------------------------------------------------------
 def scan_best_kmean_cluster_from_tsne_result(dict_tsne_result, \
     n_cluster_start, n_cluster_end):
-    """Returns best number of clusters from Kmean algorithm and best 
+    """Returns best number of clusters from Kmeans algorithm and best 
     perplexity value from tSNE algorithm. 
     Input :
       dict_tsne_result : dictionary containing perplexity values as keys and 
@@ -416,7 +416,7 @@ def scan_best_gmm_cluster_from_tsne_result(dict_tsne_result, \
       n_cluster_start : start point for cluster scanning process.
       n_cluster_end : end point for cluster scanning process.
     Output : 
-      n_cluster_optimum : number of Kmeans clusters providing the best \
+      n_cluster_optimum : number of GMM clusters providing the best \
       silhouette score.
       best_perplexity : perplexity key value from dict_tsne_result leading to 
       the best score.
@@ -1482,7 +1482,7 @@ def gmm_scan(df, cluster_start, cluster_end, p_covariance_type='full'):
       * cluster_start : start point for cluster range
       * cluster_end : sendtart point for cluster range
    Output : 
-      * dict_gmm : a dictionary containing kmeans cluster model
+      * dict_gmm : a dictionary containing GMM cluster model
    """
    #arr_inter_inertia=[]
 
