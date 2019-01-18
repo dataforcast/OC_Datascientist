@@ -1,29 +1,90 @@
 import os
-import pandas as pd
-from PIL import ImageOps
-import numpy as np
 import random
+
+import pandas as pd
+import numpy as np
+
+import cv2
+from PIL import ImageOps
+from PIL import Image
 from  sklearn import model_selection
+
 import p5_util
 import p6_util
 import p7_util
+ 
 
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def process_breed_sample(dirbreed, list_image_name, resize) :
+def pil_square(pil_image):
+    '''Truncate image with a margin for having same size for height and weight.
+    Input :
+        * Rectangular PIL image 
+    Output :
+        * Squared PIL image 
+    '''
+    arr_image = np.array(pil_image)
+
+    delta = arr_image.shape[0] - arr_image.shape[1]
+    margin = np.abs(int(delta/2))
+    #print(arr_image.shape)
+    if arr_image.shape[0] >= arr_image.shape[1]:
+
+        # Horizontal truncation
+        arr_image = arr_image[margin:,:]
+        arr_image = arr_image[:-margin,:]
+
+    else :
+        # Vertical truncation
+        arr_image = arr_image[:,margin:]
+        arr_image = arr_image[:,:-margin]
+
+    return Image.fromarray(arr_image)
+#-------------------------------------------------------------------------------
+ 
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def show_pil_image_and_kp(pil_image,breedname) :
+    kp, desc = get_image_kpdesc(pil_image)
+    print("KP= "+str(len(kp)))
+    print("DESC= "+str(desc.shape))
+    dict_breed_kpdesc = {breedname:[(kp,desc)]}
+    dict_pil_image = {breedname : [pil_image] }
+    dict_breed_kpdesc_image = dict()
+    for (breed, list_breed_kpdesc), list_image_pil in zip(dict_breed_kpdesc.items(), dict_pil_image.values()):
+        dict_breed_kpdesc_image[breed] = [cv2.drawKeypoints(np.array(image_pil), kp, np.array(image_pil)) \
+                                 for ((kp, desc),image_pil) in zip(list_breed_kpdesc,list_image_pil)]
+    p7_util.p7_image_pil_show(dict_breed_kpdesc_image,std_image_size=None)
+
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def process_breed_sample(dirbreed, list_image_name, resize, is_filtered=True) :
     dict_pil_image = dict()
-    dict_pil_image['resize']   = list()
-    dict_pil_image['orig']     = list()
-    dict_pil_image['2gray']    = list()
-    dict_pil_image['equalize'] = list()
+    dict_pil_image['breedname'] = list()
     for image_name in list_image_name :
         image_path_name = dirbreed+'/'+image_name
         pil_image = p7_read_image(image_path_name)
-        dict_pil_image['orig'].append([pil_image])
+        
+        if is_filtered is False :
+            dict_pil_image['breedname'].append([pil_image])
+        else :
+            dict_pil_image['resize']   = list()
+            dict_pil_image['orig']     = list()
+            dict_pil_image['2gray']    = list()
+            dict_pil_image['equalize'] = list()
 
-        pil_image = pil_resize(pil_image,resize)
-        dict_pil_image['resize'].append([pil_image])
+            
+
+        dict_pil_image['orig'].append([pil_image])
+    
+        if resize is not None :
+            pil_image = pil_resize(pil_image,resize)
+            dict_pil_image['resize'].append([pil_image])
 
         pil_image = pil_2gray(pil_image)
         dict_pil_image['2gray'].append([pil_image])
@@ -54,6 +115,14 @@ def get_image_kpdesc(pil_image):
 def pil_2gray(pil_image):
     return pil_image.convert('L')
 #-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def pil_autocontrast(pil_image):
+    return ImageOps.autocontrast(pil_image)
+#-------------------------------------------------------------------------------
+
 
 #-------------------------------------------------------------------------------
 #
@@ -188,7 +257,7 @@ class P7_DataBreed() :
         +str(self._total_image))       
         self.strprint("Standard images size .......... : "\
         +str(self._std_size))
-        self.strprint("SIFT Descriptors count ........ : "\
+        self.strprint("SIFT Image descriptors count .. : "\
         +str(len(self._dict_breed_kpdesc)))
 
 
@@ -589,9 +658,9 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def split_pil_image(self, pil_image, classname):
-        width = int(self._std_size[0]/4)
-        height = int(self._std_size[1]/4)
+    def split_pil_image(self, pil_image, classname,ratio=(4,4)):
+        width  = int(self._std_size[0]/ratio[0])
+        height = int(self._std_size[1]/ratio[1])
         dict_pil_image = dict()
         imgwidth, imgheight = pil_image.size
         for i in range(0,imgheight,height):
@@ -604,11 +673,78 @@ class P7_DataBreed() :
         
         return dict_pil_image
     #---------------------------------------------------------------------------
+    
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def build_arr_desc(self):
+        '''Build an array (Nx128) where :
+        --> N : is the total number of keypoints for the dataset.
+        --> 128 is the number of descriptors per keypoints.
+        Arrays of keypoints descriptors are stored into a dictionary.
+        Building array of descriptors leads to stack eacu one of these arrays.
+        
+        TBD : to store all descriptors into a dataframe for which : 
+        indexes of raws allow to identify image ==> 2 levels index dataframe.
+        '''
+        X_desc = np.zeros(128)
+        error=0
+        count= 0
+        #-----------------------------------------------------------------------
+        # Dictionary _dict_breed_kpdesc is structured as {id:(desc,name)}
+        # --> desc is an array of key-points descriptors with 128 columns.
+        # --> name is the breed name, usefull for classification.
+        # --> id is the directory identifier breed images are stored in.
+        #-----------------------------------------------------------------------
+        raws = len(self._dict_breed_kpdesc)
+        if(0 >= raws):
+            print("*** ERROR : empty Key-points descriptors! \
+            build it with build_sift_desc()")
+            return
+
+        for id, (desc,breedname) in self._dict_breed_kpdesc.items():
+            try :
+                X_desc = np.vstack((X_desc,desc))
+            except ValueError:
+                error +=1
+                pass
+            count+=1
+            if count%1000==0 :
+                print("Processed raws= "+str(count)+"/"+str(raws))
+        if 0 < error :
+            print("\n*** WARN : Nb of exceptions during process ... : "\
+            +str(error))
+        self._Xdesc = X_desc[1:].copy()
+    #---------------------------------------------------------------------------
+    
 
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
     def kpdesc_build(self, dirbreed, pil_image, image_count) :
+        '''Build matrix of key points descriptors where  :
+        --> number of raws from this matrix is the number of keypoints
+        --> number of columns is the number of features (128) for each keypoint.
+
+        Build is processed following is_splitted falg. When activated, then 
+        image is splitted and matrix is built over each one of the splitted 
+        images.
+        
+        Input :
+            * dirbreed : directory full image lays on.
+            * pil_image : PIL image from which KPDESC matrix is built.
+            * image_count : this is an incremental value used to build raws of 
+            the KPDESC matrix.
+            
+        Output : 
+            * dict_breed_kpdesc : KPDESC matrix stored in a dictionary 
+            strustured as following : {image_count:(desc,breedname)}, where :
+                --> desc : this is the descriptor vector (128 sized) for image 
+                identified with image_count
+                --> breedname : human readable name of the breed.
+            * image_count : current number of images.
+        
+        '''
         dict_breed_kpdesc = dict()
         breedname = get_breedname_from_dirbreed(dirbreed)
 
@@ -622,6 +758,9 @@ class P7_DataBreed() :
         else :            
             kp, desc = get_image_kpdesc(pil_image)
             dict_breed_kpdesc[image_count] = (desc,breedname)
+
+        print("kpdesc_build() : desc.shape="+str(desc.shape))
+
         return dict_breed_kpdesc, image_count
     #---------------------------------------------------------------------------
     
@@ -630,7 +769,7 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     def build_sift_desc(self, is_splitted=False) :
         image_count=0
-        #image_count_split = 0
+
         ratio = 5/100
         self._dict_breed_kpdesc = dict()
         self._is_splitted = is_splitted
@@ -754,7 +893,7 @@ class P7_DataBreed() :
             * dataframe containing histogram of clusters representing 
             image bag of visual words.
             dataframe raws : images identifiers
-            dataframe columns : descriptors occuenrencies 
+            dataframe columns : descriptors occurencies 
         '''
         
         #-----------------------------------------------------------------------
@@ -783,6 +922,7 @@ class P7_DataBreed() :
             except ValueError:
                 print("\n*** get_cluster_from_imagedesc() : Error on desc array")
                 return None
+
             #-------------------------------------------------------------------
             # Build histogram of clusters for this image and convert it into 
             # dataframe.
@@ -860,7 +1000,6 @@ class P7_DataBreed() :
 
         for image_id_error in list_image_id_error :
             del(self._dict_breed_kpdesc[image_id_error] )
-            #del(dict_label[image_id_error])         
         
         print(len(self._dict_breed_kpdesc), len(dict_label))
         #-----------------------------------------------------------------------
@@ -894,7 +1033,7 @@ class P7_DataBreed() :
     def breed_show(self) :
         print("")
         for name,id in self._dict_breedname_id.items() :
-            print("Identifier= {}  Breed name= {}".format(id,name))
+            print("Identifier= {}  Breed name= {}".format(str(id)+'-'+name,name))
     #---------------------------------------------------------------------------
 
     #---------------------------------------------------------------------------
@@ -933,68 +1072,43 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def show_image_name(self, breedname):
+    def show_image_name(self, breedname, is_sample_show=False):
         ser = pd.Series(self._dict_breedname_id)
         index = np.where(ser.keys()==breedname)[0][0]
         id = list(self._dict_breedname_id.values())[index]
-        dirbreed = self._dir_path+'/'+str(id)+'-'+breedname
+        breedid = str(id)+'-'+breedname
+        dirbreed = self._dir_path+'/'+breedid
         list_image_name = os.listdir(dirbreed)
+        
+        #-----------------------------------------------------------------------
+        # Do not show images stored in sampling when is_sample_show is False
+        #-----------------------------------------------------------------------
+        list_sample_breed_image = list()
+        if is_sample_show is False :
+            list_sample_breed_image = self._dict_breed_sample[breedid]
+
+
         print("")
-        print("Number of images ="+str(len(list_image_name)))
+        count_image_sample_show = len(list_sample_breed_image)
+        print("Number of images ="+str(len(list_image_name)-count_image_sample_show))
         for image_name in list_image_name :
-            print("Image name= {}".format(image_name))
+            if image_name not in list_sample_breed_image :
+                print("Image name= {}".format(image_name))
         
     #---------------------------------------------------------------------------
 
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def build_arr_desc(self):
-        '''Build an array (Nx128) where :
-        --> N : is the total number of keypoints for the dataset.
-        --> 128 is the number of descriptors per keypoints.
-        Arrays of keypoints descriptors are stored into a dictionary.
-        Building array of descriptors leads to stack eacu one of these arrays.
-        
-        TBD : to store all descriptors into a dataframe for which : 
-        indexes of raws allow to identify image.
-        '''
-        X_desc = np.zeros(128)
-        error=0
-        count= 0
-        #-----------------------------------------------------------------------
-        # Dictionary _dict_breed_kpdesc is structured as {id:(desc,name)}
-        # --> desc is an array of key-points descriptors with 128 columns.
-        # --> name is the breed name, usefull for classification.
-        # --> id is the directory identifier breed images are stored in.
-        #-----------------------------------------------------------------------
-        raws = len(self._dict_breed_kpdesc)
-        if(0 >= raws):
-            print("*** ERROR : empty Key-points descriptors! build it with build_sift_desc()")
-            return
-
-        for id, (desc,breedname) in self._dict_breed_kpdesc.items():
-            try :
-                X_desc = np.vstack((X_desc,desc))
-            except ValueError:
-                error +=1
-                pass
-            count+=1
-            if count%1000==0 :
-                print("Processed raws= "+str(count)+"/"+str(raws))
-        if 0 < error :
-            print("\n*** WARN : Nb of exceptions during process ... : "+str(error))
-        self._Xdesc = X_desc[1:].copy()
-    #---------------------------------------------------------------------------
-    
-    #---------------------------------------------------------------------------
-    #
-    #---------------------------------------------------------------------------
-    def predict(self,dirbreed,imagename):
+    def predict(self,dirbreed,imagename, top=3):
         self.load(dirbreed=dirbreed, imagename=imagename)
+        
+        #-----------------------------------------------------------------------
+        # SIFt descriptors are built
+        #-----------------------------------------------------------------------
         self.build_sift_desc(is_splitted=True)
         self.build_arr_desc()
-        #self.build_dict_breedname_id()
+
 
         #-----------------------------------------------------------------------
         # Bag Of Feature is built
@@ -1009,22 +1123,37 @@ class P7_DataBreed() :
         #print(classifier.predict_proba(self.df_bof))
 
         #-----------------------------------------------------------------------
-        # Sum over each column
+        # Sum over each column is computed; result is sorted.
         #-----------------------------------------------------------------------
         ser = pd.DataFrame(result).apply(lambda x:x.sum())
-        ser_max = ser.max()
+        ser.sort_values(ascending=False, inplace=True)
 
         #-----------------------------------------------------------------------
         # Get breed label
         #-----------------------------------------------------------------------
-        breedlabel = np.where(ser.values==ser_max)[0][0]
-        print(breedlabel)
+        list_predicted = list()
+        for breedlabel, value in ser[:top].items():
+            #-------------------------------------------------------------------
+            # Get breed name
+            #-------------------------------------------------------------------
+            breedname = self.get_breedname_from_breedlabel(breedlabel)
+            list_predicted.append(breedname)
 
         #-----------------------------------------------------------------------
-        # return breed name
+        # Get breed name
         #-----------------------------------------------------------------------
-        return self.get_breedname_from_breedlabel(breedlabel)
+        breedname = get_breedname_from_dirbreed(dirbreed)
+        return breedname, list_predicted
 
+    #---------------------------------------------------------------------------
+    
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def show_breedname(self) :
+        for breedname, breedid in self._dict_breedname_id.items():
+            dirbreed = str(breedid)+'-'+str(breedname)
+            print("{0} ..... : {1}".format(breedname,dirbreed))
     #---------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 

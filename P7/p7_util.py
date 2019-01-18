@@ -233,12 +233,13 @@ def p7_show_sift_features(gray_img, color_img, kp):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p7_image_pil_show(dict_image_pil, std_image_size=(200,200),size_x=10) :
+def p7_image_pil_show(dict_image_pil, std_image_size=(200,200),size_x=10, is_title=True) :
     
     for breed in  dict_image_pil.keys():
         list_image_pil = dict_image_pil[breed]
         image_count = len(list_image_pil)
         size_y = int(size_x/image_count)
+        size_y = size_x
         f, axs = plt.subplots(1, image_count, figsize=(size_x,size_y))
 
         if( 1 < len(list_image_pil)) :
@@ -249,7 +250,8 @@ def p7_image_pil_show(dict_image_pil, std_image_size=(200,200),size_x=10) :
                     axs[index].imshow(image_pil.resize(std_image_size))
                 else :
                     axs[index].imshow(image_pil)
-                axs[index].set_title(breed)
+                if is_title is True :
+                    axs[index].set_title(breed)
         else :
             for index in range(0,len(list_image_pil)) :
                 image_pil = list_image_pil[index].copy()
@@ -258,7 +260,8 @@ def p7_image_pil_show(dict_image_pil, std_image_size=(200,200),size_x=10) :
                     axs.imshow(image_pil.resize(std_image_size))
                 else :
                     axs.imshow(image_pil)
-                axs.set_title(breed)
+                if is_title is True :
+                    axs.set_title(breed)
     #plt.tight_layout(pad=-2)
     plt.show()
 #-------------------------------------------------------------------------------
