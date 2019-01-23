@@ -383,8 +383,8 @@ def df_pca_components_plot(df, color_feature, nb_components=2\
       if color_feature in df.columns :
          spectral_value = df.describe()[color_feature].loc['max']
          # Colorier en utilisant les valeurs de la variable color_feature
-         plt.scatter(X_projected[:, 0], X_projected[:, 1], c=df[color_feature] 
-         \, edgecolor='none', alpha=0.2,
+         plt.scatter(X_projected[:, 0], X_projected[:, 1], c=df[color_feature] \
+         , edgecolor='none', alpha=0.2,\
          cmap=plt.cm.get_cmap('nipy_spectral', spectral_value))   
 
       else :

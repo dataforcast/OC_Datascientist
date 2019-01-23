@@ -15,6 +15,7 @@ import p5_util
 #------------------------------------------------------------------------------
 def p7_filter_convolutional(image, kernel, size=(3,3), title=str()\
 , xlabel=str(), ylabel=str(), is_show=False, extension='conv'):
+    filename = str()
     #---------------------------------------------------------------------------
     # Les filtres par convolution ne supportent que les formats RGB et L 
     # d'encodage des pixels. L'image est réencodée en L
@@ -33,26 +34,23 @@ def p7_filter_convolutional(image, kernel, size=(3,3), title=str()\
     #---------------------------------------------------------------------------
     image_filtered = image_L.filter(image_filtered)
 
-    #---------------------------------------------------------------------------
-    # L'histograme des pixels et des pixels cumulés est affiché
-    #---------------------------------------------------------------------------
-    p7_image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel)
-    
-    p7_image_hist(image_filtered\
-               , title=title+' cumulé'\
-               , xlabel=xlabel\
-               , ylabel=ylabel+" cumulés"\
-              ,cumulative=True)
-    #---------------------------------------------------------------------------
-    # Sauvegarde de l'image filtree dans un fichier
-    #---------------------------------------------------------------------------
-    filename = "./data/image_filtered_conv_"+extension+".png"
-    image_filtered.save(filename)
 
-    #---------------------------------------------------------------------------
-    # L'histograme des pixels et des pixels cumulés est affiché
-    #---------------------------------------------------------------------------
     if is_show is True :
+        #---------------------------------------------------------------------------
+        # L'histograme des pixels et des pixels cumulés est affiché
+        #---------------------------------------------------------------------------
+        p7_image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel)
+        
+        p7_image_hist(image_filtered\
+                   , title=title+' cumulé'\
+                   , xlabel=xlabel\
+                   , ylabel=ylabel+" cumulés"\
+                  ,cumulative=True)
+        #---------------------------------------------------------------------------
+        # Sauvegarde de l'image filtree dans un fichier
+        #---------------------------------------------------------------------------
+        filename = "./data/image_filtered_conv_"+extension+".png"
+        image_filtered.save(filename)
         image_filtered.show()
     
     return filename, image_filtered
@@ -64,17 +62,16 @@ def p7_filter_convolutional(image, kernel, size=(3,3), title=str()\
 def p7_filter_median(image, size=3, title=str(), xlabel=str(), ylabel=str()\
 ,is_show=False) :
     image_filtered = image.filter(ImageFilter.MedianFilter(size=size))
-    p7_image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel)
-
-    p7_image_hist(image_filtered\
-               , title=title\
-               , xlabel=xlabel\
-               , ylabel=ylabel\
-              ,cumulative=True)
-    filename = "./data/image_filtered_median_"+str(size)+".png"
-    image_filtered.save(filename)
-    
+    filename = str()
     if is_show is True :
+        p7_image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel)
+        p7_image_hist(image_filtered\
+                   , title=title\
+                   , xlabel=xlabel\
+                   , ylabel=ylabel\
+                  ,cumulative=True)
+        filename = "./data/image_filtered_median_"+str(size)+".png"
+        image_filtered.save(filename)    
         image_filtered.show()
     return filename, image_filtered
 #------------------------------------------------------------------------------
@@ -85,15 +82,16 @@ def p7_filter_median(image, size=3, title=str(), xlabel=str(), ylabel=str()\
 #------------------------------------------------------------------------------
 def p7_filter_gaussian(image, size=3, title=str(), xlabel=str(), ylabel=str()\
 , is_show=False) :
+    filename = str()
     image_filtered = image.filter(ImageFilter.GaussianBlur(size))
-    p7_image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel)
-
-    p7_image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel\
-              ,cumulative=True)
-    filename = "./data/image_filtered_gaussian_"+str(size)+".png"
-    image_filtered.save(filename)
 
     if is_show is True:
+        p7_image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel)
+
+        p7_image_hist(image_filtered, title=title, xlabel=xlabel, ylabel=ylabel\
+                  ,cumulative=True)
+        filename = "./data/image_filtered_gaussian_"+str(size)+".png"
+        image_filtered.save(filename)
         image_filtered.show()
     return filename, image_filtered
 #-------------------------------------------------------------------------------
@@ -238,6 +236,7 @@ def p7_image_pil_show(dict_image_pil, std_image_size=(200,200),size_x=10, is_tit
     for breed in  dict_image_pil.keys():
         list_image_pil = dict_image_pil[breed]
         image_count = len(list_image_pil)
+
         size_y = int(size_x/image_count)
         size_y = size_x
         f, axs = plt.subplots(1, image_count, figsize=(size_x,size_y))

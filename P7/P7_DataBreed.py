@@ -13,36 +13,315 @@ import p5_util
 import p6_util
 import p7_util
  
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+import P7_DataBreed
+import p5_util
+
 
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def pil_square(pil_image):
-    '''Truncate image with a margin for having same size for height and weight.
+def p7_keras_X_y_build_deprecated(ser_pil_image,ser_label):
+    '''Convert Series of PIL image into numpy array allowing to feed Keras 
+    dense layer. 
+    Convert Series of labels into numpy array of pixels.
+    
+    Input :
+        * ser_pil_image : Series of PIL images.
+        * ser_label : Series of label.
+    Output : 
+        * arr_X : array of converted PIL images.
+        * arr_y : array of converted Series label.
+    '''
+
+    #---------------------------------------------------------------------------
+    # Build list of numpy arrays, each array is a PIL image.
+    #---------------------------------------------------------------------------
+    list_X = [np.array(pil_image) for pil_image in ser_pil_image]
+    list_y = [y for y in ser_label]
+
+    #---------------------------------------------------------------------------
+    # Get dimensions values for weight, height and channels.
+    #---------------------------------------------------------------------------
+    weight  = list_X[0].shape[0]
+    height  = list_X[0].shape[1]
+    channel = list_X[0].shape[2]
+    
+    #---------------------------------------------------------------------------
+    # Initialization of Series conversion.
+    #---------------------------------------------------------------------------
+    arr_X  = list_X[0].reshape((1, weight, height, channel))
+
+    #---------------------------------------------------------------------------
+    # Build array of images from list of numpy arrays.
+    #---------------------------------------------------------------------------
+    image_count = arr_X.shape[0]
+    list_image_error = list()
+    for image_i in range(1,image_count) :
+        try :
+            arr_X\
+            = np.append(arr_X,list_X[image_i].reshape((1, weight, height, channel)),axis=0)
+        except ValueError :
+            list_image_error.append(image_i)
+    print("INFO : number of errors = "+str(len(list_image_error)))
+    #---------------------------------------------------------------------------
+    # Build array of labels
+    #---------------------------------------------------------------------------
+    arr_y = np.array(list_y)
+    
+    return arr_X, arr_y
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p7_keras_X_y_build(ser_pil_image, ser_label, square=None):
+    '''Convert Series of PIL image into numpy array allowing to feed Keras 
+    dense layer. 
+    Convert Series of labels into numpy array of pixels.
+    
+    Input :
+        * ser_pil_image : Series of PIL images.
+        * ser_label : Series of label.
+    Output : 
+        * arr_X : array of converted PIL images.
+        * arr_y : array of converted Series label.
+    '''
+    
+    #---------------------------------------------------------------------------
+    # Initialization : convert all PIL images into Keras array of images.
+    #---------------------------------------------------------------------------
+    image_id = 0
+    list_image_error = list()
+    list_label_error = list()
+    
+    pil_image_square = pil_square(ser_pil_image.iloc[image_id], square=square)
+    arr_keras_image_vstack = np.array(pil_image_square)
+    
+    weight  = arr_keras_image_vstack.shape[0]
+    height  = arr_keras_image_vstack.shape[1]
+    channel = arr_keras_image_vstack.shape[2]
+    
+    arr_keras_image_vstack \
+    = arr_keras_image_vstack.reshape(1,weight, height,channel)
+    
+    arr_label_vstack = np.array(ser_label.iloc[image_id])
+
+    #---------------------------------------------------------------------------
+    # Convert all other PIL images into Keras array of images.
+    # Build array of labels
+    #---------------------------------------------------------------------------
+    for (image_id, pil_image) , (label_id, label) \
+    in zip(ser_pil_image.iloc[1:].items(), ser_label.iloc[1:].items() ):
+
+    
+        pil_image_truncated = pil_square(pil_image, square=square)
+        arr_keras = np.array(pil_image_truncated)
+        
+        weight  = arr_keras.shape[0]
+        height  = arr_keras.shape[1]
+        channel = arr_keras.shape[2]
+        
+        arr_keras = arr_keras.reshape(1,weight, height,channel)
+        try :
+            arr_label = np.array(ser_label.iloc[label_id])
+        except IndexError:
+            #print("*** ERROR for label indexes=: ("+str(image_id)+","+str(label_id)+")")
+            list_label_error.append(label_id)
+            continue
+            
+        try :
+            arr_keras_image_vstack \
+            = np.vstack((arr_keras_image_vstack,arr_keras))
+            arr_label_vstack = np.vstack((arr_label_vstack,arr_label))
+        except ValueError:
+            #print("*** ERROR : "+str(arr_keras.shape))
+            list_image_error.append(image_id)
+            
+    print("INFO : number of Image errors = "+str(len(list_image_error)))
+    print("INFO : number of Label errors = "+str(len(list_label_error)))
+    
+    return arr_keras_image_vstack, arr_label_vstack
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p7_keras_X_train_test_build(ser_pil_image, ser_label\
+, test_size=0.2, square=None):
+    '''Build train and test arrays based on given data arrays.
+    Input : 
+        * ser_pil_image : Series containing PIL images.
+        * ser_label : Series of labels related to PIL images.
+        * test_size : percentage of test data-set.
+    Output :
+        * arr_X_train : array of pixels containing train dataset
+        * arr_X_test : array of pixels containing test dataset
+        * arr_y_train : array of labels related to images from train dataset.
+        * arr_y_test : array of labels related to images from test dataset.
+        
+    '''
+    #---------------------------------------------------------------------------
+    # Convert train dataset Series into numpy array allowing to feed Keras 
+    # dense layer.
+    #---------------------------------------------------------------------------
+    print("Images for training = "+str(len(ser_pil_image)))
+    arr_keras_image, arr_label \
+    = p7_keras_X_y_build(ser_pil_image, ser_label, square=square)
+    print(arr_keras_image.shape, arr_label.shape)
+
+    #---------------------------------------------------------------------------
+    # Get train and test dataset returned as Series of PIL images
+    #---------------------------------------------------------------------------
+    arr_keras_image_train, arr_keras_image_test, arr_label_train, arr_label_test \
+    = model_selection.train_test_split(arr_keras_image, arr_label\
+    , test_size=test_size)    
+    
+    return arr_keras_image_train, arr_keras_image_test, arr_label_train\
+    , arr_label_test
+#-------------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p7_keras_X_train_test_build_deprected(ser_pil_image, ser_label\
+, test_size=0.2, square=None):
+    '''Build train and test arrays based on given data arrays.
+    Input : 
+        * ser_pil_image : Series containing PIL images.
+        * ser_label : Series of labels related to PIL images.
+        * test_size : percentage of test data-set.
+    Output :
+        * arr_X_train : array of pixels containing train dataset
+        * arr_X_test : array of pixels containing test dataset
+        * arr_y_train : array of labels related to images from train dataset.
+        * arr_y_test : array of labels related to images from test dataset.
+        
+    '''
+    #---------------------------------------------------------------------------
+    # Get train and test dataset returned as Series of PIL images
+    #---------------------------------------------------------------------------
+    ser_pil_image_train, ser_pil_image_test, ser_label_train,  ser_label_test \
+    = model_selection.train_test_split(ser_pil_image, ser_label\
+    , test_size=test_size)
+    
+    print(ser_pil_image_train.shape,ser_pil_image_test.shape\
+    ,ser_label_train.shape, ser_label_test.shape)
+    
+    #---------------------------------------------------------------------------
+    # Convert train dataset Series into numpy array allowing to feed Keras 
+    # dense layer.
+    #---------------------------------------------------------------------------
+    print("Images for training = "+str(len(ser_label_train)))
+    arr_X_train, arr_y_train \
+    = p7_keras_X_y_build(ser_pil_image_train, ser_label_train, square=square)
+    print(arr_X_train.shape, arr_y_train.shape)
+    
+    #---------------------------------------------------------------------------
+    # Convert test dataset Series into numpy array 
+    #---------------------------------------------------------------------------
+    print()
+    print("Images for testing = "+str(len(ser_pil_image_test)))
+    arr_X_test, arr_y_test \
+    = p7_keras_X_y_build(ser_pil_image_test, ser_label_test,square=square)
+    print(arr_X_test.shape, arr_y_test.shape)
+
+    return arr_X_train, arr_X_test, arr_y_train, arr_y_test
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def pil_square(pil_image,square=None):
+    '''Truncate image with a margin for having same size for height aimagend weight.
     Input :
         * Rectangular PIL image 
     Output :
         * Squared PIL image 
     '''
     arr_image = np.array(pil_image)
-
-    delta = arr_image.shape[0] - arr_image.shape[1]
-    margin = np.abs(int(delta/2))
-    #print(arr_image.shape)
-    if arr_image.shape[0] >= arr_image.shape[1]:
-
-        # Horizontal truncation
-        arr_image = arr_image[margin:,:]
-        arr_image = arr_image[:-margin,:]
-
+    weight = arr_image.shape[0]
+    height = arr_image.shape[1]
+    if square is None :
+        delta = weight - height
+        margin = np.abs(int(delta/2))
+        if weight >= height:
+            margin_x = margin
+            margin_y = 0
+        else :
+            margin_x = 0
+            margin_y = margin
+        
     else :
-        # Vertical truncation
-        arr_image = arr_image[:,margin:]
-        arr_image = arr_image[:,:-margin]
+        margin_x = int((weight - square[0])/2)
+        margin_y = int((height - square[1])/2)
+        
 
-    return Image.fromarray(arr_image)
+    
+    # Horizontal truncation
+    arr_image = arr_image[margin_x:,:]
+    if 0 < margin_x :
+        arr_image = arr_image[:-margin_x,:]
+
+    # Vertical truncation
+    arr_image = arr_image[:,margin_y:]
+    if 0 < margin_y:
+        arr_image = arr_image[:,:-margin_y]
+
+
+    
+    #---------------------------------------------------------------------------
+    # After truncation, normalization makes sure that weight and height are 
+    # fixed with same value.
+    #---------------------------------------------------------------------------
+    weight = arr_image.shape[0]
+    height = arr_image.shape[1]
+    size = min(weight,height)
+    std_size = (size,size)
+    
+    #return pil_image#Image.fromarray(arr_image)
+    return pil_resize(Image.fromarray(arr_image),std_size)
 #-------------------------------------------------------------------------------
  
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def pil_truncate(pil_image,std_size) :
+    ''' 
+        Input :
+            * pil_image : PIL image format to be truncated 
+            * std_size : tuple for size truncation
+        Output : 
+            * truncated PIL image.
+    '''
+    arr_image = np.array(pil_image)
+    print(std_size[0],std_size[1])
+    print(arr_image.shape)
+    #print(arr_image.shape[0],arr_image.shape[1])
+    
+    margin_w = int((arr_image.shape[0] -  std_size[0])/2)
+    margin_h = int((arr_image.shape[1] -  std_size[1])/2)
+    if margin_w >0 :
+        # Horizontal truncation
+        arr_image = arr_image[margin_w:,:]
+        arr_image = arr_image[:-margin_w,:]
+    else :
+        pass
+        
+    if margin_h >0 :
+        # Vertical truncation
+        arr_image = arr_image[:,margin_h:]
+        arr_image = arr_image[:,:-margin_h]
+    else :
+        pass
+
+    return pil_resize(Image.fromarray(arr_image),std_size)     
+#-------------------------------------------------------------------------------
+
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
@@ -163,6 +442,8 @@ class P7_DataBreed() :
             |   +--> p7_util.p7_load_data()
             |   
             +-->sampling()
+            |   |
+            |   +--> build_ser_number_breedname()
             |
             +-->build_sift_desc()
             |   |
@@ -217,6 +498,8 @@ class P7_DataBreed() :
         self._ser_breed_number = pd.Series()
         self._dict_classifier = dict()
         self._classifier_name = str()
+        self._list_restricted_image = list()
+        self._dict_split_pil_image = dict()
         
         
     #---------------------------------------------------------------------------
@@ -303,6 +586,11 @@ class P7_DataBreed() :
         +str(self._classifier_name))
         self.strprint("Supported classifiers ......... : "\
         +str(list(self.dict_classifier.keys())))
+
+        self.strprint("Number of restricted images ... : "\
+        +str(len(self._list_restricted_image)))
+        self.strprint("Number of splitted images .... : "\
+        +str(len(self._dict_split_pil_image)))
         
         self.strprint("")
 
@@ -345,6 +633,8 @@ class P7_DataBreed() :
         self._ser_breed_number = object._ser_breed_number.copy()    
         self._classifier_name = object._classifier_name
         self._dict_classifier = object._dict_classifier.copy()
+        self._list_restricted_image  = object._list_restricted_image.copy()
+        self._dict_split_pil_image = object._dict_split_pil_image.copy()
         
         if is_new_attribute is True :
             pass
@@ -387,7 +677,8 @@ class P7_DataBreed() :
     def _get_dict_cluster_model(self) :
       return self._dict_cluster_model
     def _set_dict_cluster_model(self, dict_cluster_model) :
-      self._dict_cluster_model = dict_cluster_model.copy()
+      #self._dict_cluster_model = dict_cluster_model.copy()
+      self._dict_cluster_model.update(dict_cluster_model)
 
 
     def _get_cluster_model_name(self) :
@@ -481,7 +772,25 @@ class P7_DataBreed() :
         print("\n*** WARN : method not authorized !\n")
         
     
+    def _get_list_restricted_image(self) :
+      return self._list_restricted_image.copy()
+    def _set_list_restricted_image(self, list_restricted_image) :
+        self._list_restricted_image = list_restricted_image.copy()
+        self._dict_breed_sample = dict()
+        for breed_name, list_image_name in  self._list_restricted_image :
+            for image_name in list_image_name :
+                part1 = image_name.split('_')[0]
+                dirbreed = part1+'-'+breed_name
+                self._dict_breed_sample[dirbreed] = list_image_name
+                break
 
+
+    def _get_dict_split_pil_image(self) :
+      return self._dict_split_pil_image.copy()
+    def _set_dict_split_pil_image(self, dict_split_pil_image) :
+        self._dict_split_pil_image = dict_split_pil_image.copy()
+
+    
     dir_path = property(_get_dir_path,_set_dir_path)
     std_size = property(_get_std_size,_set_std_size)
     df_desc  = property(_get_df_desc, _set_df_desc)
@@ -510,7 +819,46 @@ class P7_DataBreed() :
     classifier_name = property(_get_classifier_name, _set_classifier_name)
     dict_classifier = property(_get_dict_classifier, _set_dict_classifier)
     classifier = property(_get_classifier,_set_classifier)
+    list_restricted_image = property(_get_list_restricted_image\
+    ,_set_list_restricted_image)
+    dict_split_pil_image = property(_get_dict_split_pil_image\
+    ,_set_dict_split_pil_image)
     
+
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def df_build(self) :
+        '''Build dataframe from _dict_data. This dictionary is structured as 
+        following : {dirbreed:list_of_image_name}
+        where  : 
+            * dirbreed is the directory name for a breed
+            * list_of_image_name is the list of all image files under dirbreed
+
+        and built dataframe is structured as following : 
+            * columns : breed, label, image
+                --> breed : human readable breed name
+                --> label : encoded label for breed name.
+                --> image : content of image in a given format.
+        '''
+        dict_image = dict()
+        label = 0
+        df = pd.DataFrame()
+        new_breedname = str()
+        for dirbreed, list_imagefilename in self._dict_data.items():
+            for imagefilename in list_imagefilename :
+                pil_image = self.read_image(dirbreed, imagefilename)
+                breedname = dirbreed.split('-')[1]
+                df = df.append(pd.DataFrame([[breedname, label,pil_image]]\
+                , columns=['breed','label','image']))
+
+            label +=1
+        
+        df.reset_index(drop=True, inplace=True)
+        print("Image count = "+str(len(df)))
+        return df
+    #---------------------------------------------------------------------------
 
     #---------------------------------------------------------------------------
     #
@@ -605,9 +953,14 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def resize(self) :
-        ''' 
+    def std_size_build(self) :
+        ''' Compute the standard size (weight, height) for the hole images 
+        dataset. Standard size is computed from median value.
+        
+        This standard size will be applied to all images.
+        
         '''
+
         #-----------------------------------------------------------------------
         # A standard image size is computed.
         # This is the most frequent number of pixels X and the most frequent 
@@ -658,9 +1011,28 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def split_pil_image(self, pil_image, classname,ratio=(4,4)):
-        width  = int(self._std_size[0]/ratio[0])
-        height = int(self._std_size[1]/ratio[1])
+    def split_pil_image(self, pil_image, labelname,ratio=(4,4)):
+        '''Split a PIL formated image given a ratio for weight and given a ratio 
+        for height.
+        
+        Input : 
+            * pil_image : image to be spitted
+            * labelname : image label in order to identify a part of splited 
+            image. This label may be relevant for display.
+            * ratio : tuple providing number of images for weight and number of 
+            images for height.
+        Output :
+            * dictionary structured as following : {label_i:list_of_pil_image}
+            where : 
+                --> label_i is a label identifying the ith raw and 
+                --> list_of_pil_image is the list of PIL images in the ith raw.
+        '''
+        if self._std_size is None :
+            width  = int(pil_image.size[0]/ratio[0])
+            height = int(pil_image.size[1]/ratio[1])
+        else:        
+            width  = int(self._std_size[0]/ratio[0])
+            height = int(self._std_size[1]/ratio[1])
         dict_pil_image = dict()
         imgwidth, imgheight = pil_image.size
         for i in range(0,imgheight,height):
@@ -668,8 +1040,8 @@ class P7_DataBreed() :
             for j in range(0,imgwidth,width):
                 box = (j, i, j+width, i+height)
                 list_pil_image_crop.append(pil_image.crop(box))
-            classname_i = str(i)+'_'+classname
-            dict_pil_image[classname_i]=  list_pil_image_crop  
+            labelname_i = str(i)+'_'+labelname
+            dict_pil_image[labelname_i]=  list_pil_image_crop  
         
         return dict_pil_image
     #---------------------------------------------------------------------------
@@ -731,36 +1103,44 @@ class P7_DataBreed() :
         images.
         
         Input :
-            * dirbreed : directory full image lays on.
+            * dirbreed : directory in which all images lays on.
             * pil_image : PIL image from which KPDESC matrix is built.
             * image_count : this is an incremental value used to build raws of 
             the KPDESC matrix.
             
         Output : 
             * dict_breed_kpdesc : KPDESC matrix stored in a dictionary 
-            strustured as following : {image_count:(desc,breedname)}, where :
+            strustured as following : {image_count:(desc,hr_breedname)}, where :
                 --> desc : this is the descriptor vector (128 sized) for image 
                 identified with image_count
-                --> breedname : human readable name of the breed.
+                --> hr_breedname : human readable name of the breed.
             * image_count : current number of images.
         
         '''
         dict_breed_kpdesc = dict()
-        breedname = get_breedname_from_dirbreed(dirbreed)
+        hr_breedname = get_breedname_from_dirbreed(dirbreed)
 
         if self._is_splitted is True :
-            dict_split_pil_image = self.split_pil_image(pil_image,breedname)
+            dict_split_pil_image = self.split_pil_image(pil_image,hr_breedname)
+            
             for id_breedname, list_split_pil_image in dict_split_pil_image.items() :
                 for split_pil_image in list_split_pil_image :
                     kp, desc = get_image_kpdesc(split_pil_image)
-                    dict_breed_kpdesc[image_count] = (desc,breedname)
+                    dict_breed_kpdesc[image_count] = (desc,hr_breedname)
                     image_count +=1
+            self._dict_breed_kpdesc.update(dict_breed_kpdesc)
         else :            
             kp, desc = get_image_kpdesc(pil_image)
-            dict_breed_kpdesc[image_count] = (desc,breedname)
+            dict_breed_kpdesc[image_count] = (desc,hr_breedname)
+            self._dict_breed_kpdesc.update(dict_breed_kpdesc)
 
-        print("kpdesc_build() : desc.shape="+str(desc.shape))
+        #-----------------------------------------------------------------------
+        # Dictionary of splitted images is updated.
+        #-----------------------------------------------------------------------
+        self._dict_split_pil_image.update(dict_split_pil_image)
 
+        #if 0 < len(self._list_restricted_image) : 
+            #self._dict_split_pil_image = dict_split_pil_image.copy()
         return dict_breed_kpdesc, image_count
     #---------------------------------------------------------------------------
     
@@ -769,6 +1149,7 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     def build_sift_desc(self, is_splitted=False) :
         image_count=0
+        error = 0
 
         ratio = 5/100
         self._dict_breed_kpdesc = dict()
@@ -788,12 +1169,38 @@ class P7_DataBreed() :
                 # Resize
                 #---------------------------------------------------------------
                 try :
-                    pil_image.resize(self._std_size)
                     #-----------------------------------------------------------
-                    # Gray transformation
+                    # Resize of PIL image
+                    #-----------------------------------------------------------
+                    #pil_image.resize(self._std_size)
+
+                    #-----------------------------------------------------------
+                    # Gray transformation : removing channel dimension.
                     #-----------------------------------------------------------
                     pil_image = pil_2gray(pil_image)
+
+                    #-----------------------------------------------------------
+                    # Image is rendered with same weight and heigth 
+                    #-----------------------------------------------------------
+                    pil_image = pil_square(pil_image)
                     
+                    #-----------------------------------------------------------
+                    # Image truncation to render std_size
+                    #-----------------------------------------------------------
+                    #pil_image = pil_truncate(pil_image,self.std_size)
+
+                    
+                    
+                    #-----------------------------------------------------------
+                    # Median filter is applied
+                    #-----------------------------------------------------------
+                    filename, pil_image = p7_util.p7_filter_median(pil_image)
+
+                    #-----------------------------------------------------------
+                    # AUto-contrast filter is applied
+                    #-----------------------------------------------------------
+                    pil_image = pil_autocontrast(pil_image)
+
                     #-----------------------------------------------------------
                     # Equalization
                     #-----------------------------------------------------------
@@ -804,9 +1211,11 @@ class P7_DataBreed() :
                     # for classification.
                     #-----------------------------------------------------------
                     dict_breed_kpdesc, image_count\
-                    = self.kpdesc_build(dirbreed, pil_image,image_count)                
+                    = self.kpdesc_build(dirbreed, pil_image,image_count)
+                    
+                    print("Images processed= "+str(image_count))             
 
-                    self._dict_breed_kpdesc = dict_breed_kpdesc.copy()
+                    #self._dict_breed_kpdesc = dict_breed_kpdesc.copy()
                     
                     #-----------------------------------------------------------
                     # Closing PIL image : all resources of PIL image are released.
@@ -816,17 +1225,19 @@ class P7_DataBreed() :
                     #-----------------------------------------------------------
                     # Display progress
                     #-----------------------------------------------------------
-                    if(0 == (image_count)%500 ) :
-                        print("Images processed= "\
-                        +str(image_count)+"/"+str(self._total_image))
+                    if False :
+                        if(0 == (image_count)%500 ) :
+                            print("Images processed= "\
+                            +str(image_count)+"/"+str(self._total_image))
 
                     if self._is_splitted is False :
                         image_count +=1     
                     
                 except AttributeError :
-                    print("*** WARNING : attribute error for PIL image ")
+                    error +=1
+                    #print("*** WARNING : attribute error for PIL image ")
                     continue                
-
+        print("\nINFO : Error = "+str(error)+" Total images processed= "+str(image_count))        
     #---------------------------------------------------------------------------
         
     #---------------------------------------------------------------------------
@@ -855,7 +1266,7 @@ class P7_DataBreed() :
             self._dict_breed_sample[breedname] = list_file_sample
         self._sampling_breed_count = breed_count
         self._sampling_image_per_breed_count = image_per_breed_count
-        
+        self.build_ser_number_breedname()
     #---------------------------------------------------------------------------
     
     #---------------------------------------------------------------------------
@@ -920,7 +1331,7 @@ class P7_DataBreed() :
                 y_label = cluster_model.predict(desc)
                 #print("get_cluster_from_imagedesc : Label= "+str(y_label))
             except ValueError:
-                print("\n*** get_cluster_from_imagedesc() : Error on desc array")
+                #print("\n*** get_cluster_from_imagedesc() : Error on desc array")
                 return None
 
             #-------------------------------------------------------------------
@@ -955,9 +1366,10 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     def ylabel_encode(self,dict_label):
         list_tags_ref = list(self._ser_breed_number.keys())
+        print("Number of referenced labels= "+str(len(list_tags_ref)))
 
-        list_list_tags = [[tag] for tag in set(dict_label.values())]
-
+        list_list_tags = [[tag] for tag in list(dict_label.values())]
+        print("Number of labels to be encoded= "+str(len(list_list_tags)))
         y_label = p6_util.p6_encode_target(list_tags_ref, list_list_tags)
         self._y_label =  np.array(y_label).copy()
     #---------------------------------------------------------------------------
@@ -993,15 +1405,17 @@ class P7_DataBreed() :
                 # Used for Y label
                 breedlabel = self.get_breedlabel_from_breedname(breedname)
                 dict_label[image_id] = breedlabel
-        #-----------------------------------------------------------------------
-        # Errors recorded during BOF construction are removed from dictionary.
-        #-----------------------------------------------------------------------
-        print("\n***Nb of errors= "+str(error))
 
-        for image_id_error in list_image_id_error :
-            del(self._dict_breed_kpdesc[image_id_error] )
+        print("\n***Nb of errors..............= "+str(error))
+        print("\n***Nb of labelized images ...= "+str(len(dict_label)))
+
+        if False :
+            #-----------------------------------------------------------------------
+            # Errors recorded during BOF construction are removed from dictionary.
+            #-----------------------------------------------------------------------
+            for image_id_error in list_image_id_error :
+                del(self._dict_breed_kpdesc[image_id_error] )
         
-        print(len(self._dict_breed_kpdesc), len(dict_label))
         #-----------------------------------------------------------------------
         # Label are encoded in a multi-class way
         #-----------------------------------------------------------------------
@@ -1039,10 +1453,15 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def build_dict_breedname_id(self) :
-        '''Build a dictionary with keys as breed name and values as breed 
-        identifier name : {breedname:breed_id}
+    def build_ser_number_breedname(self) :
+        '''Build a Series with index as breed numbers and values as human 
+        readable breed names.
         '''
+        if 0 >= len(self._dict_breedname_id) :
+            pass
+        else :
+            print("\nINFO : Series already built!")
+
         dict_breedname_id=dict()
         if 0 < len(self._dict_breed_sample) :
             print("Building...")
@@ -1065,35 +1484,53 @@ class P7_DataBreed() :
             index+=1
             #print(dict_breed_number)
         self._ser_breed_number = pd.Series(dict_breed_number).copy()
-
-        
     #---------------------------------------------------------------------------
     
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
     def show_image_name(self, breedname, is_sample_show=False):
-        ser = pd.Series(self._dict_breedname_id)
-        index = np.where(ser.keys()==breedname)[0][0]
-        id = list(self._dict_breedname_id.values())[index]
-        breedid = str(id)+'-'+breedname
-        dirbreed = self._dir_path+'/'+breedid
-        list_image_name = os.listdir(dirbreed)
+        '''Display images files names issued from sampling from a human readable 
+        breedname.
         
-        #-----------------------------------------------------------------------
-        # Do not show images stored in sampling when is_sample_show is False
-        #-----------------------------------------------------------------------
-        list_sample_breed_image = list()
-        if is_sample_show is False :
-            list_sample_breed_image = self._dict_breed_sample[breedid]
+        Directory name of breeds images is built from human readable breedname.
+        List of images files is built from this directory and is displayed.
+        
+        Input :
+            * breedname : human readable breed name.
+            * is_sample_show : when fixed to True, then....?
+        '''
+
+        ser = pd.Series(self._dict_breedname_id)
+        tuple_array = np.where(ser.keys()==breedname)
+        if 0 < len(tuple_array[0]):
+            index = tuple_array[0][0]
+            id = list(self._dict_breedname_id.values())[index]
+            breedid = str(id)+'-'+breedname
+            dirbreed = self._dir_path+'/'+breedid
+            
+            list_image_name = os.listdir(dirbreed)
+            
+            print("Directory breed name = "+dirbreed)
+            
+            #-----------------------------------------------------------------------
+            # Do not show images stored in sampling when is_sample_show is False
+            #-----------------------------------------------------------------------
+            list_sample_breed_image = list()
+            if is_sample_show is False :
+                list_sample_breed_image = self._dict_breed_sample[breedid]
 
 
-        print("")
-        count_image_sample_show = len(list_sample_breed_image)
-        print("Number of images ="+str(len(list_image_name)-count_image_sample_show))
-        for image_name in list_image_name :
-            if image_name not in list_sample_breed_image :
-                print("Image name= {}".format(image_name))
+            print("")
+            count_image_sample_show = len(list_sample_breed_image)
+            print("Number of images ="\
+            +str(len(list_image_name)-count_image_sample_show))
+            for image_name in list_image_name :
+                if image_name not in list_sample_breed_image :
+                    print("Image name= {}".format(image_name))
+        else : 
+            print("\n*** ERROR : breadname= "+str(breedname)+" not found into sample! Enter show_breed_name()\n")
+            
         
     #---------------------------------------------------------------------------
 
@@ -1150,10 +1587,20 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def show_breedname(self) :
+    def show_breed_name(self) :
         for breedname, breedid in self._dict_breedname_id.items():
             dirbreed = str(breedid)+'-'+str(breedname)
             print("{0} ..... : {1}".format(breedname,dirbreed))
     #---------------------------------------------------------------------------
+    
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    #def single_image(self,list_restricted_image):
+    #    self.list_restricted_image = list_restricted_image.copy()
+    #---------------------------------------------------------------------------
+    
+    
+    
 #-------------------------------------------------------------------------------
 
