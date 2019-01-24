@@ -1,5 +1,5 @@
-# OC_Datascientist
-Openclassrooms projects for Datascientist
+# Set of projects 
+Projects carried out on behalf of the Master 2 Centrale Supélec / OPenclassrooms training in datasience
 
 ## <center><h1>P2 : Food recipe generator</h1></center>
 <hr>
