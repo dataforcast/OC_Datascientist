@@ -18,7 +18,7 @@ def p7_filter_convolutional(image, kernel, size=(3,3), title=str()\
     filename = str()
     #---------------------------------------------------------------------------
     # Les filtres par convolution ne supportent que les formats RGB et L 
-    # d'encodage des pixels. L'image est réencodée en L
+    # d'encodage des pixels. L'image est réencodée en Ldict_split_pil_image = dict()
     #---------------------------------------------------------------------------
     image_L =Image.fromarray(np.array(image)).convert('L')
 

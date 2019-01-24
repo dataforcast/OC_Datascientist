@@ -499,7 +499,9 @@ class P7_DataBreed() :
         self._dict_classifier = dict()
         self._classifier_name = str()
         self._list_restricted_image = list()
-        self._dict_split_pil_image = dict()
+        #self._dict_split_pil_image = dict()
+        self._split_ratio = (4,4)
+        self._df_pil_image_kpdesc = pd.DataFrame()
         
         
     #---------------------------------------------------------------------------
@@ -528,9 +530,12 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def show(self, legend=str()):
+    def show(self, legend=str(), is_show=True):
         '''Show classes attributes
         '''
+        if is_show is False :
+            return
+        
         self.strprint("\n "+str(legend))
         
         self.strprint("Path to data directory ........ : "+str(self._dir_path))
@@ -589,8 +594,12 @@ class P7_DataBreed() :
 
         self.strprint("Number of restricted images ... : "\
         +str(len(self._list_restricted_image)))
-        self.strprint("Number of splitted images .... : "\
-        +str(len(self._dict_split_pil_image)))
+        self.strprint("Number of splitted images ..... : "\
+        +str(len(self.dict_split_pil_image)))
+        self.strprint("Splitted parts ................ : "\
+        +str(self._split_ratio))
+        self.strprint("Dataframe images descriptors .. : "\
+        +str(self._df_pil_image_kpdesc.shape))
         
         self.strprint("")
 
@@ -599,47 +608,50 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def copy(self, object, is_new_attribute=True) :
+    def copy(self, copied_object, is_new_attribute=True) :
         '''' Copies attributes from object given as parameter into 
-        this object.'''
-        self._dir_path = object.dir_path
+        this copied_object.'''
+        self._dir_path = copied_object.dir_path
 
-        self._dict_data = object._dict_data.copy()
-        self._total_image = object._total_image
-        self.is_verbose = object.is_verbose
-        self._std_size = object._std_size
-        self._dict_img_pil = object._dict_img_pil.copy()
-        self._dict_breed_kpdesc = object._dict_breed_kpdesc.copy()
-        self._dict_breed_sample = object._dict_breed_sample.copy()
-        self._list_breed_sample = object._list_breed_sample.copy()
-        if object._X_train is not None :
-            self._X_train = object._X_train.copy()
-        if object._y_train is not None :
-            self._y_train = object._y_train.copy()
-        if object._X_test is not None :
-            self._X_test = object._X_test.copy()
-        if object._y_test is not None :
-            self._y_test = object._y_test.copy()
-        self._sampling_breed_count =object._sampling_breed_count
+        self._dict_data = copied_object._dict_data.copy()
+        self._total_image = copied_object._total_image
+        self.is_verbose = copied_object.is_verbose
+        self._std_size = copied_object._std_size
+        self._dict_img_pil = copied_object._dict_img_pil.copy()
+        self._dict_breed_kpdesc = copied_object._dict_breed_kpdesc.copy()
+        self._dict_breed_sample = copied_object._dict_breed_sample.copy()
+        self._list_breed_sample = copied_object._list_breed_sample.copy()
+        if copied_object._X_train is not None :
+            self._X_train = copied_object._X_train.copy()
+        if copied_object._y_train is not None :
+            self._y_train = copied_object._y_train.copy()
+        if copied_object._X_test is not None :
+            self._X_test = copied_object._X_test.copy()
+        if copied_object._y_test is not None :
+            self._y_test = copied_object._y_test.copy()
+        self._sampling_breed_count =copied_object._sampling_breed_count
         self._sampling_image_per_breed_count \
-        = object._sampling_image_per_breed_count
-        self._dict_cluster_model = object._dict_cluster_model.copy()
-        self._cluster_model_name = object._cluster_model_name
-        self._df_bof = object._df_bof.copy()
-        self._y_label = object._y_label.copy()
-        self._dict_breedname_id = object._dict_breedname_id.copy()
-        self._is_splitted = object._is_splitted
-        self._Xdesc = object._Xdesc.copy()
-        self._ser_breed_number = object._ser_breed_number.copy()    
-        self._classifier_name = object._classifier_name
-        self._dict_classifier = object._dict_classifier.copy()
-        self._list_restricted_image  = object._list_restricted_image.copy()
-        self._dict_split_pil_image = object._dict_split_pil_image.copy()
+        = copied_object._sampling_image_per_breed_count
+        self._dict_cluster_model = copied_object._dict_cluster_model.copy()
+        self._cluster_model_name = copied_object._cluster_model_name
+        self._df_bof = copied_object._df_bof.copy()
+        self._y_label = copied_object._y_label.copy()
+        self._dict_breedname_id = copied_object._dict_breedname_id.copy()
+        self._is_splitted = copied_object._is_splitted
+        self._Xdesc = copied_object._Xdesc.copy()
+        self._ser_breed_number = copied_object._ser_breed_number.copy()    
+        self._classifier_name = copied_object._classifier_name
+        self._dict_classifier = copied_object._dict_classifier.copy()
+        self._list_restricted_image  = copied_object._list_restricted_image.copy()
+        #self._dict_split_pil_image = copied_object._dict_split_pil_image.copy()
+        self._split_ratio = copied_object._split_ratio
+        self._df_pil_image_kpdesc = copied_object._df_pil_image_kpdesc.copy()
         
         if is_new_attribute is True :
             pass
         else :
-            print("\n*** WARN : new attributes from object are not copied on target!\n")
+            print("\n*** WARN : new attributes from copied_object are not \
+            copied on target!\n")
     #---------------------------------------------------------------------------
 
     #---------------------------------------------------------------------------
@@ -695,7 +707,7 @@ class P7_DataBreed() :
         else :
             print("\n*** WARN : cluster model does not exists in clusters dictionary !\n")
     def _set_cluster_model(self, cluster_model) :
-            print("\n*** WARN : method not authorized !\n")
+            print("\n*** WARN : assignement is not authorized !\n")
 
     def _get_nb_cluster(self) :
         nb_cluster = 0
@@ -707,7 +719,7 @@ class P7_DataBreed() :
         return nb_cluster
    
     def _set_nb_cluster(self, nb_cluster) :
-        print("\n*** WARN : method not authorized !\n")
+        print("\n*** WARN : assignement is not authorized !\n")
 
     def _get_df_bof(self) :
       return self._df_bof
@@ -717,42 +729,42 @@ class P7_DataBreed() :
     def _get_X_train(self) :
       return self._X_train
     def _set_X_train(self, X_train) :
-        print("\n*** WARN : method not authorized !\n")
+        print("\n*** WARN : assignement is not authorized !\n")
 
     def _get_y_train(self) :
       return self._y_train
     def _set_y_train(self, y_train) :
-        print("\n*** WARN : method not authorized !\n")
+        print("\n*** WARN : assignement is not authorized !\n")
 
     def _get_X_test(self) :
       return self._X_test
     def _set_X_test(self, X_test) :
-        print("\n*** WARN : method not authorized !\n")
+        print("\n*** WARN : assignement is not authorized !\n")
 
     def _get_y_test(self) :
       return self._y_test
     def _set_y_test(self, y_test) :
-        print("\n*** WARN : method not authorized !\n")
+        print("\n*** WARN : assignement is not authorized !\n")
 
     def _get_ylabel(self) :
       return self._y_label
     def _set_ylabel(self, ylabel) :
-        print("\n*** WARN : method not authorized !\n")
+        print("\n*** WARN : assignement is not authorized !\n")
 
     def _get_dict_breedname_id(self) :
       return self._dict_breedname_id
     def _set_dict_breedname_id(self, dict_breedname_id) :
-        print("\n*** WARN : method not authorized !\n")
+        print("\n*** WARN : assignement is not authorized !\n")
 
     def _get_is_splitted(self) :
       return self._is_splitted
     def _set_is_splitted(self, is_splitted) :
-        print("\n*** WARN : method not authorized !\n")
+        print("\n*** WARN : assignement is not authorized !\n")
 
     def _get_Xdesc(self) :
       return self._Xdesc
     def _set_Xdesc(self, Xdesc) :
-        print("\n*** WARN : method not authorized !\n")
+        print("\n*** WARN : assignement is not authorized !\n")
 
     def _get_classifier_name(self) :
       return self._classifier_name
@@ -769,7 +781,7 @@ class P7_DataBreed() :
         classifier = self._dict_classifier[classifier_name]
         return classifier
     def _set_classifier(self, classifier) :
-        print("\n*** WARN : method not authorized !\n")
+        print("\n*** WARN : assignement is not authorized !\n")
         
     
     def _get_list_restricted_image(self) :
@@ -786,10 +798,37 @@ class P7_DataBreed() :
 
 
     def _get_dict_split_pil_image(self) :
-      return self._dict_split_pil_image.copy()
+        dict_split_pil_image = dict()
+        raw_new = 0
+        if 0 == len(self.df_pil_image_kpdesc) :
+            print("\n*** WARN : no SIFT descriptors extracted !")
+        else :
+            for (raw,col) in self.df_pil_image_kpdesc.index :
+                if raw == raw_new :
+                    breed = self.df_pil_image_kpdesc.loc[(raw,col)][1]
+                    breed += "_"+str(raw)
+                    
+                    arr_raw_image \
+                    = self.df_pil_image_kpdesc.loc[raw:raw]['split_image'].values
+                    dict_split_pil_image[breed] = list(arr_raw_image)
+                    raw_new +=1
+        return dict_split_pil_image      
+      
+      
     def _set_dict_split_pil_image(self, dict_split_pil_image) :
-        self._dict_split_pil_image = dict_split_pil_image.copy()
+        #self._dict_split_pil_image = dict_split_pil_image.copy()
+        print("\n*** WARN : assignement is not authorized !\n")
 
+    def _get_split_ratio(self) :
+      return self._split_ratio
+    def _set_split_ratio(self, split_ratio) :
+        self._split_ratio = split_ratio
+    
+    def _get_df_pil_image_kpdesc(self) :
+      return self._df_pil_image_kpdesc
+    def _set_df_pil_image_kpdesc(self, Xdesc) :
+        print("\n*** WARN : assignement is not authorized !\n")
+    
     
     dir_path = property(_get_dir_path,_set_dir_path)
     std_size = property(_get_std_size,_set_std_size)
@@ -803,7 +842,8 @@ class P7_DataBreed() :
     
     dict_cluster_model  = property(_get_dict_cluster_model\
     , _set_dict_cluster_model)
-    cluster_model_name = property(_get_cluster_model_name,_set_cluster_model_name)
+    cluster_model_name = property(_get_cluster_model_name\
+    ,_set_cluster_model_name)
     
     cluster_model = property(_get_cluster_model, _set_cluster_model)
     nb_cluster = property(_get_nb_cluster, _set_nb_cluster)
@@ -823,6 +863,9 @@ class P7_DataBreed() :
     ,_set_list_restricted_image)
     dict_split_pil_image = property(_get_dict_split_pil_image\
     ,_set_dict_split_pil_image)
+    split_ratio = property(_get_split_ratio, _set_split_ratio)
+    df_pil_image_kpdesc = property(_get_df_pil_image_kpdesc\
+    , _set_df_pil_image_kpdesc)
     
 
 
@@ -1026,6 +1069,8 @@ class P7_DataBreed() :
             where : 
                 --> label_i is a label identifying the ith raw and 
                 --> list_of_pil_image is the list of PIL images in the ith raw.
+
+            Such output is usefull for image display.
         '''
         if self._std_size is None :
             width  = int(pil_image.size[0]/ratio[0])
@@ -1089,6 +1134,52 @@ class P7_DataBreed() :
         self._Xdesc = X_desc[1:].copy()
     #---------------------------------------------------------------------------
     
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def _df_pil_image_kpdesc_build(self, array_values):
+        '''Reset dataframe holding PIL images along with corresponding 
+        KP and descriptors.
+        Dataframe is built with a multi-level indexes. 
+            --> 1st level index references raws of spillted images.
+            --> 2nd index references columns for splitted images in a raw. 
+        Number of raws and columns are issued from split image process. This 
+        process is leaded by parameter self.split_ratio.
+        
+        Input :
+            * array_values : array of values : KP, descriptors, image size, 
+            breed name.
+        Output :
+            * dataframe with multi-level indexes and values contained in arr.
+        '''
+        raw = self.split_ratio[0]
+        col = self.split_ratio[1]
+
+        raw_index =np.arange(0,raw*col,1)
+        col_index =np.arange(0,raw*col,1)
+
+        #-----------------------------------------------------------------------
+        # Index for raws and colulns initialization
+        #-----------------------------------------------------------------------
+        raw_index[:]=0
+        col_index[:]=0
+
+        for i in range(0,raw*col, col):
+            raw_index[i:i+col] = int(i/col)
+
+        for i in range(0,raw*col, col):
+            col_index[i:i+col] = range(0,col,1)
+
+        list_level_index=[raw_index,col_index]
+                
+        
+        df_multi_level \
+        = pd.DataFrame(array_values\
+        , columns=['desc','breed','kp','size','split_image']\
+        , index=list_level_index)
+
+        return df_multi_level
+    #---------------------------------------------------------------------------    
 
     #---------------------------------------------------------------------------
     #
@@ -1126,21 +1217,34 @@ class P7_DataBreed() :
             for id_breedname, list_split_pil_image in dict_split_pil_image.items() :
                 for split_pil_image in list_split_pil_image :
                     kp, desc = get_image_kpdesc(split_pil_image)
-                    dict_breed_kpdesc[image_count] = (desc,hr_breedname)
+                    dict_breed_kpdesc[image_count] \
+                    = (desc,hr_breedname,kp,split_pil_image.size,split_pil_image)
                     image_count +=1
             self._dict_breed_kpdesc.update(dict_breed_kpdesc)
         else :            
             kp, desc = get_image_kpdesc(pil_image)
-            dict_breed_kpdesc[image_count] = (desc,hr_breedname)
+            dict_breed_kpdesc[image_count] \
+            = (desc,hr_breedname, kp,split_pil_image.size,split_pil_image)
             self._dict_breed_kpdesc.update(dict_breed_kpdesc)
 
         #-----------------------------------------------------------------------
         # Dictionary of splitted images is updated.
         #-----------------------------------------------------------------------
-        self._dict_split_pil_image.update(dict_split_pil_image)
+        #self._dict_split_pil_image.update(dict_split_pil_image)
+        
+        #-----------------------------------------------------------------------
+        # Dataframe with all informations related to PIL images and descriptors 
+        #-----------------------------------------------------------------------
+        ar = np.array(list(dict_breed_kpdesc.values()))
+        df_multi_level = self._df_pil_image_kpdesc_build(ar)
+        #print("***"+str(ar))
+        self._df_pil_image_kpdesc  \
+        = pd.concat( [self._df_pil_image_kpdesc, df_multi_level])
 
-        #if 0 < len(self._list_restricted_image) : 
-            #self._dict_split_pil_image = dict_split_pil_image.copy()
+        if False :
+            self._df_pil_image_kpdesc \
+            = self._df_pil_image_kpdesc.append(df_multi_level)
+
         return dict_breed_kpdesc, image_count
     #---------------------------------------------------------------------------
     
@@ -1148,12 +1252,24 @@ class P7_DataBreed() :
     #
     #---------------------------------------------------------------------------
     def build_sift_desc(self, is_splitted=False) :
+        '''Build SIFT descriptors from dictionary _dict_breed_sample.
+        This dictionary is structured as following : {dirbreed:list_imagename}
+        where : 
+            --> dirbreed is the directory name for a breed containing all images
+            --> list_imagename is the file name of all images under dirbreed.
+        Images are not stored in memory. They are loaded from information into 
+        _dict_breed_sample.
+        
+        Filters are applied before SIFT descriptors to be built.
+        
+        '''
         image_count=0
         error = 0
 
         ratio = 5/100
         self._dict_breed_kpdesc = dict()
         self._is_splitted = is_splitted
+        self._df_pil_image_kpdesc = pd.DataFrame()
 
         for dirbreed, list_imagename in self._dict_breed_sample.items():
             
@@ -1185,11 +1301,12 @@ class P7_DataBreed() :
                     pil_image = pil_square(pil_image)
                     
                     #-----------------------------------------------------------
-                    # Image truncation to render std_size
+                    # Image may be truncated to render std_size
                     #-----------------------------------------------------------
-                    #pil_image = pil_truncate(pil_image,self.std_size)
-
-                    
+                    if self.std_size is not None :
+                        pil_image = pil_truncate(pil_image,self.std_size)
+                    else :
+                        pass
                     
                     #-----------------------------------------------------------
                     # Median filter is applied
@@ -1197,7 +1314,11 @@ class P7_DataBreed() :
                     filename, pil_image = p7_util.p7_filter_median(pil_image)
 
                     #-----------------------------------------------------------
-                    # AUto-contrast filter is applied
+                    # AUto-contrast filter is applied: this allows to provide 
+                    # mode contrast for finding SIFT descriptors.
+                    # It is supposed here that more an imageis contrasted, 
+                    # the easiest SIFT descriptors will be extracted from 
+                    # shape. 
                     #-----------------------------------------------------------
                     pil_image = pil_autocontrast(pil_image)
 
