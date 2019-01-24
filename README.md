@@ -1,7 +1,7 @@
 # OC_Datascientist
 Openclassrooms projects for Datascientist
 
-<center><h1>P2 : Food recipe generator</h1></center>
+## <center><h1>P2 : Food recipe generator</h1></center>
 <hr>
 
 <br><br><br>
