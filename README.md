@@ -18,19 +18,19 @@ A recipe is understood here as a combination of foods from the food database.
 
 * The cleaning of the database is presented.
 
-An analysis of the model is carried out through the selection of relevant 
+* An analysis of the model is carried out through the selection of relevant 
 qualitative and quantitative variables. The relevance of these variables is
 based on study hypotheses. These are presented in the introductory paragraph of 
 the study report.
 
-The analysis of the relevant variables is carried out by univariate, bivariate studies,
+* The analysis of the relevant variables is carried out by univariate, bivariate studies,
 concentration, dispersion and distribution measures.
 
-This analysis links the observations to a model underlying explanatory text.
+* This analysis links the observations to a model underlying explanatory text.
 
-On the basis of this analysis, two scoring methods are proposed and compared
+* On the basis of this analysis, two scoring methods are proposed and compared
 to the native scoring set by Open food facts.
  
-Recommendations are proposed for improving the scoring model.
+* Recommendations are proposed for improving the scoring model.
 
 
