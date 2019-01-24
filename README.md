@@ -1,5 +1,5 @@
 # Set of projects 
-Projects carried out on behalf of the Master 2 Centrale Supélec / OPenclassrooms training in datasience
+Projects carried out on behalf of the Master 2 Centrale Supélec / Openclassrooms training in datasience
 
 ## <center><h1>P2 : Food recipe generator</h1></center>
 <hr>
@@ -11,7 +11,7 @@ Projects carried out on behalf of the Master 2 Centrale Supélec / OPenclassroom
 This study aims to explore a food database in order to constitute a generator 
 of healthy recipes.
 
-Data are issued from Open food facts database  ( see https://fr.openfoodfacts.org/)
+Data are issued from Open food facts database  (See https://fr.openfoodfacts.org/)
 
 A recipe is understood here as a combination of foods from the food database.
 
