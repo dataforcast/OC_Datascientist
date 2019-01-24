@@ -16,7 +16,7 @@ Data are issued from Open food facts database  (See https://fr.openfoodfacts.org
 A recipe is understood here as a combination of foods from the food database.
 
 
-The cleaning of the database is presented.
+* The cleaning of the database is presented.
 
 An analysis of the model is carried out through the selection of relevant 
 qualitative and quantitative variables. The relevance of these variables is
