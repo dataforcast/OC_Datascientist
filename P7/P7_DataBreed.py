@@ -299,8 +299,8 @@ def pil_truncate(pil_image,std_size) :
             * truncated PIL image.
     '''
     arr_image = np.array(pil_image)
-    print(std_size[0],std_size[1])
-    print(arr_image.shape)
+    #print(std_size[0],std_size[1])
+    #print(arr_image.shape)
     #print(arr_image.shape[0],arr_image.shape[1])
     
     margin_w = int((arr_image.shape[0] -  std_size[0])/2)
@@ -594,8 +594,8 @@ class P7_DataBreed() :
 
         self.strprint("Number of restricted images ... : "\
         +str(len(self._list_restricted_image)))
-        self.strprint("Number of splitted images ..... : "\
-        +str(len(self.dict_split_pil_image)))
+        #self.strprint("Number of splitted images ..... : "\
+        #+str(len(self.dict_split_pil_image)))
         self.strprint("Splitted parts ................ : "\
         +str(self._split_ratio))
         self.strprint("Dataframe images descriptors .. : "\
@@ -1154,7 +1154,10 @@ class P7_DataBreed() :
         '''
         raw = self.split_ratio[0]
         col = self.split_ratio[1]
-
+        
+        col = int(np.sqrt(array_values.shape[0]))
+        raw = col 
+        
         raw_index =np.arange(0,raw*col,1)
         col_index =np.arange(0,raw*col,1)
 
@@ -1175,7 +1178,7 @@ class P7_DataBreed() :
         
         df_multi_level \
         = pd.DataFrame(array_values\
-        , columns=['desc','breed','kp','size','split_image']\
+        , columns=['desc','breed','kp','size','split_image','image_id']\
         , index=list_level_index)
 
         return df_multi_level
@@ -1184,7 +1187,7 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def kpdesc_build(self, dirbreed, pil_image, image_count) :
+    def kpdesc_build(self, dirbreed, pil_image, image_count,imagename) :
         '''Build matrix of key points descriptors where  :
         --> number of raws from this matrix is the number of keypoints
         --> number of columns is the number of features (128) for each keypoint.
@@ -1208,36 +1211,47 @@ class P7_DataBreed() :
             * image_count : current number of images.
         
         '''
+
         dict_breed_kpdesc = dict()
         hr_breedname = get_breedname_from_dirbreed(dirbreed)
-
+        name_id = imagename.split('.')[0]
+        if name_id == 'n02113186_11037' :
+            print(name_id)            
         if self._is_splitted is True :
+            
             dict_split_pil_image = self.split_pil_image(pil_image,hr_breedname)
             
-            for id_breedname, list_split_pil_image in dict_split_pil_image.items() :
+            for id_breedname, list_split_pil_image \
+            in dict_split_pil_image.items() :
                 for split_pil_image in list_split_pil_image :
                     kp, desc = get_image_kpdesc(split_pil_image)
                     dict_breed_kpdesc[image_count] \
-                    = (desc,hr_breedname,kp,split_pil_image.size,split_pil_image)
+                    = (desc,hr_breedname,kp,split_pil_image.size,split_pil_image,name_id)
                     image_count +=1
+
             self._dict_breed_kpdesc.update(dict_breed_kpdesc)
         else :            
             kp, desc = get_image_kpdesc(pil_image)
             dict_breed_kpdesc[image_count] \
-            = (desc,hr_breedname, kp,split_pil_image.size,split_pil_image)
+            = (desc,hr_breedname, kp,split_pil_image.size,split_pil_image,name_id)
             self._dict_breed_kpdesc.update(dict_breed_kpdesc)
 
         #-----------------------------------------------------------------------
         # Dictionary of splitted images is updated.
         #-----------------------------------------------------------------------
         #self._dict_split_pil_image.update(dict_split_pil_image)
+        #print("*** kpdesc_build() ... "+str(len(self._dict_split_pil_image)))
         
         #-----------------------------------------------------------------------
         # Dataframe with all informations related to PIL images and descriptors 
         #-----------------------------------------------------------------------
         ar = np.array(list(dict_breed_kpdesc.values()))
+
+        #print("*** kpdesc_build() ... "+str(ar.shape))
         df_multi_level = self._df_pil_image_kpdesc_build(ar)
-        #print("***"+str(ar))
+
+        #print("***"+str(df_multi_level.shape))
+
         self._df_pil_image_kpdesc  \
         = pd.concat( [self._df_pil_image_kpdesc, df_multi_level])
 
@@ -1270,10 +1284,14 @@ class P7_DataBreed() :
         self._dict_breed_kpdesc = dict()
         self._is_splitted = is_splitted
         self._df_pil_image_kpdesc = pd.DataFrame()
+        
+        print("*** build_sift_desc() ...")
 
         for dirbreed, list_imagename in self._dict_breed_sample.items():
             
             for imagename  in list_imagename :
+                #print(imagename)
+                
                 #---------------------------------------------------------------
                 # Load PIL image from file path
                 #---------------------------------------------------------------
@@ -1332,9 +1350,9 @@ class P7_DataBreed() :
                     # for classification.
                     #-----------------------------------------------------------
                     dict_breed_kpdesc, image_count\
-                    = self.kpdesc_build(dirbreed, pil_image,image_count)
+                    = self.kpdesc_build(dirbreed, pil_image,image_count,imagename)
                     
-                    print("Images processed= "+str(image_count))             
+                    #print("Images processed= "+str(image_count))             
 
                     #self._dict_breed_kpdesc = dict_breed_kpdesc.copy()
                     
@@ -1358,6 +1376,7 @@ class P7_DataBreed() :
                     error +=1
                     #print("*** WARNING : attribute error for PIL image ")
                     continue                
+        self._df_pil_image_kpdesc.index.names =['raw','col']
         print("\nINFO : Error = "+str(error)+" Total images processed= "+str(image_count))        
     #---------------------------------------------------------------------------
         
