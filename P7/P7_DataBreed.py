@@ -9,6 +9,7 @@ from PIL import ImageOps
 from PIL import Image
 from  sklearn import model_selection
 
+import p3_util
 import p5_util
 import p6_util
 import p7_util
@@ -20,6 +21,59 @@ import matplotlib.pyplot as plt
 import P7_DataBreed
 import p5_util
 
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def object_dump(oP7_DataBreed_to_dump, filename) :
+    '''Dump oP7_DataBreed object into file given in parameter.
+    Dictionary containing cv2.KeyPoint objects is erased because 
+    pickling such objects fail.
+    '''    
+    oP7_DataBreed_to_dump._dict_breed_kpdesc = dict()
+
+    oP7_DataBreed_to_dump.df_pil_image_kpdesc.kp \
+    = oP7_DataBreed_to_dump.df_pil_image_kpdesc.kp.apply(lambda val:list())
+    
+    oP7_DataBreed_to_dump.df_pil_image_kpdesc.split_image\
+    = oP7_DataBreed_to_dump.df_pil_image_kpdesc.split_image.apply(lambda val:list())
+
+    p5_util.object_dump(oP7_DataBreed_to_dump,filename)
+    print('*** INFO : object is saved removing cv2.KeyPoint objects!')
+    return oP7_DataBreed_to_dump
+    
+#-------------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def update_object_save(oP7_DataBreed, is_saved=True, filename=None, is_new_attribute=True):
+    
+    if filename is None :
+        filename='./data/oP7_DataBreed.dump'
+
+    oP7_DataBreed_save = P7_DataBreed()
+
+    if oP7_DataBreed is None :
+        oP7_DataBreed = p5_util.object_load(filename)
+    
+    try: 
+        oP7_DataBreed
+    except NameError:
+        print('*** INFO : oP7_DataBreed is not defined; loading...')
+        oP7_DataBreed = p5_util.object_load(filename)
+        is_saved = False
+
+    oP7_DataBreed_save.copy(oP7_DataBreed,is_new_attribute=is_new_attribute)
+    oP7_DataBreed = P7_DataBreed()
+    oP7_DataBreed.copy(oP7_DataBreed_save,is_new_attribute=is_new_attribute)
+    del(oP7_DataBreed_save)
+
+    if is_saved is True:
+        object_dump(oP7_DataBreed,filename)
+
+    return oP7_DataBreed
+#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 #
@@ -299,9 +353,6 @@ def pil_truncate(pil_image,std_size) :
             * truncated PIL image.
     '''
     arr_image = np.array(pil_image)
-    #print(std_size[0],std_size[1])
-    #print(arr_image.shape)
-    #print(arr_image.shape[0],arr_image.shape[1])
     
     margin_w = int((arr_image.shape[0] -  std_size[0])/2)
     margin_h = int((arr_image.shape[1] -  std_size[1])/2)
@@ -451,6 +502,8 @@ class P7_DataBreed() :
             |   |
             |   +--> kpdesc_build()
             |
+            +-->kp_filter()
+            |
             +-->build_arr_desc()
             |
             |   GMM clustering
@@ -502,6 +555,7 @@ class P7_DataBreed() :
         #self._dict_split_pil_image = dict()
         self._split_ratio = (4,4)
         self._df_pil_image_kpdesc = pd.DataFrame()
+        self._is_kp_filtered = True
         
         
     #---------------------------------------------------------------------------
@@ -539,7 +593,7 @@ class P7_DataBreed() :
         self.strprint("\n "+str(legend))
         
         self.strprint("Path to data directory ........ : "+str(self._dir_path))
-        self.strprint("Number of breeds .............. : "\
+        self.strprint("Number of original breeds ..... : "\
         +str(len(self._dict_data)))
         self.strprint("Total number of images ........ : "\
         +str(self._total_image))       
@@ -579,10 +633,10 @@ class P7_DataBreed() :
         +self._cluster_model_name)
         self.strprint("Bag of features dataframe ..... : "\
         +str(self._df_bof.shape))
-        self.strprint("Labels from dataset ........... : "\
+        self.strprint("Encoded labels from dataset ... : "\
         +str(self._y_label.shape))
-        self.strprint("Number of breeds .............. : "\
-        +str(len(self._dict_breedname_id)))
+        self.strprint("Number of breeds in sample .... : "\
+        +str(len(self._ser_breed_number)))
         self.strprint("Image splitted ................ : "\
         +str(self._is_splitted))
         self.strprint("Key point descriptors ......... : "\
@@ -598,9 +652,13 @@ class P7_DataBreed() :
         #+str(len(self.dict_split_pil_image)))
         self.strprint("Splitted parts ................ : "\
         +str(self._split_ratio))
-        self.strprint("Dataframe images descriptors .. : "\
-        +str(self._df_pil_image_kpdesc.shape))
-        
+        self.strprint("Dataframe images descriptors .. : {} / {}"\
+              .format(self._df_pil_image_kpdesc.shape[0]\
+              ,self._df_pil_image_kpdesc.columns))      
+        self.strprint("KP filtering .................. : "\
+        +str(self._is_kp_filtered))
+              
+          
         self.strprint("")
 
     #---------------------------------------------------------------------------
@@ -646,6 +704,7 @@ class P7_DataBreed() :
         #self._dict_split_pil_image = copied_object._dict_split_pil_image.copy()
         self._split_ratio = copied_object._split_ratio
         self._df_pil_image_kpdesc = copied_object._df_pil_image_kpdesc.copy()
+        self._is_kp_filtered = copied_object._is_kp_filtered
         
         if is_new_attribute is True :
             pass
@@ -829,6 +888,11 @@ class P7_DataBreed() :
     def _set_df_pil_image_kpdesc(self, Xdesc) :
         print("\n*** WARN : assignement is not authorized !\n")
     
+    def _get_is_kp_filtered(self) :
+      return self._is_kp_filtered
+    def _set_is_kp_filtered(self, is_kp_filtered) :
+        self._is_kp_filtered =is_kp_filtered
+    
     
     dir_path = property(_get_dir_path,_set_dir_path)
     std_size = property(_get_std_size,_set_std_size)
@@ -866,8 +930,7 @@ class P7_DataBreed() :
     split_ratio = property(_get_split_ratio, _set_split_ratio)
     df_pil_image_kpdesc = property(_get_df_pil_image_kpdesc\
     , _set_df_pil_image_kpdesc)
-    
-
+    is_kp_filtered = property(_get_is_kp_filtered, _set_is_kp_filtered)
 
     #---------------------------------------------------------------------------
     #
@@ -921,9 +984,15 @@ class P7_DataBreed() :
     #
     #---------------------------------------------------------------------------
     def get_image_filename(self, breedname, imagename) :
-        id = self._dict_breedname_id[breedname]
-        breedname = id+'-'+breedname
-        image_filename = self._dir_path+'/'+breedname+'/'+imagename
+        '''Build and returns absolute path of image file name using breedname 
+        and image name. 
+        Images identifiers are stored into dictionary self._dict_breedname_id.
+        Directory holding images belonging to a breed is named as following : 
+            --> 'id-breedname' such as n02107142-Doberman
+        '''
+        id_breedname = self._dict_breedname_id[breedname]
+        dirbreed = id_breedname+'-'+breedname
+        image_filename = self._dir_path+'/'+dirbreed+'/'+imagename
         return image_filename
     #---------------------------------------------------------------------------
     #
@@ -983,12 +1052,13 @@ class P7_DataBreed() :
     #
     #---------------------------------------------------------------------------
     def _build_pathname(self, dir_breed, filenamebreed):
-        '''Build path name from path dir, and given parameters that are :
+        '''Build absolute path name from path dir, and given parameters that are :
         Input : 
             * dir_breed : directory breed name 
-            * filenamebreed : a file name located into dir_breed
+            * filenamebreed : a file name located into dir_breed referencing 
+            an image.
         Output :
-            * file path name.
+            * absolute file path name.
         '''
         return self._dir_path+'/'+dir_breed+'/'+filenamebreed
     #---------------------------------------------------------------------------
@@ -1090,19 +1160,17 @@ class P7_DataBreed() :
         
         return dict_pil_image
     #---------------------------------------------------------------------------
-    
+
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
     def build_arr_desc(self):
         '''Build an array (Nx128) where :
         --> N : is the total number of keypoints for the dataset.
-        --> 128 is the number of descriptors per keypoints.
+        --> 128 is the number of SIFT descriptors per keypoints.
         Arrays of keypoints descriptors are stored into a dictionary.
-        Building array of descriptors leads to stack eacu one of these arrays.
+        Building array of descriptors leads to stack each one of these arrays.
         
-        TBD : to store all descriptors into a dataframe for which : 
-        indexes of raws allow to identify image ==> 2 levels index dataframe.
         '''
         X_desc = np.zeros(128)
         error=0
@@ -1113,13 +1181,13 @@ class P7_DataBreed() :
         # --> name is the breed name, usefull for classification.
         # --> id is the directory identifier breed images are stored in.
         #-----------------------------------------------------------------------
-        raws = len(self._dict_breed_kpdesc)
-        if(0 >= raws):
+        rows = len(self._dict_breed_kpdesc)
+        if(0 >= rows):
             print("*** ERROR : empty Key-points descriptors! \
             build it with build_sift_desc()")
             return
 
-        for id, (desc,breedname) in self._dict_breed_kpdesc.items():
+        for desc in self._df_pil_image_kpdesc.desc.values:
             try :
                 X_desc = np.vstack((X_desc,desc))
             except ValueError:
@@ -1127,10 +1195,11 @@ class P7_DataBreed() :
                 pass
             count+=1
             if count%1000==0 :
-                print("Processed raws= "+str(count)+"/"+str(raws))
+                print("Processed rows= "+str(count)+"/"+str(rows))
         if 0 < error :
             print("\n*** WARN : Nb of exceptions during process ... : "\
             +str(error))
+        # Copy result except fist column that matches to initialization.
         self._Xdesc = X_desc[1:].copy()
     #---------------------------------------------------------------------------
     
@@ -1139,30 +1208,35 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     def _df_pil_image_kpdesc_build(self, array_values):
         '''Reset dataframe holding PIL images along with corresponding 
-        KP and descriptors.
-        Dataframe is built with a multi-level indexes. 
-            --> 1st level index references raws of spillted images.
+        KP and descriptors. 
+        
+        Dataframe is built with a 2-levels indexes. 
+            --> 1st level index references rows of spliltted images.
             --> 2nd index references columns for splitted images in a raw. 
-        Number of raws and columns are issued from split image process. This 
+        Number of rows and columns are issued from split image process. This 
         process is leaded by parameter self.split_ratio.
         
         Input :
             * array_values : array of values : KP, descriptors, image size, 
             breed name.
         Output :
-            * dataframe with multi-level indexes and values contained in arr.
+            * dataframe with 2-levels indexes and values issued from array_values.
         '''
         raw = self.split_ratio[0]
         col = self.split_ratio[1]
         
+        #-----------------------------------------------------------------------
+        # number of columns is computed based on a square split for any image.
+        #-----------------------------------------------------------------------
         col = int(np.sqrt(array_values.shape[0]))
         raw = col 
         
+        # print("_df_pil_image_kpdesc_build : (raw,col) = ({},{})".format(raw,col))
         raw_index =np.arange(0,raw*col,1)
         col_index =np.arange(0,raw*col,1)
 
         #-----------------------------------------------------------------------
-        # Index for raws and colulns initialization
+        # Index for rows and colulns initialization
         #-----------------------------------------------------------------------
         raw_index[:]=0
         col_index[:]=0
@@ -1181,6 +1255,8 @@ class P7_DataBreed() :
         , columns=['desc','breed','kp','size','split_image','image_id']\
         , index=list_level_index)
 
+        #print(df_multi_level)
+
         return df_multi_level
     #---------------------------------------------------------------------------    
 
@@ -1189,7 +1265,7 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     def kpdesc_build(self, dirbreed, pil_image, image_count,imagename) :
         '''Build matrix of key points descriptors where  :
-        --> number of raws from this matrix is the number of keypoints
+        --> number of rows from this matrix is the number of keypoints
         --> number of columns is the number of features (128) for each keypoint.
 
         Build is processed following is_splitted falg. When activated, then 
@@ -1199,12 +1275,14 @@ class P7_DataBreed() :
         Input :
             * dirbreed : directory in which all images lays on.
             * pil_image : PIL image from which KPDESC matrix is built.
-            * image_count : this is an incremental value used to build raws of 
-            the KPDESC matrix.
+            * image_count : this is an incremental value used to build rows 
+            for KPDESC matrix. One row represents one image.
             
         Output : 
-            * dict_breed_kpdesc : KPDESC matrix stored in a dictionary 
-            strustured as following : {image_count:(desc,hr_breedname)}, where :
+            * dict_breed_kpdesc : KPDESC matrix for any image stored in a 
+            dictionary structured as following : {image_id:(desc,hr_breedname)},
+            where :
+                --> image_id : is an identifier for current image
                 --> desc : this is the descriptor vector (128 sized) for image 
                 identified with image_count
                 --> hr_breedname : human readable name of the breed.
@@ -1215,49 +1293,44 @@ class P7_DataBreed() :
         dict_breed_kpdesc = dict()
         hr_breedname = get_breedname_from_dirbreed(dirbreed)
         name_id = imagename.split('.')[0]
-        if name_id == 'n02113186_11037' :
-            print(name_id)            
-        if self._is_splitted is True :
-            
+           
+        if self._is_splitted is True :            
+            #-------------------------------------------------------------------
+            # dict_split_pil_image holds informations from pil_image image. 
+            #-------------------------------------------------------------------
             dict_split_pil_image = self.split_pil_image(pil_image,hr_breedname)
             
             for id_breedname, list_split_pil_image \
             in dict_split_pil_image.items() :
+            
                 for split_pil_image in list_split_pil_image :
                     kp, desc = get_image_kpdesc(split_pil_image)
+                    
                     dict_breed_kpdesc[image_count] \
-                    = (desc,hr_breedname,kp,split_pil_image.size,split_pil_image,name_id)
+                    = (desc,hr_breedname,kp,split_pil_image.size\
+                    ,split_pil_image,name_id)
+                    
                     image_count +=1
 
             self._dict_breed_kpdesc.update(dict_breed_kpdesc)
-        else :            
+
+        else :
             kp, desc = get_image_kpdesc(pil_image)
             dict_breed_kpdesc[image_count] \
-            = (desc,hr_breedname, kp,split_pil_image.size,split_pil_image,name_id)
-            self._dict_breed_kpdesc.update(dict_breed_kpdesc)
+            = (desc,hr_breedname, kp,pil_image.size\
+            ,pil_image,name_id)
 
-        #-----------------------------------------------------------------------
-        # Dictionary of splitted images is updated.
-        #-----------------------------------------------------------------------
-        #self._dict_split_pil_image.update(dict_split_pil_image)
-        #print("*** kpdesc_build() ... "+str(len(self._dict_split_pil_image)))
+            self._dict_breed_kpdesc.update(dict_breed_kpdesc)
         
         #-----------------------------------------------------------------------
         # Dataframe with all informations related to PIL images and descriptors 
         #-----------------------------------------------------------------------
         ar = np.array(list(dict_breed_kpdesc.values()))
 
-        #print("*** kpdesc_build() ... "+str(ar.shape))
         df_multi_level = self._df_pil_image_kpdesc_build(ar)
-
-        #print("***"+str(df_multi_level.shape))
 
         self._df_pil_image_kpdesc  \
         = pd.concat( [self._df_pil_image_kpdesc, df_multi_level])
-
-        if False :
-            self._df_pil_image_kpdesc \
-            = self._df_pil_image_kpdesc.append(df_multi_level)
 
         return dict_breed_kpdesc, image_count
     #---------------------------------------------------------------------------
@@ -1352,10 +1425,6 @@ class P7_DataBreed() :
                     dict_breed_kpdesc, image_count\
                     = self.kpdesc_build(dirbreed, pil_image,image_count,imagename)
                     
-                    #print("Images processed= "+str(image_count))             
-
-                    #self._dict_breed_kpdesc = dict_breed_kpdesc.copy()
-                    
                     #-----------------------------------------------------------
                     # Closing PIL image : all resources of PIL image are released.
                     #-----------------------------------------------------------
@@ -1377,7 +1446,8 @@ class P7_DataBreed() :
                     #print("*** WARNING : attribute error for PIL image ")
                     continue                
         self._df_pil_image_kpdesc.index.names =['raw','col']
-        print("\nINFO : Error = "+str(error)+" Total images processed= "+str(image_count))        
+        print("\nINFO : Error = "+str(error)\
+        +" Total images processed= "+str(image_count))        
     #---------------------------------------------------------------------------
         
     #---------------------------------------------------------------------------
@@ -1385,7 +1455,8 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     def sampling(self, breed_count, image_per_breed_count):
         #-----------------------------------------------------------------------
-        # Select randomly a breed directory name
+        # Select randomly a breed directory name; a list of randomly selected
+        # breeds directory is built.
         #-----------------------------------------------------------------------
         self._list_breed_sample = list()
         for breed_id in range(0, breed_count,1):
@@ -1400,10 +1471,20 @@ class P7_DataBreed() :
         for breedname in self._list_breed_sample :
             list_filename = self._dict_data[breedname]
             list_file_sample = list()
-            for file_id in range(0, image_per_breed_count,1):
+            selected_images = min(image_per_breed_count,len(list_filename))
+            #print("*** sampling() : {},{}".format(image_per_breed_count,selected_images))
+            for file_id in range(0, selected_images,1):
                 list_file_sample.append(random.choice(list_filename))
                 count +=1
-            self._dict_breed_sample[breedname] = list_file_sample
+            #-------------------------------------------------------------------
+            # Random may lead to duplication; in order to avoid it, 
+            # a unique list of names is created using pandas Series object 
+            # from dictionary. 
+            #-------------------------------------------------------------------
+            list_file_sample_unique = list(pd.Series(list_file_sample).unique())
+            
+            self._dict_breed_sample[breedname] = list_file_sample_unique
+            
         self._sampling_breed_count = breed_count
         self._sampling_image_per_breed_count = image_per_breed_count
         self.build_ser_number_breedname()
@@ -1439,11 +1520,11 @@ class P7_DataBreed() :
         
         Input : 
             * desc : image represented as SIFT key points descriptors.
-            Raws are keypoints, extended over 128 descriptors (columns)
+            rows are keypoints, extended over 128 descriptors (columns)
         Output :
             * dataframe containing histogram of clusters representing 
             image bag of visual words.
-            dataframe raws : images identifiers
+            dataframe rows : images identifiers
             dataframe columns : descriptors occurencies 
         '''
         
@@ -1518,25 +1599,29 @@ class P7_DataBreed() :
     #
     #---------------------------------------------------------------------------
     def build_datakp_bof(self) :
-        '''Build representation of keypoints dataset in a bag of features.
+        '''Build representation of key-points dataset in a bag of features.
         Result is normalized and stored into a pandas data-frame.
         Clustering should have been built before this step.
         Output :
-            * dataframe structures as following : 
-                Raws index are references to images from sampling 
-                Columns are features occurencies.
+            * dataframe structured as following : 
+                --> Rows index are references to images from sampling 
+                --> Columns are features occurencies.
         '''
         df = None
         dict_label = dict()
         error =0
         list_image_id_error = list()
-        for image_id, (imagedesc, breedname) in self._dict_breed_kpdesc.items():
+        self._df_pil_image_kpdesc.reset_index(drop=True, inplace=True)
+
+        for image_id in self._df_pil_image_kpdesc.desc.index: 
+            breedname = self._df_pil_image_kpdesc.breed[image_id]       
+            imagedesc = self._df_pil_image_kpdesc.desc[image_id]
             df_tmp = self.get_cluster_from_imagedesc(imagedesc)
             if df_tmp is None :
                 error +=1
                 list_image_id_error.append(image_id)
             else :            
-                # Index is matched with image id
+                # Index is matched with image_id
                 df_tmp.rename(index={0:image_id}, inplace=True)
                 if df is None :
                     df = df_tmp.copy()
@@ -1544,6 +1629,8 @@ class P7_DataBreed() :
                     df = pd.concat([df, df_tmp])
                 # Used for Y label
                 breedlabel = self.get_breedlabel_from_breedname(breedname)
+                
+                # Assign a label for each image.
                 dict_label[image_id] = breedlabel
 
         print("\n***Nb of errors..............= "+str(error))
@@ -1557,7 +1644,7 @@ class P7_DataBreed() :
                 del(self._dict_breed_kpdesc[image_id_error] )
         
         #-----------------------------------------------------------------------
-        # Label are encoded in a multi-class way
+        # Labels are encoded in a multi-class way
         #-----------------------------------------------------------------------
         self.ylabel_encode(dict_label) 
         
@@ -1566,6 +1653,7 @@ class P7_DataBreed() :
         # * L2 per column is computed summing all terms for any column
         # * Normalization is applied on all terms or any column 
         #-----------------------------------------------------------------------
+        print(df.shape)
         ser_sqrt = df.apply(lambda x: np.sqrt(x.dot(x.T)), axis=0)
         ser_sqrt
         df = df/ser_sqrt
@@ -1586,16 +1674,22 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     def breed_show(self) :
         print("")
+
         for name,id in self._dict_breedname_id.items() :
-            print("Identifier= {}  Breed name= {}".format(str(id)+'-'+name,name))
+            print("Breed directory= {:30}  Breed name= {}"\
+            .format(str(id)+'-'+name,name))
     #---------------------------------------------------------------------------
 
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
     def build_ser_number_breedname(self) :
-        '''Build a Series with index as breed numbers and values as human 
-        readable breed names.
+        '''Build, from sampling dataset, a pandas Series with index 
+        as breed labels and human readable breed names as values.
+        
+        Series is strictured as following : 
+        --> keys : [list_of_labels]
+        --> values : [array_of_breed_name]
         '''
         if 0 >= len(self._dict_breedname_id) :
             pass
@@ -1615,14 +1709,13 @@ class P7_DataBreed() :
         self._dict_breedname_id = dict_breedname_id.copy()
 
         #-----------------------------------------------------------------------
-        # Also build dictionary for label identifiers
+        # Build pandas Series with labeled breed names.
         #-----------------------------------------------------------------------
-        index = 0
+        label = 0
         dict_breed_number = dict()
         for breed_name in self._dict_breedname_id.keys() :
-            dict_breed_number[index] = breed_name
-            index+=1
-            #print(dict_breed_number)
+            dict_breed_number[label] = breed_name
+            label+=1
         self._ser_breed_number = pd.Series(dict_breed_number).copy()
     #---------------------------------------------------------------------------
     
@@ -1736,10 +1829,103 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    #def single_image(self,list_restricted_image):
-    #    self.list_restricted_image = list_restricted_image.copy()
+    def kp_filter(self):
+        '''Process filtering of KP descriptors issued from build_sif_desc() 
+        method.
+        Splitted image are filtered based of occurency of KP.
+        For each splitted image, distribution of KP is computed.
+        Images from which KP occurency is outside the quartile [q1,q3] are 
+        ignored.
+        '''
+        #-----------------------------------------------------------------------
+        # If splitted flag is not activated, then KP filtering is deactivated
+        #-----------------------------------------------------------------------
+        if self._is_splitted is False :
+            self._is_kp_filtered = False
+        
+        if self._is_kp_filtered is False :
+            return
+        
+        df_pil_image_kpdesc = self.df_pil_image_kpdesc
+
+        #-----------------------------------------------------------------------
+        # List of unique images identifiers is extracted.
+        # All splitted images have the same marker, image_id. Thsi marker is  
+        # the identifier of the original image (the one before splitting)
+        #-----------------------------------------------------------------------
+        list_name_id_unique = list(df_pil_image_kpdesc.image_id.unique())
+
+        #-----------------------------------------------------------------------
+        # Rows with KP array values fixed to None are erased
+        #-----------------------------------------------------------------------
+        print("*** Before filtering       : "+str(df_pil_image_kpdesc.shape))
+        df_pil_image_kpdesc['desc'].replace([None],'-', inplace=True)
+        df_pil_image_kpdesc = df_pil_image_kpdesc[df_pil_image_kpdesc['desc']!='-']
+        print("*** After 1st filter level : "+str(df_pil_image_kpdesc.shape))
+
+        df_pil_image_kpdesc_filtered = pd.DataFrame()
+
+        for name_id_unique in list_name_id_unique :
+            #-------------------------------------------------------------------
+            # Select a set of splitted images from dataframe 
+            #-------------------------------------------------------------------
+            df = df_pil_image_kpdesc[df_pil_image_kpdesc.image_id==name_id_unique]
+        
+            #-------------------------------------------------------------------
+            # Build dictionary with occurencies of KP for each splitted image.
+            #-------------------------------------------------------------------
+            dict_kp_occurency = dict()
+            range_list = range(0,df.shape[0])
+            i_raw = 0
+            for (raw, col), list_kp in df.kp.items() :
+                dict_kp_occurency[i_raw] = len(list_kp)
+                i_raw += 1
+        
+            #-------------------------------------------------------------------
+            # Occurencies dictionary is converted into a Dataframe 
+            # allowing easiest operations.
+            #-------------------------------------------------------------------
+            ser = pd.Series(dict_kp_occurency)
+            df_kp = pd.DataFrame([ser]).T.rename(columns={0:'count'})
+
+            #-------------------------------------------------------------------
+            # Threashold are computed 
+            #-------------------------------------------------------------------
+            q1,q3,zmin,zmax = p3_util.df_boxplot_limits(df_kp , 'count')
+
+            #-------------------------------------------------------------------
+            # Filtering is applied
+            #-------------------------------------------------------------------
+            df_kp_filtered = df_kp[df_kp['count']<int(q3)]
+            df_kp_filtered = df_kp_filtered[df_kp_filtered['count']>int(q1)]
+            df.reset_index(inplace=True)
+            list_index_drop = list()
+
+            #-------------------------------------------------------------------
+            # Dataframe rows from outside filter are droped : index list is 
+            # firstly built. Then this filtered indexes are applied to dataframe.
+            #-------------------------------------------------------------------
+            df_to_filter = df.copy()
+            for id  in df.index:
+                if id not in  df_kp_filtered.index :
+                    list_index_drop.append(id)
+                else:
+                    pass
+            df.drop(list_index_drop, inplace=True)
+        
+            #-------------------------------------------------------------------
+            # Filtered dataset is concatened with previous one.
+            #-------------------------------------------------------------------
+            df_pil_image_kpdesc_filtered \
+            = pd.concat([df_pil_image_kpdesc_filtered, df],ignore_index=True)
+            
+        #-------------------------------------------------------------------
+        # Dataframe issue from filtering replace previous dataframe. 
+        #-------------------------------------------------------------------
+        self._df_pil_image_kpdesc = df_pil_image_kpdesc_filtered.copy()    
+        print("*** After KP filter        : "\
+        +str(self._df_pil_image_kpdesc.shape))
     #---------------------------------------------------------------------------
-    
     
     
 #-------------------------------------------------------------------------------

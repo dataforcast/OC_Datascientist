@@ -2065,7 +2065,7 @@ def gmm_hyper_parameter_cv(df, t_cluster, dict_hyper_parameter):
    cluster_start=t_cluster[0]
    cluster_end=t_cluster[1]
    
-   n_components=np.arange(cluster_start, cluster_end)
+   n_components=np.arange(cluster_start, cluster_end+1)
  
    print("Clustering from clusters range from : "\
    +str(cluster_start)+" --> "+str(cluster_end))
