@@ -442,6 +442,24 @@ def get_image_kpdesc(pil_image):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
+def pil_edge(pil_image):
+    edges = cv2.Canny(np.array(pil_image),pil_image.size[0],pil_image.size[1])
+    pil_image = edges-np.array(pil_image)
+    
+    return Image.fromarray(pil_image)
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p7_filter_median(pil_image) :
+    filename, pil_image = p7_util.p7_filter_median(pil_image)
+    return pil_image
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
 def pil_2gray(pil_image):
     return pil_image.convert('L')
 #-------------------------------------------------------------------------------
@@ -518,6 +536,10 @@ class P7_DataBreed() :
 
         
     '''
+    
+    LIST_PIL_PROCESS=[pil_square, pil_edge,p7_filter_median\
+    , pil_2gray,pil_autocontrast,pil_equalize]
+
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
@@ -1382,6 +1404,14 @@ class P7_DataBreed() :
                     #pil_image.resize(self._std_size)
 
                     #-----------------------------------------------------------
+                    # Image may be truncated to render std_size
+                    #-----------------------------------------------------------
+                    if self.std_size is not None :
+                        pil_image = pil_truncate(pil_image,self.std_size)
+                    else :
+                        pass
+
+                    #-----------------------------------------------------------
                     # Gray transformation : removing channel dimension.
                     #-----------------------------------------------------------
                     pil_image = pil_2gray(pil_image)
@@ -1391,18 +1421,11 @@ class P7_DataBreed() :
                     #-----------------------------------------------------------
                     pil_image = pil_square(pil_image)
                     
-                    #-----------------------------------------------------------
-                    # Image may be truncated to render std_size
-                    #-----------------------------------------------------------
-                    if self.std_size is not None :
-                        pil_image = pil_truncate(pil_image,self.std_size)
-                    else :
-                        pass
                     
                     #-----------------------------------------------------------
                     # Median filter is applied
                     #-----------------------------------------------------------
-                    filename, pil_image = p7_util.p7_filter_median(pil_image)
+                    pil_image = p7_filter_median(pil_image)
 
                     #-----------------------------------------------------------
                     # AUto-contrast filter is applied: this allows to provide 
@@ -1416,8 +1439,13 @@ class P7_DataBreed() :
                     #-----------------------------------------------------------
                     # Equalization
                     #-----------------------------------------------------------
-                    pil_image = pil_equalize(pil_image)
+                    #pil_image = pil_equalize(pil_image)
                     
+                    #-----------------------------------------------------------
+                    # Edging
+                    #-----------------------------------------------------------
+                    pil_image = pil_edge(pil_image)
+
                     #-----------------------------------------------------------
                     # Store descriptor along with breed name. This will be usefull
                     # for classification.
@@ -1431,13 +1459,11 @@ class P7_DataBreed() :
                     pil_image.close()
 
                     #-----------------------------------------------------------
-                    # Display progress
+                    # Increase number of processed image in case is_splitted 
+                    # flag in not activated.
+                    # When activated, number of processed images is increased 
+                    # inside kpdesc_build() method.
                     #-----------------------------------------------------------
-                    if False :
-                        if(0 == (image_count)%500 ) :
-                            print("Images processed= "\
-                            +str(image_count)+"/"+str(self._total_image))
-
                     if self._is_splitted is False :
                         image_count +=1     
                     
@@ -1896,8 +1922,8 @@ class P7_DataBreed() :
             #-------------------------------------------------------------------
             # Filtering is applied
             #-------------------------------------------------------------------
-            df_kp_filtered = df_kp[df_kp['count']<int(q3)]
-            df_kp_filtered = df_kp_filtered[df_kp_filtered['count']>int(q1)]
+            df_kp_filtered = df_kp[df_kp['count']<=int(q3)]
+            df_kp_filtered = df_kp_filtered[df_kp_filtered['count']>=int(q1)]
             df.reset_index(inplace=True)
             list_index_drop = list()
 
