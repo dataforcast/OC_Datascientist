@@ -35,7 +35,7 @@ to the native scoring set by Open food facts.
 
 
 
-## <center><h1>P4 : Flights delay estimator</h1></center>
+## <center><h1>P4 : Flights delays estimator</h1></center>
 <hr>
 
 <br><br><br>
@@ -62,7 +62,7 @@ suggest assumptions on data model variables.
 
 * Linear regressors are evaluated based on an exhautive cross-validation. 
 
-* The best estimator is selected based on performances measures. 
+* The best estimator among linear regression estimators is selected based on performances measures. 
 
 * An software engineering scheme is showned for the model to be deployed.
 
@@ -70,3 +70,11 @@ suggest assumptions on data model variables.
 
 * Conclusions present limits of this model and possibles propositions to increase 
 preformances.
+
+API on JSON format: 
+
+Following displays a random list of flights
+ * https://francois-bangui-oc-p4.herokuapp.com/predictor/?’*’
+<br> 
+Flight delay evaluation  based of flight identifier : 
+ * https://francois-bangui-oc-p4.herokuapp.com/predictor/?flight_id=<ID>
