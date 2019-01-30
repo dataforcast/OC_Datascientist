@@ -80,4 +80,5 @@ Following displays a random list of flights
 Flight delay evaluation  based of flight identifier : 
 
  * https://francois-bangui-oc-p4.herokuapp.com/predictor/?flight_id=ID
+ 
 where ID is picked from previous output.
