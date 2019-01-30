@@ -74,9 +74,10 @@ preformances.
 API on JSON format: 
 
 Following displays a random list of flights
- * https://francois-bangui-oc-p4.herokuapp.com/predictor/?’*’
+ * https://francois-bangui-oc-p4.herokuapp.com/predictor/?*
 
 <br> 
 Flight delay evaluation  based of flight identifier : 
 
- * https://francois-bangui-oc-p4.herokuapp.com/predictor/?flight_id=<ID>
+ * https://francois-bangui-oc-p4.herokuapp.com/predictor/?flight_id=ID
+where ID is picked from previous output.
