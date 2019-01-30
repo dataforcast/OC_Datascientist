@@ -33,7 +33,12 @@ to the native scoring set by Open food facts.
  
 * Recommendations are proposed for improving the scoring model.
 
+## <center><h1>P3 : Moovies recommandation engine </h1></center>
+<hr>
 
+<br><br><br>
+<h3>Abstract</h3>
+<hr>
 
 ## <center><h1>P4 : Flights delays estimator</h1></center>
 <hr>
