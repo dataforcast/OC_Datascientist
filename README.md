@@ -75,6 +75,8 @@ API on JSON format:
 
 Following displays a random list of flights
  * https://francois-bangui-oc-p4.herokuapp.com/predictor/?’*’
+
 <br> 
 Flight delay evaluation  based of flight identifier : 
+
  * https://francois-bangui-oc-p4.herokuapp.com/predictor/?flight_id=<ID>
