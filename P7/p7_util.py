@@ -117,16 +117,25 @@ def p7_image_hist(image, title=None, xlabel=None, ylabel=None, cumulative=False)
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p7_pil_image_load(filename, is_verbose=True, std_size=(200,200)) :
+def p7_pil_image_load(filename, is_verbose=True, std_size=None) :
     '''Load an image from a file using PIL package and returns it.
     '''
-    image = Image.open(filename) 
-    image.load_end()
+    pil_image_copy = None
+    
+    pil_image = Image.open(filename) 
+    pil_image.load_end()
+    try :
+        pil_image_copy = pil_image.copy()
+        pil_image.close()
+    except AttributeError :
+        pass
+    
     if is_verbose is True:
-        print("Format des pixels : {}".format(image.mode))
+        print("Format des pixels : {}".format(pil_image_copy.mode))
     if std_size is not None :
-        image = image.resize(std_size)
-    return image
+        pil_image_copy = pil_image_copy.resize(std_size)
+
+    return pil_image_copy
 #-------------------------------------------------------------------------------
  
 #-------------------------------------------------------------------------------

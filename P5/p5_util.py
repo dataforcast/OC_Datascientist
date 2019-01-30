@@ -1069,10 +1069,10 @@ def object_dump(object_to_dump, fileName):
 #
 #-------------------------------------------------------------------------------
 def object_compress_dump(object_to_dump, fileName):
-   """ This function compress and dump (serialize), into a file name, 
-   an object given as parameter using pickle package.
+   """ This function compress and dump (serialize) a given object into a 
+   file name using pickle package.
    Input : 
-      * object_to_dump : objecct to be dumped
+      * object_to_dump : object to be compressed then dumped
       * fileName : name of the file in which object has been dumped
    Output : none
       
@@ -1455,8 +1455,9 @@ def kmeans_scan_inter_inertia(df, cluster_start, cluster_end):
       * df  : dataframe from which values are clusterized
       * cluster_start : start point for cluster range
       * cluster_end : sendtart point for cluster range
-   Output : dict_kmeans : a dictionary containing kmeans cluster model
-      * 
+   Output : 
+      * dict_kmeans : a dictionary containing kmeans cluster model structured 
+        as following : {cluster_id: kmeans_model}
    """
    #arr_inter_inertia=[]
 
