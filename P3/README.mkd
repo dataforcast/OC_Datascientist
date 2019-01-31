@@ -1,0 +1,71 @@
+# <center><h1>Moovies recommandation engine</h1></center>
+This project carried out on behalf of the Master 2 Centrale Supélec / Openclassrooms training in datasience
+<hr>
+
+<br><br><br>
+<h3>Abstract</h3>
+<hr>
+
+This project aims to provide a JSON API allowing to return a set of 5 
+recommended moovies from a moovie identifier or a moovie name.
+
+Data are issued from IMDB database  (See [https://www.imdb.com//](URL))
+
+Recommendation engine is powered with an unsupervized machine learning algorithm.
+<br>
+
+<u>This recommendation engine is not based on users collaboration; it is based on moovies informations extracted from database.</u>
+
+<br>
+
+<h3>Steps</h3>
+<hr>
+
+* The cleaning of the database is presented.
+
+* An exploratory analysis and `PCA` are conducted leading to the issuance of study hypotheses. Features correlations have allowed to select 
+
+* Qualitative and quantitative variables lead to forge a digital model. Quantitative variables are one-hot encoded.
+
+* Missing variables are balanced with an imputation algorithm based on a linear regression.
+
+* The analysis of the relevant variables is carried out by univariate, bivariate studies,
+concentration, dispersion and distribution measures.
+
+* Multiple combinations of reduction / clustering algorithms have been benchmarked : 
+
+    1. `Kernel PCA / Kmeans`
+    2. `MDS / Kmeans`
+    3. `t-SNE / DBSCAN`
+
+<br>
+
+<h3>API usage</h3>
+<hr>
+API produces `JSON` results.
+
+* Retrieving random moovies references : 
+<br>
+[https://recomovies.herokuapp.com/recommend?’*’](URL)
+<br>
+
+* Get recommended moovies from a moovie reference : 
+<br>
+[https://recomovies.herokuapp.com/recommend?movie_id=ID](URL)
+<br>where ID is a moovie identifier.
+
+* Get recommended moovies from a moovie title : 
+<br>
+[https://recomovies.herokuapp.com/recommend?movie_id=TITLE](URL)
+<br>where TITLE is a moovie title.
+
+<br>
+<h3>Software engineering</h3>
+<hr>
+
+<img src="./P3_SoftwareEngineering.png" alt="Drawing" style="width: 200px;"/>
+
+
+
+
+
