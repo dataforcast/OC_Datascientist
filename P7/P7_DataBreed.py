@@ -781,6 +781,10 @@ class P7_DataBreed() :
         if 'GMM' == self._cluster_model_name :
             nb_cluster \
             = self._dict_cluster_model[self._cluster_model_name].n_components
+        elif 'Kmeans' == self._cluster_model_name :
+            nb_cluster \
+            = self._dict_cluster_model[self._cluster_model_name].n_clusters
+        
         else:
             print("\n*** WARN : cluster model does not exists in clusters dictionary !\n")
         return nb_cluster
@@ -1010,13 +1014,16 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     def plot_kpdesc_image(self) :
         '''
-            Input : None
-                
-            Output : 
-                * list_breed_kpdesc : list of tuples structured as following :
-                (kp,descriptor), for each raw of splitted image.
-                * dict_breed_kpdesc_image : dictionary structures as following :
-                {breed: list_of_cv2.drawKeypoints}, for each raw of splitted image.
+        Plot a single image along with its KP points issued from SIFT features 
+        extraction.
+
+        Input : None
+            
+        Output : 
+            * list_breed_kpdesc : list of tuples structured as following :
+            (kp,descriptor), for each raw of splitted image.
+            * dict_breed_kpdesc_image : dictionary structures as following :
+            {breed: list_of_cv2.drawKeypoints}, for each raw of splitted image.
         '''
 
         raw_new = 0
@@ -1669,10 +1676,19 @@ class P7_DataBreed() :
     #
     #---------------------------------------------------------------------------
     def read_image(self, dirbreed, imagename, image_type='PIL') :
-    
+        pil_image = None
         imagepathname = self._build_pathname(dirbreed, imagename)
         pil_image = p7_read_image(imagepathname)
-        
+        if pil_image is None : 
+            breedname = dirbreed
+            dirbreed = imagename.split('_')[0]
+            dirbreed = dirbreed+'-'+breedname
+            imagepathname = self._build_pathname(dirbreed, imagename)
+            pil_image = p7_read_image(imagepathname)
+            if pil_image is None : 
+                print("*** ERROR : re-building breed directory name FAILED!")
+            else :
+                pass
         return pil_image
     #---------------------------------------------------------------------------
 
@@ -1906,7 +1922,11 @@ class P7_DataBreed() :
         
         Input :
             * breedname : human readable breed name.
-            * is_sample_show : when fixed to True, then....?
+            * is_sample_show : when fixed to False, then images stored in sample 
+            are not displayed. Then only images names out of sample are displayed.
+            This may be relevant when testing image out of sample.
+            
+            Images from sample are those used for training a ML or DL algorithm.
         '''
 
         ser = pd.Series(self._dict_breedname_id)

@@ -4,10 +4,15 @@ import os
 import pandas as pd
 import random
 
+
 from PIL import Image
 from PIL import ImageFilter
 import matplotlib.pyplot as plt
 import numpy as np
+from keras.preprocessing.image import load_img
+from keras.preprocessing.image import img_to_array
+
+
 import p5_util
 
 #------------------------------------------------------------------------------
@@ -121,8 +126,16 @@ def p7_pil_image_load(filename, is_verbose=True, std_size=None) :
     '''Load an image from a file using PIL package and returns it.
     '''
     pil_image_copy = None
+    pil_image = None
+    try :
+        pil_image = Image.open(filename) 
+    except FileNotFoundError :
+        print("*** ERROR : image from path= "+filename+" NOT FOUND!")
+        pass   
     
-    pil_image = Image.open(filename) 
+    if pil_image is None :
+        return pil_image
+
     pil_image.load_end()
     try :
         pil_image_copy = pil_image.copy()
@@ -446,4 +459,26 @@ def p7_breed_sampling_index(dict_breed_all, breed_count, dog_breed_count):
 #-------------------------------------------------------------------------------
 
 
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p7_pil_to_keras_image(pil_image, is_show=True) :
+    '''Convert PIL image into a Keras image.
+    PIL image must be extended with an additional dimension for batch size.
+    Also Keras image required PIL image to be resized in (224,224)
+    '''
+    pil_image =pil_image.resize((224,224)) 
+    if is_show is True :
+        plt.imshow(pil_image)
+        plt.show()
+    numpy_image = img_to_array(pil_image)
+    batch_image = np.expand_dims(numpy_image, axis=0)
+    if is_show is True :
+        plt.imshow(np.uint8(batch_image[0]))
+        plt.show()
+    else : 
+        pass
+    return batch_image    
+#-------------------------------------------------------------------------------
     
