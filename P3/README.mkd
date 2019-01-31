@@ -18,7 +18,7 @@ Recommendation engine is powered with an unsupervized machine learning algorithm
 
 <br>
 
-<h3>Steps</h3>
+<h3>Overview</h3>
 <hr>
 
 * The cleaning of the database is presented.
