@@ -9,11 +9,20 @@ This project carried out on behalf of the Master 2 Centrale Supélec / Openclass
 The purpose of this study is to automatically categorize the clients of a website according to their behavior. The data are presented as time series. They come from a database of an e-commerce site.
 
 <br>
-The slides in this study (`[Openclassrooms_ParcoursDatascientist_P5-V2.pdf](URL)`) present the project in detail.
+
+  * The slides present the overall approach of the study : <a href="URL">https://github.com/dataforcast/OC_Datascientist/blob/master/P5/p5_soutenance_F-BANGUI_V2/Openclassrooms_ParcoursDatascientist_P5-V2.pdf</a>
 <br>
+
+* Jupyter notebook, Python source code : <a href="URL">http://bit.ly/FBangui_Datascience_Marketing</a>
+
+<br>
+
 
 The overall project process is schematized below : 
 <img src="./P5_MarketSegmentation_ProcessOverview.png" alt="Drawing" style="width: 200px;"/>
+
+<br>
+
 
 At a first step, clustering algorithm are used to classify customers. Once done, supervized algorithms are trained with classes issued from clustring algorithms.
 <h3>Study Overview :</h3>

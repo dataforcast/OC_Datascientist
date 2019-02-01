@@ -9,10 +9,21 @@ This project carried out on behalf of the Master 2 Centrale Supélec / Openclass
 This study aims to explore a food database in order to constitute a generator 
 of healthy recipes.
 
-Data are issued from Open food facts database  (See [https://fr.openfoodfacts.org/](URL))
+Data are issued from Open food facts database  (See <a href="URL">https://fr.openfoodfacts.org/</a> )
+<br>
 
 <u>A recipe is understood here as a combination of foods from the food database.</u>
+<br>
 
+  * Detailed report is here : <a href="URL">https://github.com/dataforcast/OC_Datascientist/blob/master/P2/Rapport-P2.pdf</a>
+<>br
+
+  * Jupyter notebook as well as Python source code :  <a href="URL">http://bit.ly/FBangui_Datascience_nutrition</a>
+<br>
+<br>
+
+<hr>
+**Study steps**
 <br>
 
 * The cleaning of the database is presented.

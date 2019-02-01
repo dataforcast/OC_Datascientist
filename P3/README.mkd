@@ -15,7 +15,12 @@ Recommendation engine is powered with an unsupervized machine learning algorithm
 <br>
 
 <u>This recommendation engine is not based on users collaboration; it is based on moovies informations extracted from database.</u>
+<br>
 
+  * Slides from project : <a href="URL">https://github.com/dataforcast/OC_Datascientist/blob/master/P3/CentraleSupelec_OC_ParcoursDatascientist_P3-V2.pdf</a>
+
+
+  * Jupyter notebook, Python source code : <a href="URL">http://bit.ly/FBangui_Datascience_filmsEngine</a>
 <br>
 
 <h3>Overview</h3>
@@ -46,17 +51,17 @@ API produces `JSON` results.
 
 * Retrieving random moovies references : 
 <br>
-[https://recomovies.herokuapp.com/recommend?’*’](URL)
+<a href="URL">https://recomovies.herokuapp.com/recommend?*</a>
 <br>
 
 * Get recommended moovies from a moovie reference : 
 <br>
-[https://recomovies.herokuapp.com/recommend?movie_id=ID](URL)
+<a href="URL">https://recomovies.herokuapp.com/recommend?movie_id=ID</a>
 <br>where ID is a moovie identifier.
 
 * Get recommended moovies from a moovie title : 
 <br>
-[https://recomovies.herokuapp.com/recommend?movie_id=TITLE](URL)
+<a href="URL">https://recomovies.herokuapp.com/recommend?movie_id=TITLE</a>
 <br>where TITLE is a moovie title.
 
 <br>
