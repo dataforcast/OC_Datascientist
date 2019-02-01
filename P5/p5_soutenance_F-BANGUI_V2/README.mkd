@@ -1,0 +1,95 @@
+# <center><h1>Market segmentation</h1></center>
+This project carried out on behalf of the Master 2 Centrale Supélec / Openclassrooms training in datasience
+<hr>
+
+<br><br><br>
+<h3>Abstract</h3>
+<hr>
+
+The purpose of this study is to automatically categorize the clients of a website according to their behavior. The data are presented as time series. They come from a database of an e-commerce site.
+
+<br>
+The slides in this study (`[Openclassrooms_ParcoursDatascientist_P5-V2.pdf](URL)`) present the project in detail.
+<br>
+
+The overall project process is schematized below : 
+<img src="./P5_MarketSegmentation_ProcessOverview.png" alt="Drawing" style="width: 200px;"/>
+
+At a first step, clustering algorithm are used to classify customers. Once done, supervized algorithms are trained with classes issued from clustring algorithms.
+<h3>Study Overview :</h3>
+<hr>
+
+ 
+* A Data model is built based on the dataset cleaning and exploratory analysis. This last shows linear aspects of data model. This assumption drives the entire study. The expected results of a reference of different M.L. algorithms will support this hypothesis.
+
+* RFM scores are computed and introduced in the model. The inflation of combinations for such estimation based on RFM score does not allow to provide a simple explicative model.
+
+* NLP process has been applied to items description from database. Through extraction of items attributes, it is expected to feed data-model with relevant informations in order to reveale customers behaviour.
+
+<img src="./P5_MarketSegmentation_NLPProcess.png" alt="Drawing" style="width: 200px;"/>
+
+* In order to benefit an efficient model, data-model dimensions have been reduced thanks to a PCA analysis applied to features.
+
+<img src="./P5_MarketSegmentation_PCA.png" alt="Drawing" style="width: 200px;"/>
+
+* Clustering algorithms has been applied in order to find similarities in-between data-points. Kmeans and GMM algoritms have been used. Algorithm selection has been performed based on Silhouette coefficients, inter-inertia values and AIC/BIC criterias. GMM, a enerative algorithm based on Gaussian distributions showned the bests results.
+
+<img src="./P5_MarketSegmentation_Clustering.png" alt="Drawing" style="width: 200px;"/>
+
+* Considering this clustering with respect to monthly incomes, graphs reveal an interpretable model, with 3 mains segments. It can be shown that *Gold customers* (green curve) those producing the most value for the web site owner over a period of time, they do anticipate buys before christmas period. At the opposite, copper clients (blue curve) buy items at the end last period of christmas, such customers who do not have enough advanced cash.
+<br>
+This model reveals a middle segment of silver customers (red curve), those whom behaviour is in-between glod clients and copper clients.
+
+<img src="./P5_MarketSegmentation_IncomesSegmentation.png" alt="Drawing" style="width: 200px;"/>
+
+
+
+* Based on these results, supervized algorithm have been benchmarked in order to produce the best estimator allowing to classify a client into a market segment : 
+<br>
+
+  -> Random Forest<br>
+  -> SVC with RBF kernel<br>
+  -> SVC with sigmoid kernel<br>
+  -> SVC with linear kernel<br>
+  -> Linear SVC<br>
+
+As expected with assumptions issued exploratory analysis, linear estimators provides the bests performances.
+
+<img src="./P5_MarketSegmentation_MLPerf.png" alt="Drawing" style="width: 200px;"/>
+
+
+* Conclusions present model limitations in terms of performances and how a such model could be improved thanks to data augmentation and resources allocation.
+<br>
+
+<h3>API on JSON format:</h3>
+<hr>
+
+<img src="./P5_MarketSegmentation_API.png" alt="Drawing" style="width: 200px;"/>
+<br>
+
+
+
+<br>
+<h3>Software artefacts</h3>
+<hr>
+<br>
+Scheme below presents usage links between artefacts produced for this study : pyhton jupyter notebooks and python source code.
+
+<img src="./P5_MarketSegmentation_Artefacts.png" alt="Drawing" style="width: 200px;"/>
+<br>
+
+<u>Exploratory plan : </u>
+<br>
+
+* *P5_2_RFM* :         this notebook is dedicated to RFM exploration.
+* *P5_2_TimeFeature* : this notebook is dedicated to features issued from time variables exploration.
+* *P5_2_NLP* :         this notebook is dedicated to items description exploratory thanks to NLP algorithms (NLTK).
+
+<br>
+<u>Deployment plan : </u>
+
+
+* *P5_ModelBuilder* : this notebook allows to configure model (data and algorithm) used for production.
+* *oP5_segmentClassifier* : this is the deployed model. It is implemented into a Python class *P5_segmentClassifier.py*. This last uses utilitaries function implemented into files *p3_util.py* and *p5_util.py*. 
+* *P5_SegmentClassifier* : this notebook allows to test and validate model implemented into *oP5_segmentClassifier*
+
