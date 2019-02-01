@@ -7,7 +7,7 @@ Projects carried out on behalf of the Master 2 Centrale Supélec / Openclassroom
 Exploratory analysis leads to propose a scoring algorithm in order to evaluate a recipe sanity. 
 <br>
 
-See project description : <a href="URL">http://bit.ly/FBanfui_Datascience_README_Recipe</a>
+See project description : <a href="URL">https://github.com/dataforcast/OC_Datascientist/blob/master/P2/README.mkd</a>
 <hr>
 
 ## <h1><font color='blus'>Moovies recommendation engine</font></h1>
