@@ -1,5 +1,18 @@
 # Set of projects 
-Projects carried out on behalf of the Master 2 Centrale Supélec / Openclassrooms training in datasience
+Projects carried out on behalf of the Master 2 Centrale Supélec / Openclassrooms training in datasience.
+
+<br>
+I'am a software engineer consultant with a mathematical background.
+<br>
+
+At the beginning of 2018, I decided to develop skills in Datasciences.
+
+The professional projects presented here are the results of my apprenticeship.
+<br>
+
+<a href="URL">http://bit.ly/Linkedin_FBANGUI</a>
+
+
 <hr>
 
 ## <h1><font color='blus'>Food recipe generator</font></h1>
