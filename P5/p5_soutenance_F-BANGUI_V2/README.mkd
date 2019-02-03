@@ -6,7 +6,7 @@ This project carried out on behalf of the Master 2 Centrale Supélec / Openclass
 <h3>Abstract</h3>
 <hr>
 
-The purpose of this study is to automatically categorize the clients of a website according to their behavior. The data are presented as time series. They come from a database of an e-commerce site.
+The purpose of this study is to automatically categorize the clients of a website according to their purchase behavior. The data are presented as time series. They come from a database of an e-commerce site.
 
 <br>
 

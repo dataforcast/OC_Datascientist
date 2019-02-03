@@ -538,6 +538,7 @@ class P7_DataBreed() :
         self._y_test = None
         self._sampling_breed_count = 0
         self._sampling_image_per_breed_count = 0
+        self._sampling_image_count = 0
         self._dict_cluster_model = dict()
         self._cluster_model_name = str()
         self._df_bof = pd.DataFrame()
@@ -602,6 +603,9 @@ class P7_DataBreed() :
         +str(len(self._dict_breed_kpdesc)))
 
 
+
+        self.strprint("Number of images in sample .... : "\
+        +str(self._sampling_image_count))
         self.strprint("Sampling : breeds count ....... : "\
         +str(self._sampling_breed_count))
         self.strprint("Sampling : images per breed ... : "\
@@ -642,6 +646,7 @@ class P7_DataBreed() :
         +str(self._Xdesc.shape))
         self.strprint("Classifier name ............... : "\
         +str(self._classifier_name))
+        
         self.strprint("Supported classifiers ......... : "\
         +str(list(self.dict_classifier.keys())))
 
@@ -663,7 +668,6 @@ class P7_DataBreed() :
         
         self.strprint("Random image sampling ......... : "\
         +str(self._is_random_sampling_image))
-
 
         self.strprint("")
 
@@ -712,9 +716,10 @@ class P7_DataBreed() :
         self._df_pil_image_kpdesc = copied_object._df_pil_image_kpdesc.copy()
         self._is_kp_filtered = copied_object._is_kp_filtered
         self._is_squarred = copied_object._is_squarred
+        self._is_random_sampling_image = copied_object._is_random_sampling_image
+        self._sampling_image_count = copied_object._sampling_image_count
         
         if is_new_attribute is True :
-            self._is_random_sampling_image = copied_object._is_random_sampling_image
             pass
         else :
             print("\n*** WARN : new attributes from copied_object are not \
@@ -926,6 +931,11 @@ class P7_DataBreed() :
     def _set_is_random_sampling_image(self, is_random_sampling_image) :
         self._is_random_sampling_image =is_random_sampling_image
     
+    def _get_sampling_image_count(self) :
+      return self._sampling_image_count
+    def _set_sampling_image_count(self, sampling_image_count) :
+        self._sampling_image_count =sampling_image_count
+
     
     
     dir_path = property(_get_dir_path,_set_dir_path)
@@ -969,6 +979,8 @@ class P7_DataBreed() :
     list_breed_sample = property(_get_list_breed_sample, _set_list_breed_sample)
     is_random_sampling_image \
     = property(_get_is_random_sampling_image, _set_is_random_sampling_image)
+    sampling_image_count \
+    = property(_get_sampling_image_count, _set_sampling_image_count)
 
     #---------------------------------------------------------------------------
     #
