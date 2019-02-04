@@ -1,0 +1,132 @@
+# <center><h1>TAG engine proposal for StackOverFlow platform</h1></center>
+This project carried out on behalf of the Master 2 Centrale Supélec / Openclassrooms training in datasience
+<hr>
+
+<br><br><br>
+<h3>Abstract</h3>
+<hr>
+
+Stackoverflow allows its users to post problems that they encounter in the implementation of solutions in the field of information technologies. Helpers answer these questions. Questions and Answers form a knowledge base.
+
+<br>
+
+* Project artefacts are located under <a href="URL">http://bit.ly/FBangui_Datascience_NLP</a>
+<br>
+
+* The slides present the overall approach of the study : <a href="URL">
+        OC_Datascientist/P6/Soutenance_P6_v3/report/Openclassrooms_ParcoursDatascientist_P6-V1.pdf
+      </a>
+<br>
+
+* Jupyter notebook : <a href="URL">http://bit.ly/NLP_JupyterNotebook</a>
+<br>
+
+* Python source code : <a href="URL">http://bit.ly/NLP_Python</a>
+<br>
+
+* Project report with detailed exploratory analysis : <a href="URL">http://bit.ly/FBangui_Datascience_slides_TAG</a>
+<br>
+
+Description of task to be accomplished along with asumptions are schematized below : 
+
+<center><img src="./P6_Mission.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>
+
+The problem posed is formulated as that of classifying questions according to the tags which are attributed to them. This classification is then used to suggest the most relevant tags to new questions. 
+<br>
+
+Because a question can be assigned with several tags, the classification is approached here from the angle of a **multi-label classification**.
+<br>
+
+<h3>Study Overview :</h3>
+<hr>
+
+ 
+* Exploratory analysis leads to build a standardized data model. Scheme below shows how the exploratory analysis has been conducted. It was focused both on Tags and Tokens.
+
+<center><img src="./P6_TAGExploratoryAnalysis.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>
+Tags and tokens show same curve for occurencies.
+<center><img src="./P6_TAGandTokenDistribution.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>
+While Kolmogorov statistical inference test over assigned tags lead us to make decision over Gaussian asumption distribution.
+<center><img src="./P6_StatInference.png" alt="Drawing" style="width: 200px;"/></center>
+<br>
+
+* Standardization process
+<br>
+<center><img src="./P6_TokenizationProcess.png" alt="Drawing" style="width: 200px;"/></center>
+
+The left side of the scheme above shows applied functions to lead to corpus standardization.
+<br>
+
+The right side of the scheme above provides an exemple of a tokenized post issued from standardization process.
+<br>
+
+<u>It is shown that while using NLP algorithms, we've to mainly deal with tokens that are derived from naturel language but do not belongs to naturel language.</u>
+
+<br>
+Then, using lemmatization and stems may lead to a bias while training Machine Learning algorithms.
+
+<br>
+
+* Corpus digitalization
+
+All along this study, multiple algorithms have been used for standardized corpus digitalization : counting tokens, TFIDF, co-occurencies.
+
+<br>
+Results lead to a set of features along which, each one of the POST from corpus will be assigned with a set of weights.
+
+
+<br>
+<center><img src="./P6_CorpusDigitalization.png" alt="Drawing" style="width: 200px;"/></center>
+<br>
+
+
+
+* Benchmarking scheme : multiple Machine Learning algorithms have been benchmarked in order to select most apropriate one for deployment.
+<br>
+
+In addition to M.L. algorithms, statistical algorithms have been added in order to provide a baseline of  results. Scheme below shows the global picture of such benchmark.
+<br>
+<center><img src="./P6_BenchmarkScope.png" alt="Drawing" style="width: 200px;"/></center>
+<br>
+
+**Word2Vec** algorihtm has been regarded here as an expert system. Some tests have shown that **TWord2Vec** was able to predict "better" tags for a given post then the one suggested by users.
+
+<br>
+<h3>API on JSON format:</h3>
+<hr>
+
+<img src="./P5_MarketSegmentation_API.png" alt="Drawing" style="width: 200px;"/>
+<br>
+
+
+
+<br>
+<h3>Software artefacts</h3>
+<hr>
+<br>
+Scheme below presents usage links between artefacts produced for this study : pyhton jupyter notebooks and python source code.
+
+<img src="./P5_MarketSegmentation_Artefacts.png" alt="Drawing" style="width: 200px;"/>
+<br>
+
+<u>Exploratory plan : </u>
+<br>
+
+* *P5_2_RFM* :         this notebook is dedicated to RFM exploration.
+* *P5_2_TimeFeature* : this notebook is dedicated to features issued from time variables exploration.
+* *P5_2_NLP* :         this notebook is dedicated to items description exploratory thanks to NLP algorithms (NLTK).
+
+<br>
+<u>Deployment plan : </u>
+
+
+* *P5_ModelBuilder* : this notebook allows to configure model (data and algorithm) used for production.
+* *oP5_segmentClassifier* : this is the deployed model. It is implemented into a Python class *P5_segmentClassifier.py*. This last uses utilitaries function implemented into files *p3_util.py* and *p5_util.py*. 
+* *P5_SegmentClassifier* : this notebook allows to test and validate model implemented into *oP5_segmentClassifier*
+
