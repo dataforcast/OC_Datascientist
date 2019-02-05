@@ -52,7 +52,7 @@ Tags and tokens show same curve for occurencies.
 <center><img src="./P6_TAGandTokenDistribution.png" alt="Drawing" style="width: 200px;"/></center>
 
 <br>
-While Kolmogorov statistical inference test over assigned tags lead us to make decision over Gaussian asumption distribution.
+While Kolmogorov/Smirnov statistical inference test over assigned tags lead us to make decision over Gaussian asumption distribution.
 <center><img src="./P6_StatInference.png" alt="Drawing" style="width: 200px;"/></center>
 <br>
 
@@ -96,13 +96,55 @@ In addition to M.L. algorithms, statistical algorithms have been added in order 
 <br>
 
 **Word2Vec** algorihtm has been regarded here as an expert system. Some tests have shown that **TWord2Vec** was able to predict "better" tags for a given post then the one suggested by users.
+<br>
+
+* Statisticals methods
+<br>
+These methods provide a baseline of results. A measure of accuracy has been defined as showned on scheme below. Multiple digitalization algorithms has been applied such as TF-IDF, token occurencies, N-Grams occurency.
+
 
 <br>
+<center><img src="./P6_StatisticalMethod.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>
+    Results shows accuracy versus digitalization algorithms :
+<br>
+<center><img src="./P6_StatisticalMethodBenchmark.png" alt="Drawing" style="width: 200px;"/></center>
+Best result is reached for  TF-IDF(1,1) with an average accuracy of around 10%.
+<br>
+
+* Unsupervized methods : LDA
+<br>
+<center><img src="./P6_LDA.png" alt="Drawing" style="width: 200px;"/></center>
+<br>Latent Dirichlet Allocation process leads to build 2 matrix : topics distribution over tokens (beta matrix) and POST distribution ovre topics. The former matrix is used for feeding matching algorithm for providing suggested TAGs. The resulted mapped beta matrix shows how same TAGs may belong to different topics. An interpretation may be delivered as follow : combining TAGs lead to cover differents topics. Then (*Linux, C++)* combination may reference developpement of C++ application over Linux platform while *(IOCTL, Linux)* combination probably references developpment of drivers inside Linux kernel.
+<br>
+<center><img src="./P6_LDAResult.png" alt="Drawing" style="width: 200px;"/></center>
+<br>Searching over LDA hyper-parameter that is the number of topics, best accuracy has been reached for 400 topics for an accuracy value of 30%.
+
+<br>
+
+* Unsupervized methods : Kmeans clustering
+<br> This sheme detailed below is based on vectorized (digitalized) POST clustering. Similar POSTS may belongs the same cluster. TAGs extraction from any cluster is detailed next.
+<center><img src="./P6_Kmeans.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>Tags extraction is based of distance from a POST to Kmeans cluster centroid. All elements in the cluster are ordered based on distance from cluster centroid. A neighborhood is defined for the POST. Highests TF-IDF value for each neighbour lead to select related Token. Those tokens are filtered from TAGs database for suggested TAGs.
+
+
+<center><img src="./P6_KmeansTAGExtraction.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br> Searching over Kmeans hyper-parameter that is the number of clusters, best result is shown for 400 clusters for an accuracy value of 16%. Best accuracy value is also reached for 400 clusters, to be compared to LDA results with 400 topics (see above). A possible interpretation is that Kmeans centroid represents the main topic and sub-topics are reached as you moove away from centroid.
+
+<center><img src="./P6_KmeansResult.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>It is shownon the shame below that accuracy decrease when POST distance from centroid increase.
+<center><img src="./P6_KmeansResult2.png" alt="Drawing" style="width: 200px;"/></center>
+
+
 <h3>API on JSON format:</h3>
 <hr>
 
 <img src="./P5_MarketSegmentation_API.png" alt="Drawing" style="width: 200px;"/>
-<br>
+
 
 
 
@@ -110,23 +152,3 @@ In addition to M.L. algorithms, statistical algorithms have been added in order 
 <h3>Software artefacts</h3>
 <hr>
 <br>
-Scheme below presents usage links between artefacts produced for this study : pyhton jupyter notebooks and python source code.
-
-<img src="./P5_MarketSegmentation_Artefacts.png" alt="Drawing" style="width: 200px;"/>
-<br>
-
-<u>Exploratory plan : </u>
-<br>
-
-* *P5_2_RFM* :         this notebook is dedicated to RFM exploration.
-* *P5_2_TimeFeature* : this notebook is dedicated to features issued from time variables exploration.
-* *P5_2_NLP* :         this notebook is dedicated to items description exploratory thanks to NLP algorithms (NLTK).
-
-<br>
-<u>Deployment plan : </u>
-
-
-* *P5_ModelBuilder* : this notebook allows to configure model (data and algorithm) used for production.
-* *oP5_segmentClassifier* : this is the deployed model. It is implemented into a Python class *P5_segmentClassifier.py*. This last uses utilitaries function implemented into files *p3_util.py* and *p5_util.py*. 
-* *P5_SegmentClassifier* : this notebook allows to test and validate model implemented into *oP5_segmentClassifier*
-

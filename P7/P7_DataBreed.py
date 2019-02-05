@@ -9,17 +9,17 @@ from PIL import ImageOps
 from PIL import Image
 from  sklearn import model_selection
 
-import p3_util
-import p5_util
-import p6_util
-import p7_util
  
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-import P7_DataBreed
+from keras.utils import to_categorical
+
+import p3_util
 import p5_util
+import p6_util
+import p7_util
 
 #-------------------------------------------------------------------------------
 #
@@ -48,6 +48,20 @@ def object_dump(oP7_DataBreed_to_dump, filename) :
     
 #-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def build_dict_processor_list() :
+    dict_pil_processor = dict()
+    list_processor_id = list()
+    
+    list_pil_processor = P7_DataBreed.LIST_PIL_PROCESSOR.copy()
+    for id, pil_processor in zip(range(0,len(list_pil_processor) )\
+    ,list_pil_processor ) :
+        dict_pil_processor.update({id:pil_processor})
+        list_processor_id.append(id)        
+    return list_processor_id,dict_pil_processor
+#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 #
@@ -226,6 +240,8 @@ def p7_keras_X_train_test_build(ser_pil_image, ser_label\
         * ser_pil_image : Series containing PIL images.
         * ser_label : Series of labels related to PIL images.
         * test_size : percentage of test data-set.
+        * square : 
+        * resize : 
     Output :
         * arr_X_train : array of pixels containing train dataset
         * arr_X_test : array of pixels containing test dataset
@@ -237,7 +253,7 @@ def p7_keras_X_train_test_build(ser_pil_image, ser_label\
     # Convert train dataset Series into numpy array allowing to feed Keras 
     # dense layer.
     #---------------------------------------------------------------------------
-    print("Images for training = "+str(len(ser_pil_image)))
+    print("Total images = "+str(len(ser_pil_image)))
     arr_keras_image, arr_label \
     = p7_keras_X_y_build(ser_pil_image, ser_label, square=square, resize=resize)
     print(arr_keras_image.shape, arr_label.shape)
@@ -483,7 +499,7 @@ class P7_DataBreed() :
             |
             +-->load()
             |   |
-            |   +--> p7_util.p7_load_data()
+            |   +--> p7_util.p7_load_dict_filename()
             |   
             +-->sampling()
             |   |
@@ -512,7 +528,7 @@ class P7_DataBreed() :
         
     '''
     
-    LIST_PIL_PROCESS=[pil_square, pil_edge,p7_filter_median\
+    LIST_PIL_PROCESSOR=[pil_square, pil_edge,p7_filter_median\
     , pil_2gray,pil_autocontrast,pil_equalize]
 
     #---------------------------------------------------------------------------
@@ -556,6 +572,22 @@ class P7_DataBreed() :
         self._is_kp_filtered = True
         self._is_squarred = True
         self._is_random_sampling_image = True
+        
+        self._dict_pil_processor = dict()
+        self._list_processor_id = list()
+        
+        list_pil_processor, dict_pil_processor \
+        = build_dict_processor_list()
+        
+        self._dict_pil_processor = dict_pil_processor.copy()
+        self._list_processor_id = list_pil_processor.copy()
+        if False :    
+            list_pil_processor = P7_DataBreed.LIST_PIL_PROCESSOR.copy()
+            for id, pil_processor in zip(range(0,len(list_pil_processor) )\
+            ,list_pil_processor ) :
+                self._dict_pil_processor.update({id:pil_processor})
+                self._list_processor_id.append(id)
+            
         
         
     #---------------------------------------------------------------------------
@@ -669,6 +701,14 @@ class P7_DataBreed() :
         self.strprint("Random image sampling ......... : "\
         +str(self._is_random_sampling_image))
 
+
+        self.strprint("Processors identifiers ........ : "\
+        +str(self._list_processor_id))
+
+        self.strprint("PIL processor list ............ : ")
+        for key, pil_processor  in self._dict_pil_processor.items() :
+            print("Identifier : {0}   Processor= {1}".format(key,pil_processor))
+
         self.strprint("")
 
     #---------------------------------------------------------------------------
@@ -718,6 +758,8 @@ class P7_DataBreed() :
         self._is_squarred = copied_object._is_squarred
         self._is_random_sampling_image = copied_object._is_random_sampling_image
         self._sampling_image_count = copied_object._sampling_image_count
+        self._dict_pil_processor = copied_object._dict_pil_processor.copy()
+        self._list_processor_id = copied_object._list_processor_id.copy()
         
         if is_new_attribute is True :
             pass
@@ -936,6 +978,17 @@ class P7_DataBreed() :
     def _set_sampling_image_count(self, sampling_image_count) :
         self._sampling_image_count =sampling_image_count
 
+    def _get_dict_pil_processor(self) :
+      return self._dict_pil_processor
+    def _set_dict_pil_processor(self, dict_pil_processor) :
+        print("\n*** WARN : assignement is not authorized !\n")
+    
+    def _get_list_processor_id(self) :
+      return self._list_processor_id
+    def _set_list_processor_id(self, list_processor_id) :
+        self._list_processor_id = list_processor_id.copy()
+
+    
     
     
     dir_path = property(_get_dir_path,_set_dir_path)
@@ -981,6 +1034,53 @@ class P7_DataBreed() :
     = property(_get_is_random_sampling_image, _set_is_random_sampling_image)
     sampling_image_count \
     = property(_get_sampling_image_count, _set_sampling_image_count)
+    dict_pil_processor \
+    = property(_get_dict_pil_processor, _set_dict_pil_processor)
+    list_processor_id \
+    = property(_get_list_processor_id, _set_list_processor_id)
+
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def list_processor_update(self, list_processor_id=None) :
+        if list_processor_id is None :
+            list_proc_id, dict_proc_list = build_dict_processor_list()
+            self._dict_pil_processor = dict_proc_list.copy()
+            self._list_processor_id = list_proc_id.copy()
+            
+        else :
+            dict_pil_processor = dict()
+            for processor_id in list_processor_id :
+                dict_pil_processor[processor_id] \
+                = self._dict_pil_processor[processor_id]
+            self._dict_pil_processor = dict_pil_processor.copy()
+            self._list_processor_id = list_processor_id.copy()
+        
+    #---------------------------------------------------------------------------
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def keras_image_train_test(self, test_size = 0.3, resize=None, square=None) :
+        df = self.df_build()
+        nClass = len(np.unique(df['label']))
+
+        X_train, X_test, y_train, y_test \
+        = p7_keras_X_train_test_build(df['image'], df['label'] \
+        , test_size=test_size, square=square, resize=resize)
+        
+        # X_train and X_test are normalized
+        X_train = X_train / 255
+        X_test  = X_test / 255
+
+        # y_train and y_test are encoded
+        y_train = to_categorical(y_train)
+        y_test = to_categorical(y_test)
+
+
+        return X_train, X_test, y_train, y_test, nClass
+    #---------------------------------------------------------------------------
 
     #---------------------------------------------------------------------------
     #
@@ -1097,6 +1197,11 @@ class P7_DataBreed() :
         oP7_DataBreed_single.is_squarred = is_squarred
         oP7_DataBreed_single.std_size = std_size
         
+        oP7_DataBreed_single._dict_pil_processor = self._dict_pil_processor.copy()
+        oP7_DataBreed_single._list_processor_id = self._list_processor_id.copy()
+
+        
+        
         oP7_DataBreed_single._dict_breed_sample=self._dict_breed_sample.copy()
         oP7_DataBreed_single.show(is_show=is_show)
         list_restricted_image = [(breed_name,[image_name])]
@@ -1145,22 +1250,31 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def load(self, dirbreed=None, imagename=None) :
+    def load(self, list_dirbreed=None, imagename=None) :
         '''Read all images from data directory path .
         Images are stored into a dictionary with such structure : 
             --> {breed_directory : list_of_breed_file_names} 
             where :
                 -> breed_directory : is the directory containing images for a 
                 breed.
+                When value is None, then all directories will be scaned.
+                
                 -> list_of_breed_file_names is the list of file names that 
                 reference images from breed.
+                When None, then all images files names contained into each 
+                directory will be loaded.
         '''
-        self._dict_data = p7_util.p7_load_data(self._dir_path, dirbreed=dirbreed)
+        self._dict_data = dict()
+        self._total_image = 0
+        
+        self._dict_data = p7_util.p7_load_dict_filename(self._dir_path\
+        , list_dirbreed=list_dirbreed)
+        
         if imagename is not None :
-            self._dict_data = {dirbreed:[imagename]}
+            self._dict_data = {list_dirbreed[0]:[imagename]}
         
         #-----------------------------------------------------------------------
-        # Total number of files
+        # Total number of images files is computed.
         #-----------------------------------------------------------------------
         self._total_images = 0
         for breed in self._dict_data.keys():
@@ -1385,12 +1499,17 @@ class P7_DataBreed() :
         # number of columns is computed based on a square split for any image.
         #-----------------------------------------------------------------------
         #print("*** _df_pil_image_kpdesc_build() :{} ".format(array_values.shape))
-        if self._is_squarred is True :
-            col = int(np.sqrt(array_values.shape[0]))
-            row = col 
+        
+        if self._is_splitted is False :
+            row=1
+            col=1
         else :
-            row = self.split_ratio[0]
-            col = self.split_ratio[1]
+            if self._is_squarred is True :
+                col = int(np.sqrt(array_values.shape[0]))
+                row = col 
+            else :
+                row = self.split_ratio[0]
+                col = self.split_ratio[1]
         
         
 
@@ -1411,7 +1530,6 @@ class P7_DataBreed() :
 
         list_level_index=[row_index,col_index]
                 
-        
         df_multi_level \
         = pd.DataFrame(array_values\
         , columns=['desc','breed','kp','size','split_image','image_id']\
@@ -1497,10 +1615,108 @@ class P7_DataBreed() :
         return dict_breed_kpdesc, image_count
     #---------------------------------------------------------------------------
     
+        
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def apply_pil_processor(self, pil_image) :
+        for pil_processor in self._dict_pil_processor.values():
+            pil_image = pil_processor(pil_image)
+        return pil_image
+    #---------------------------------------------------------------------------
+
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
     def build_sift_desc(self, is_splitted=False) :
+        '''Build SIFT descriptors from dictionary _dict_breed_sample.
+        This dictionary is structured as following : {dirbreed:list_imagename}
+        where : 
+            --> dirbreed is the directory name for a breed containing all images
+            --> list_imagename is the file name of all images under dirbreed.
+        Images are not stored in memory. They are loaded from information into 
+        _dict_breed_sample.
+        
+        Filters are applied before SIFT descriptors to be built.
+        
+        '''
+        image_count=0
+        error = 0
+
+        ratio = 5/100
+        self._dict_breed_kpdesc = dict()
+        self._is_splitted = is_splitted
+        self._df_pil_image_kpdesc = pd.DataFrame()
+        
+        print("*** build_sift_desc() ...")
+        if is_splitted is True :
+            if self._std_size is None :
+                print("*** ERROR : Images require square resizing for splitting!")
+                return
+            else :
+                pass
+        else :
+            pass
+
+        for dirbreed, list_imagename in self._dict_breed_sample.items():
+            
+            for imagename  in list_imagename :
+                #print(imagename)
+                
+                #---------------------------------------------------------------
+                # Load PIL image from file path
+                #---------------------------------------------------------------
+                imagepathname = self._build_pathname(dirbreed, imagename)
+                pil_image = p7_util.p7_pil_image_load(imagepathname\
+                , is_verbose=False, std_size=None)
+
+                #---------------------------------------------------------------
+                # Resize
+                #---------------------------------------------------------------
+                try :
+                    if self.std_size is not None :
+                        pil_image = pil_image.resize(self._std_size)
+                        #pil_image = pil_truncate(pil_image,self.std_size)
+                    else :
+                        pass
+
+                    pil_image = self.apply_pil_processor(pil_image)
+
+                    #-----------------------------------------------------------
+                    # Store descriptor along with breed name. This will be 
+                    # usefull for classification.
+                    #-----------------------------------------------------------
+                    dict_breed_kpdesc, image_count\
+                    = self.kpdesc_build(dirbreed, pil_image,image_count\
+                    ,imagename)
+                    
+                    #-----------------------------------------------------------
+                    # Closing PIL image : all resources of PIL image are released.
+                    #-----------------------------------------------------------
+                    pil_image.close()
+
+                    #-----------------------------------------------------------
+                    # Increase number of processed image in case is_splitted 
+                    # flag in not activated.
+                    # When activated, number of processed images is increased 
+                    # inside kpdesc_build() method.
+                    #-----------------------------------------------------------
+                    if self._is_splitted is False :
+                        image_count +=1     
+                    
+                except AttributeError :
+                    error +=1
+                    #print("*** WARNING : attribute error for PIL image ")
+                    continue                
+        self._df_pil_image_kpdesc.index.names =['raw','col']
+        print("\nINFO : Error = "+str(error)\
+        +" Total images processed= "+str(image_count))        
+    #---------------------------------------------------------------------------
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def build_sift_desc_deprecated(self, is_splitted=False) :
         '''Build SIFT descriptors from dictionary _dict_breed_sample.
         This dictionary is structured as following : {dirbreed:list_imagename}
         where : 
@@ -1627,7 +1843,8 @@ class P7_DataBreed() :
         print("\nINFO : Error = "+str(error)\
         +" Total images processed= "+str(image_count))        
     #---------------------------------------------------------------------------
-        
+
+
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
@@ -1877,6 +2094,7 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     def breed_show(self) :
         print("")
+        self.build_ser_number_breedname()
 
         for name,id in self._dict_breedname_id.items() :
             print("Breed directory= {:30}  Breed name= {}"\
@@ -1942,7 +2160,13 @@ class P7_DataBreed() :
         '''
 
         ser = pd.Series(self._dict_breedname_id)
+        
         tuple_array = np.where(ser.keys()==breedname)
+        
+        if 0 == len(tuple_array[0]) :
+            breedname = breedname.split('-')[1]
+            tuple_array = np.where(ser.keys()==breedname)
+        
         if 0 < len(tuple_array[0]):
             index = tuple_array[0][0]
             id = list(self._dict_breedname_id.values())[index]

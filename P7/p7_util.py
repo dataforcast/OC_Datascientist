@@ -15,6 +15,39 @@ from keras.preprocessing.image import img_to_array
 
 import p5_util
 
+
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+def p7_plot_cnn_history(cnn_model ,X_test, y_test, history=None) :
+    '''Display loss and accuracy curves along with steps history.
+    '''
+    [test_loss, test_acc] = cnn_model.evaluate(X_test, y_test)
+    print("Evaluation result on Test Data : Loss = {0:1.2F}, accuracy = {1:1.2F}"\
+    .format(test_loss, test_acc))
+
+    if history is not None :
+        #Plot the Loss Curves
+        plt.figure(figsize=[8,6])
+        plt.plot(history.history['loss'],'r',linewidth=1.0)
+        plt.plot(history.history['val_loss'],'b',linewidth=1.0)
+        plt.legend(['Training loss', 'Validation Loss'],fontsize=18)
+        plt.xlabel('Epochs ',fontsize=16)
+        plt.ylabel('Loss',fontsize=16)
+        plt.title('Loss Curves ',fontsize=16)
+
+        #Plot the Accuracy Curves
+        plt.figure(figsize=[8,6])
+        plt.plot(history.history['acc'],'r',linewidth=1.0)
+        plt.plot(history.history['val_acc'],'b',linewidth=1.0)
+        plt.legend(['Training Accuracy', 'Validation Accuracy'],fontsize=18)
+        plt.xlabel('Epochs ',fontsize=16)
+        plt.ylabel('Accuracy',fontsize=16)
+        plt.title('Accuracy Curves',fontsize=16)
+    return test_loss, test_acc
+    
+#------------------------------------------------------------------------------
+
 #------------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------------
@@ -352,31 +385,39 @@ def p7_load_breed_name(directory_name) :
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p7_load_data(directory_name, dirbreed=None) :
+def p7_load_dict_filename(root_directory_path, list_dirbreed=None) :
+    '''Load all images file names contained in directories. 
+    These directories are under path of a root directory.
+    
+    Input :
+        * root_directory_path : directory path under which all sub-directories 
+        containing files of images lies.
+        
+        * list_dirbreed : list of directories names containing images files.
+        When None, then all directories under root directory are scaned in order 
+        to load images files names from them.
+
+    Output : 
+        * dictionary structured as following : {dirbreed: list_of_file_name }
+    where list_of_file_name is the list of files names under directory dirbreed.
+    '''
     #---------------------------------------------------------------------------
     # List of all directories, each directory contains a list of all 
     # images from breed.
     #---------------------------------------------------------------------------
-    list_dir_breed = None
-    list_dir_breed_image = None        
-    if dirbreed is None :
-        list_dir_breed = os.listdir(directory_name)
+    if list_dirbreed is None :
+        list_dirbreed = os.listdir(root_directory_path)
     else :
-        list_dir_breed_image = os.listdir(directory_name+'/'+dirbreed)    
+        pass
 
     #---------------------------------------------------------------------------
     # For each breed directory, list of all images files is loaded into a 
     # dictionary
     #---------------------------------------------------------------------------
-    dict_breed_list_filename = dict()
-    if list_dir_breed is not None :
-        for dirbreed in list_dir_breed :
-            dict_breed_list_filename[dirbreed] \
-            = os.listdir(directory_name+'/'+dirbreed)
-    else : 
-        list_dirbreed = os.listdir(directory_name+'/'+dirbreed)
-        dict_breed_list_filename={dirbreed : [ filename for filename in list_dirbreed ]}
-    return dict_breed_list_filename
+    dict_filename = dict()
+    for dirbreed in list_dirbreed :
+        dict_filename[dirbreed] = os.listdir(root_directory_path+'/'+dirbreed)
+    return dict_filename
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
