@@ -1389,8 +1389,7 @@ class P7_DataBreed() :
     #
     #---------------------------------------------------------------------------
     def split_pil_image(self, pil_image, labelname,ratio=(4,4)):
-        '''Split a PIL formated image given a ratio for weight and given a ratio 
-        for height.
+        '''Split a PIL formated image given the ratio (weight,height).
         
         Input : 
             * pil_image : image to be spitted
@@ -1420,6 +1419,7 @@ class P7_DataBreed() :
             height = int(self._std_size[1]/ratio[1])
         dict_pil_image = dict()
         imgwidth, imgheight = pil_image.size
+        
         
         #print("*** split_pil_image() : {} {}".format((imgwidth, imgheight),(width,height)))
         for i in range(0,imgheight,height):
@@ -2312,10 +2312,13 @@ class P7_DataBreed() :
                 dict_kp_occurency[i_raw] = len(list_kp)
                 i_raw += 1
         
+        
+        
             #-------------------------------------------------------------------
             # Occurencies dictionary is converted into a Dataframe 
             # allowing easiest operations.
             #-------------------------------------------------------------------
+            
             ser = pd.Series(dict_kp_occurency)
             df_kp = pd.DataFrame([ser]).T.rename(columns={0:'count'})
 
@@ -2327,21 +2330,25 @@ class P7_DataBreed() :
             #-------------------------------------------------------------------
             # Filtering is applied
             #-------------------------------------------------------------------
-            df_kp_filtered = df_kp[df_kp['count']<=int(q3)]
-            df_kp_filtered = df_kp_filtered[df_kp_filtered['count']>=int(q1)]
-            df.reset_index(inplace=True)
-            list_index_drop = list()
+            if True :
+                df_kp_filtered = df_kp[df_kp['count']<=q3]
+                df_kp_filtered = df_kp_filtered[df_kp_filtered['count']>=q1]
+                df.reset_index(inplace=True)
+            else :
+                pass
 
             #-------------------------------------------------------------------
             # Dataframe rows from outside filter are droped : index list is 
             # firstly built. Then this filtered indexes are applied to dataframe.
             #-------------------------------------------------------------------
+            list_index_drop = list()
             df_to_filter = df.copy()
             for id  in df.index:
                 if id not in  df_kp_filtered.index :
                     list_index_drop.append(id)
                 else:
                     pass
+
             df.drop(list_index_drop, inplace=True)
         
             #-------------------------------------------------------------------

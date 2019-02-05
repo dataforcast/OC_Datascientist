@@ -12,8 +12,10 @@ import numpy as np
 from keras.preprocessing.image import load_img
 from keras.preprocessing.image import img_to_array
 
-
+import p3_util_plot
+import p3_util
 import p5_util
+import p7_util
 
 
 #------------------------------------------------------------------------------
@@ -521,5 +523,168 @@ def p7_pil_to_keras_image(pil_image, is_show=True) :
     else : 
         pass
     return batch_image    
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def get_list_filtered_index(list_breed_kpdesc, is_verbose=False) :
+    dict_kp_occurency = dict()
+    range_list = range(0,len(list_breed_kpdesc))
+
+    for i_raw, tuple_kp_image in zip(range_list, list_breed_kpdesc) :
+        dict_kp_occurency[i_raw] = len(tuple_kp_image[0])
+            
+    ser = pd.Series(dict_kp_occurency)
+    df_kp = pd.DataFrame([ser]).T.rename(columns={0:'count'})
+
+    p3_util_plot.df_boxplot_display(df_kp, 'count')
+
+    q1,q3,zmin,zmax = p3_util.df_boxplot_limits(df_kp , 'count')
+    
+    if is_verbose is True :
+        print("Q1   = "+str(q1))
+        print("Q3   = "+str(q3))
+        print("Zmin = "+str(zmin))
+        print("Zmax = "+str(zmax))
+        print("Min  = "+str(df_kp['count'].min()))
+        print("Max  = "+str(df_kp['count'].max()))
+    
+    #---------------------------------------------------------------------------
+    # Filtering is applied
+    #---------------------------------------------------------------------------
+    min_limit = zmin
+    max_limit = df_kp['count'].max()
+    max_limit = q3
+    
+    if is_verbose is True :
+        print("Min limit= "+str(min_limit))
+        print("Max limit= "+str(max_limit))
+    
+    df_kp_filtered = df_kp[df_kp['count']<=max_limit]
+    df_kp_filtered = df_kp_filtered[df_kp_filtered['count']>=min_limit]
+
+    list_filtered_index = list(df_kp_filtered.index)
+    return list_filtered_index
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def plot_filtered_kpdesc_image(list_breed_kpdesc, dict_breed_kpdesc_image\
+, is_verbose=False) :
+    '''Plot a splitted image that has been filtered based on KP distribution
+    in each splitted image.
+    
+    Input :
+        * list_breed_kpdesc : list of tuples; tuples are structured as following :
+            (kp_array, descriptors)
+        * dict_breed_kpdesc_image : dictionary 
+    '''
+
+    #---------------------------------------------------------------------------
+    # Filtering is applied
+    #---------------------------------------------------------------------------
+    list_filtered_index = get_list_filtered_index(list_breed_kpdesc\
+    , is_verbose=is_verbose)
+    
+    
+    #---------------------------------------------------------------------------
+    # For splitted images out of filtered indexes, they are turned in black.
+    #---------------------------------------------------------------------------
+    index=0
+    #for i_raw in range(0,raw):
+    #print(list_filtered_index)
+    #if True :
+    for i_raw in range(0,len(dict_breed_kpdesc_image)) :
+        col = dict_breed_kpdesc_image[i_raw].shape[0]
+        
+        for i_col in range(0,col):
+            if index in list_filtered_index :
+                pass
+            else :
+                # Image index out of filter is erased 
+                arr_ = dict_breed_kpdesc_image[i_raw][i_col]
+                dict_breed_kpdesc_image[i_raw][i_col] \
+                = np.zeros((arr_.shape[0],arr_.shape[1],3))
+            index += 1
+    
+    p7_util.p7_image_pil_show(dict_breed_kpdesc_image\
+                              ,size_x=10,std_image_size=None,is_title=False)  
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def plot_filtered_kpdesc_image_deprecated(list_breed_kpdesc, dict_breed_kpdesc_image) :
+    '''Plot a splitted image that has been filtered based on KP distribution
+    in each splitted image.
+    
+    Input :
+        * list_breed_kpdesc : list of tuples; tuples are structured as following :
+            (kp_array, descriptors)
+        * dict_breed_kpdesc_image : dictionary 
+    '''
+
+    #---------------------------------------------------------------------------
+    # Building KP occurancies for each splitted image 
+    #---------------------------------------------------------------------------
+    dict_kp_occurency = dict()
+    range_list = range(0,len(list_breed_kpdesc))
+
+    for i_raw, tuple_kp_image in zip(range_list, list_breed_kpdesc) :
+        dict_kp_occurency[i_raw] = len(tuple_kp_image[0])
+            
+    ser = pd.Series(dict_kp_occurency)
+    df_kp = pd.DataFrame([ser]).T.rename(columns={0:'count'})
+
+    p3_util_plot.df_boxplot_display(df_kp, 'count')
+
+    q1,q3,zmin,zmax = p3_util.df_boxplot_limits(df_kp , 'count')
+    
+    if True :
+        print("Q1   = "+str(q1))
+        print("Q3   = "+str(q3))
+        print("Zmin = "+str(zmin))
+        print("Zmax = "+str(zmax))
+        print("Min  = "+str(df_kp['count'].min()))
+        print("Max  = "+str(df_kp['count'].max()))
+    
+    #---------------------------------------------------------------------------
+    # Filtering is applied
+    #---------------------------------------------------------------------------
+    min_limit = zmin
+    max_limit = df_kp['count'].max()
+    max_limit = q3
+    
+    if True :
+        print("Min limit= "+str(min_limit))
+        print("Max limit= "+str(max_limit))
+    
+    df_kp_filtered = df_kp[df_kp['count']<=max_limit]
+    df_kp_filtered = df_kp_filtered[df_kp_filtered['count']>=min_limit]
+
+    list_filtered_index = list(df_kp_filtered.index)
+    
+    index=0
+    #for i_raw in range(0,raw):
+    #print(list_filtered_index)
+    #if True :
+    for i_raw in range(0,len(dict_breed_kpdesc_image)) :
+        col = dict_breed_kpdesc_image[i_raw].shape[0]
+        
+        for i_col in range(0,col):
+            if index in list_filtered_index :
+                pass
+            else :
+                # Image index out of filter is erased 
+                arr_ = dict_breed_kpdesc_image[i_raw][i_col]
+                dict_breed_kpdesc_image[i_raw][i_col] \
+                = np.zeros((arr_.shape[0],arr_.shape[1],3))
+            index += 1
+    
+    p7_util.p7_image_pil_show(dict_breed_kpdesc_image\
+                              ,size_x=10,std_image_size=None,is_title=False)  
+    return df_kp
 #-------------------------------------------------------------------------------
     
