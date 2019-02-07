@@ -2,13 +2,15 @@ import cv2
 import os
 
 import pandas as pd
+import numpy as np
 import random
 
 
 from PIL import Image
 from PIL import ImageFilter
 import matplotlib.pyplot as plt
-import numpy as np
+import seaborn as sns
+
 from keras.preprocessing.image import load_img
 from keras.preprocessing.image import img_to_array
 
@@ -17,6 +19,13 @@ import p3_util
 import p5_util
 import p7_util
 
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p7_get_name_from_function(_function) :
+    splitted_information = str(_function).split(' ')
+    return splitted_information[1]
+#-------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
 #
@@ -289,6 +298,61 @@ def p7_show_sift_features(gray_img, color_img, kp):
 #
 #-------------------------------------------------------------------------------
 def p7_image_pil_show(dict_image_pil, std_image_size=(200,200),size_x=10, is_title=True) :
+    '''Plot images in the dictionary given as parameter.
+    Input :
+        * dict_image_pil : dicitonay structures as following : {tuple_name:list_PIL_image}
+        * std_image_size : ( weight, height) values for resizing image before plot.
+        * size_x :
+        * is_title : title to be displayed along with plotted image.
+    '''
+    
+    for tuple_breed in  dict_image_pil.keys():
+        list_image_pil = dict_image_pil[tuple_breed]
+
+        image_count = len(list_image_pil)
+
+        size_y = int(size_x/image_count)
+        size_y = size_x
+        f, axs = plt.subplots(1, image_count, figsize=(size_x,size_y))
+
+        if( 1 < len(list_image_pil)) :
+            for index in range(0,len(list_image_pil)) :
+                image_pil = list_image_pil[index].copy()
+                axs[index].axis('off')
+                if std_image_size is not None :
+                    axs[index].imshow(image_pil.resize(std_image_size))
+                else :
+                    axs[index].imshow(image_pil)
+                if is_title is True :
+                    breed = tuple_breed[index]
+                    axs[index].set_title(breed)
+        else :
+            for index in range(0,len(list_image_pil)) :
+                image_pil = list_image_pil[index].copy()
+                axs.axis('off')
+                if std_image_size is not None :
+                    axs.imshow(image_pil.resize(std_image_size))
+                else :
+                    axs.imshow(image_pil)
+                if is_title is True :
+                    breed = tuple_breed[index]
+                    axs.set_title(breed)
+    #plt.tight_layout(pad=-2)
+    plt.show()
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p7_image_pil_show_deprecated(dict_image_pil\
+, std_image_size=(200,200),size_x=10, is_title=True) :
+    '''Plot images in the dictionary given as parameter.
+    Input :
+        * dict_image_pil : dicitonay structures as following : {list_name:list_PIL_image}
+        * std_image_size : ( weight, height) values for resizing image before plot.
+        * size_x :
+        * is_title : title to be displayed along with plotted image.
+    '''
     
     for breed in  dict_image_pil.keys():
         list_image_pil = dict_image_pil[breed]
@@ -528,7 +592,7 @@ def p7_pil_to_keras_image(pil_image, is_show=True) :
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def get_list_filtered_index(list_breed_kpdesc, is_verbose=False) :
+def get_list_filtered_index(list_breed_kpdesc, is_verbose=False, style='box') :
     dict_kp_occurency = dict()
     range_list = range(0,len(list_breed_kpdesc))
 
@@ -538,23 +602,32 @@ def get_list_filtered_index(list_breed_kpdesc, is_verbose=False) :
     ser = pd.Series(dict_kp_occurency)
     df_kp = pd.DataFrame([ser]).T.rename(columns={0:'count'})
 
-    p3_util_plot.df_boxplot_display(df_kp, 'count')
 
     q1,q3,zmin,zmax = p3_util.df_boxplot_limits(df_kp , 'count')
+    min_abs = df_kp['count'].min()
+    max_abs = df_kp['count'].max()
     
     if is_verbose is True :
         print("Q1   = "+str(q1))
         print("Q3   = "+str(q3))
         print("Zmin = "+str(zmin))
         print("Zmax = "+str(zmax))
-        print("Min  = "+str(df_kp['count'].min()))
-        print("Max  = "+str(df_kp['count'].max()))
+        print("Min  = "+str(min_abs))
+        print("Max  = "+str(max_abs))
+        kp_count = df_kp.apply(lambda x: sum(x))
+        print("Number of KP= "+str(kp_count))
     
+    if style=='box':    
+        p3_util_plot.df_boxplot_display(df_kp, 'count')
+    elif style=='violin' :
+        sns.violinplot( y=None, x='count', data=df_kp, idth=0.8, inner='quartile', palette="colorblind")
+    else :
+        pass
     #---------------------------------------------------------------------------
     # Filtering is applied
     #---------------------------------------------------------------------------
-    min_limit = zmin
-    max_limit = df_kp['count'].max()
+    min_limit = q1
+    #max_limit = df_kp['count'].max()
     max_limit = q3
     
     if is_verbose is True :
@@ -563,6 +636,7 @@ def get_list_filtered_index(list_breed_kpdesc, is_verbose=False) :
     
     df_kp_filtered = df_kp[df_kp['count']<=max_limit]
     df_kp_filtered = df_kp_filtered[df_kp_filtered['count']>=min_limit]
+    #df_kp_filtered = df_kp_filtered[df_kp_filtered['count']>1]
 
     list_filtered_index = list(df_kp_filtered.index)
     return list_filtered_index
@@ -572,7 +646,7 @@ def get_list_filtered_index(list_breed_kpdesc, is_verbose=False) :
 #
 #-------------------------------------------------------------------------------
 def plot_filtered_kpdesc_image(list_breed_kpdesc, dict_breed_kpdesc_image\
-, is_verbose=False) :
+, is_verbose=False, style = 'box') :
     '''Plot a splitted image that has been filtered based on KP distribution
     in each splitted image.
     
@@ -586,7 +660,7 @@ def plot_filtered_kpdesc_image(list_breed_kpdesc, dict_breed_kpdesc_image\
     # Filtering is applied
     #---------------------------------------------------------------------------
     list_filtered_index = get_list_filtered_index(list_breed_kpdesc\
-    , is_verbose=is_verbose)
+    , is_verbose=is_verbose, style=style)
     
     
     #---------------------------------------------------------------------------
@@ -594,7 +668,7 @@ def plot_filtered_kpdesc_image(list_breed_kpdesc, dict_breed_kpdesc_image\
     #---------------------------------------------------------------------------
     index=0
     #for i_raw in range(0,raw):
-    #print(list_filtered_index)
+    print(list_filtered_index)
     #if True :
     for i_raw in range(0,len(dict_breed_kpdesc_image)) :
         col = dict_breed_kpdesc_image[i_raw].shape[0]
@@ -610,7 +684,8 @@ def plot_filtered_kpdesc_image(list_breed_kpdesc, dict_breed_kpdesc_image\
             index += 1
     
     p7_util.p7_image_pil_show(dict_breed_kpdesc_image\
-                              ,size_x=10,std_image_size=None,is_title=False)  
+                              ,size_x=10,std_image_size=None,is_title=False)
+    return dict_breed_kpdesc_image
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -653,8 +728,7 @@ def plot_filtered_kpdesc_image_deprecated(list_breed_kpdesc, dict_breed_kpdesc_i
     #---------------------------------------------------------------------------
     # Filtering is applied
     #---------------------------------------------------------------------------
-    min_limit = zmin
-    max_limit = df_kp['count'].max()
+    min_limit = q1
     max_limit = q3
     
     if True :
@@ -668,7 +742,7 @@ def plot_filtered_kpdesc_image_deprecated(list_breed_kpdesc, dict_breed_kpdesc_i
     
     index=0
     #for i_raw in range(0,raw):
-    #print(list_filtered_index)
+    print(list_filtered_index)
     #if True :
     for i_raw in range(0,len(dict_breed_kpdesc_image)) :
         col = dict_breed_kpdesc_image[i_raw].shape[0]

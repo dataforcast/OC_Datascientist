@@ -21,6 +21,7 @@ import p5_util
 import p6_util
 import p7_util
 
+
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
@@ -272,47 +273,7 @@ def p7_keras_X_train_test_build(ser_pil_image, ser_label\
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def pil_gaussian(pil_image) :
-    filename, pil_image = p7_util.p7_filter_gaussian(pil_image, size=3)
-    return pil_image
-#-------------------------------------------------------------------------------
-
-#-------------------------------------------------------------------------------
-#
-#-------------------------------------------------------------------------------
-def pil_truncate(pil_image,std_size) :
-    ''' 
-        Input :
-            * pil_image : PIL image format to be truncated 
-            * std_size : tuple for size truncation
-        Output : 
-            * truncated PIL image.
-    '''
-    arr_image = np.array(pil_image)
-    
-    margin_w = int((arr_image.shape[0] -  std_size[0])/2)
-    margin_h = int((arr_image.shape[1] -  std_size[1])/2)
-    if margin_w >0 :
-        # Horizontal truncation
-        arr_image = arr_image[margin_w:,:]
-        arr_image = arr_image[:-margin_w,:]
-    else :
-        pass
-        
-    if margin_h >0 :
-        # Vertical truncation
-        arr_image = arr_image[:,margin_h:]
-        arr_image = arr_image[:,:-margin_h]
-    else :
-        pass
-
-    return pil_resize(Image.fromarray(arr_image),std_size)     
-#-------------------------------------------------------------------------------
-
-#-------------------------------------------------------------------------------
-#
-#-------------------------------------------------------------------------------
-def show_pil_image_and_kp(pil_image,breedname) :
+def show_pil_image_and_kp(pil_image,breedname,is_plot=False) :
     kp, desc = get_image_kpdesc(pil_image)
     print("KP= "+str(len(kp)))
     print("DESC= "+str(desc.shape))
@@ -322,7 +283,9 @@ def show_pil_image_and_kp(pil_image,breedname) :
     for (breed, list_breed_kpdesc), list_image_pil in zip(dict_breed_kpdesc.items(), dict_pil_image.values()):
         dict_breed_kpdesc_image[breed] = [cv2.drawKeypoints(np.array(image_pil), kp, np.array(image_pil)) \
                                  for ((kp, desc),image_pil) in zip(list_breed_kpdesc,list_image_pil)]
-    p7_util.p7_image_pil_show(dict_breed_kpdesc_image,std_image_size=None)
+    if is_plot is True :
+        p7_util.p7_image_pil_show(dict_breed_kpdesc_image,std_image_size=None)
+    return dict_breed_kpdesc_image
 
 #-------------------------------------------------------------------------------
 
@@ -378,10 +341,53 @@ def get_image_kpdesc(pil_image):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
+def pil_gaussian(pil_image) :
+    filename, pil_image = p7_util.p7_filter_gaussian(pil_image, size=3)
+    return pil_image
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def pil_truncate(pil_image,std_size) :
+    ''' 
+        Input :
+            * pil_image : PIL image format to be truncated 
+            * std_size : tuple for size truncation
+        Output : 
+            * truncated PIL image.
+    '''
+    arr_image = np.array(pil_image)
+    
+    margin_w = int((arr_image.shape[0] -  std_size[0])/2)
+    margin_h = int((arr_image.shape[1] -  std_size[1])/2)
+    if margin_w >0 :
+        # Horizontal truncation
+        arr_image = arr_image[margin_w:,:]
+        arr_image = arr_image[:-margin_w,:]
+    else :
+        pass
+        
+    if margin_h >0 :
+        # Vertical truncation
+        arr_image = arr_image[:,margin_h:]
+        arr_image = arr_image[:,:-margin_h]
+    else :
+        pass
+
+    return pil_resize(Image.fromarray(arr_image),std_size)     
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
 def pil_square(pil_image,square=None):
     '''Truncate image with a margin for having same size for height and weight.
     Input :
         * Rectangular PIL image 
+        * square : when None value, then square is computed form image weight and 
+        height. Otherwise, square is a tuple with square weight, height (same) 
+        values.
     Output :
         * Squared PIL image 
     '''
@@ -479,6 +485,46 @@ def pil_resize(pil_image, resize):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
+def pil_gradient(pil_image):
+    kernel=np.array([[0,1,-1],[0,1,-1],[0,1,-1]])
+    filename, pil_image \
+    = p7_util.p7_filter_convolutional(pil_image, kernel, size=(3,3))
+    return pil_image
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def pil_laplacien_kernel_4(pil_image):
+    kernel=np.array([[0,-1,0],[-1,4,-1],[0,-1,0] ])
+    filename, pil_image \
+    = p7_util.p7_filter_convolutional(pil_image, kernel, size=(3,3))
+    return pil_image
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def pil_laplacien_kernel_8(pil_image):
+    kernel=np.array([[-1,-1,-1],[-1,8,-1],[-1,-1,-1] ])
+    filename, pil_image \
+    = p7_util.p7_filter_convolutional(pil_image, kernel, size=(3,3))
+    return pil_image
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def pil_low_pass(pil_image):
+    kernel=np.array([[1,1,1],[1,4,1],[1,1,1] ])
+    filename, pil_image \
+    = p7_util.p7_filter_convolutional(pil_image, kernel, size=(3,3))
+    return pil_image
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
 def p7_read_image(imagepathname, image_type='PIL') :
     pil_image_copy = None
     pil_image = p7_util.p7_pil_image_load(imagepathname\
@@ -507,6 +553,8 @@ class P7_DataBreed() :
             |
             +-->build_sift_desc()
             |   |
+            |   +--> build_ser_number_breedname()
+            |   |
             |   +--> p7_util.p7_pil_image_load()
             |   |
             |   +--> kpdesc_build()
@@ -528,8 +576,17 @@ class P7_DataBreed() :
         
     '''
     
-    LIST_PIL_PROCESSOR=[pil_square, pil_edge,p7_filter_median\
-    , pil_2gray,pil_autocontrast,pil_equalize]
+    LIST_PIL_PROCESSOR=[pil_square\
+    , pil_edge\
+    , p7_filter_median\
+    , pil_2gray\
+    , pil_autocontrast\
+    , pil_equalize\
+    , pil_gaussian\
+    , pil_gradient\
+    , pil_laplacien_kernel_4\
+    , pil_laplacien_kernel_8\
+    , pil_low_pass]
 
     #---------------------------------------------------------------------------
     #
@@ -580,7 +637,9 @@ class P7_DataBreed() :
         = build_dict_processor_list()
         
         self._dict_pil_processor = dict_pil_processor.copy()
-        self._list_processor_id = list_pil_processor.copy()
+        
+        # No filter is assgined for proceccing.
+        self._list_processor_id = list()#list_pil_processor.copy()
         if False :    
             list_pil_processor = P7_DataBreed.LIST_PIL_PROCESSOR.copy()
             for id, pil_processor in zip(range(0,len(list_pil_processor) )\
@@ -588,7 +647,8 @@ class P7_DataBreed() :
                 self._dict_pil_processor.update({id:pil_processor})
                 self._list_processor_id.append(id)
             
-        
+        self._image_process_count = 0
+        self._list_selected_cluster = list()
         
     #---------------------------------------------------------------------------
 
@@ -701,14 +761,20 @@ class P7_DataBreed() :
         self.strprint("Random image sampling ......... : "\
         +str(self._is_random_sampling_image))
 
-
-        self.strprint("Processors identifiers ........ : "\
+        self.strprint("Assigned filters identifiers .. : "\
         +str(self._list_processor_id))
 
-        self.strprint("PIL processor list ............ : ")
+        self.strprint("Assignable filters list ....... : ")
         for key, pil_processor  in self._dict_pil_processor.items() :
-            print("Identifier : {0}   Processor= {1}".format(key,pil_processor))
+            processor_name = p7_util.p7_get_name_from_function(pil_processor)
+            print("Identifier : {0}   Filter= {1}".format(key,processor_name))
 
+        self.strprint("Images processed count ........ : "\
+        +str(self._image_process_count))
+
+        self.strprint("List of selected clusters ..... : "\
+        +str(self._list_selected_cluster))
+    
         self.strprint("")
 
     #---------------------------------------------------------------------------
@@ -760,8 +826,10 @@ class P7_DataBreed() :
         self._sampling_image_count = copied_object._sampling_image_count
         self._dict_pil_processor = copied_object._dict_pil_processor.copy()
         self._list_processor_id = copied_object._list_processor_id.copy()
+        self._image_process_count = copied_object._image_process_count
         
         if is_new_attribute is True :
+            self._list_selected_cluster = copied_object._list_selected_cluster.copy()
             pass
         else :
             print("\n*** WARN : new attributes from copied_object are not \
@@ -813,7 +881,7 @@ class P7_DataBreed() :
       if cluster_model_name in self._dict_cluster_model.keys() :
         self._cluster_model_name = cluster_model_name
       else :
-        print("\n*** WARN : cluster model does not exists in clusters dictionary !\n")
+        print("\n*** WARN : cluster model= "+cluster_model_name+" does not exists in clusters dictionary !\n")
 
     def _get_cluster_model(self) :
         if self._cluster_model_name in self._dict_cluster_model.keys() :
@@ -829,6 +897,10 @@ class P7_DataBreed() :
             nb_cluster \
             = self._dict_cluster_model[self._cluster_model_name].n_components
         elif 'Kmeans' == self._cluster_model_name :
+            nb_cluster \
+            = self._dict_cluster_model[self._cluster_model_name].n_clusters
+
+        elif 'Hierarchical_clustering' == self._cluster_model_name :
             nb_cluster \
             = self._dict_cluster_model[self._cluster_model_name].n_clusters
         
@@ -988,7 +1060,15 @@ class P7_DataBreed() :
     def _set_list_processor_id(self, list_processor_id) :
         self._list_processor_id = list_processor_id.copy()
 
+    def _get_image_process_count(self) :
+      return self._image_process_count
+    def _set_image_process_count(self, image_process_count) :
+        print("\n*** WARN : assignement is not authorized !\n")    
     
+    def _get_list_selected_cluster(self) :
+      return self._list_selected_cluster
+    def _set_list_selected_cluster(self, list_selected_cluster) :
+      self._list_selected_cluster = list_selected_cluster.copy()
     
     
     dir_path = property(_get_dir_path,_set_dir_path)
@@ -1038,16 +1118,20 @@ class P7_DataBreed() :
     = property(_get_dict_pil_processor, _set_dict_pil_processor)
     list_processor_id \
     = property(_get_list_processor_id, _set_list_processor_id)
-
-
+    image_process_count = property(_get_image_process_count\
+    , _set_image_process_count)
+    
+    list_selected_cluster = property(_get_list_selected_cluster\
+    , _set_list_selected_cluster)
+    
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def list_processor_update(self, list_processor_id=None) :
+    def list_processor_update(self, list_processor_id=None, is_verbose=False) :
         if list_processor_id is None :
             list_proc_id, dict_proc_list = build_dict_processor_list()
             self._dict_pil_processor = dict_proc_list.copy()
-            self._list_processor_id = list_proc_id.copy()
+            self._list_processor_id = None #list_proc_id.copy()
             
         else :
             dict_pil_processor = dict()
@@ -1056,7 +1140,13 @@ class P7_DataBreed() :
                 = self._dict_pil_processor[processor_id]
             self._dict_pil_processor = dict_pil_processor.copy()
             self._list_processor_id = list_processor_id.copy()
-        
+
+        if is_verbose is True :
+            self.strprint("Assignable filters list ....... : ")
+            for key, pil_processor  in self._dict_pil_processor.items() :
+                processor_name = p7_util.p7_get_name_from_function(pil_processor)
+                print("Identifier : {0}   Filter= {1}".format(key,processor_name))
+            
     #---------------------------------------------------------------------------
 
     #---------------------------------------------------------------------------
@@ -1124,7 +1214,7 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def plot_kpdesc_image(self) :
+    def plot_kpdesc_image(self, is_plot=True) :
         '''
         Plot a single image along with its KP points issued from SIFT features 
         extraction.
@@ -1180,9 +1270,10 @@ class P7_DataBreed() :
             dict_breed_kpdesc_image_raw.update({i_raw:arr_[col_start:col_end,::,::,::]})
             col_start =col_end
 
-
-        p7_util.p7_image_pil_show(dict_breed_kpdesc_image_raw\
-                                  ,size_x=10,std_image_size=None,is_title=False)
+        if is_plot is True :
+            p7_util.p7_image_pil_show(dict_breed_kpdesc_image_raw\
+                                      ,size_x=10,std_image_size=None\
+                                      ,is_title=False)
 
         return list_breed_kpdesc, dict_breed_kpdesc_image_raw
     #---------------------------------------------------------------------------
@@ -1192,7 +1283,7 @@ class P7_DataBreed() :
     #
     #-------------------------------------------------------------------------------
     def image_explore(self,breed_name, image_name, is_show=False\
-    , is_squarred=True, std_size=None) :
+    , is_squarred=True, std_size=None, is_plot=True) :
         oP7_DataBreed_single = P7_DataBreed()
         oP7_DataBreed_single.is_squarred = is_squarred
         oP7_DataBreed_single.std_size = std_size
@@ -1213,8 +1304,9 @@ class P7_DataBreed() :
         oP7_DataBreed_single.build_sift_desc(is_splitted=True)
 
         oP7_DataBreed_single.show(is_show=is_show)
-        p7_util.p7_image_pil_show(oP7_DataBreed_single.dict_split_pil_image\
-                                  ,std_image_size=None, is_title=False)
+        if is_plot is True :
+            p7_util.p7_image_pil_show(oP7_DataBreed_single.dict_split_pil_image\
+                                      ,std_image_size=None, is_title=False)
         return oP7_DataBreed_single
     #-------------------------------------------------------------------------------
 
@@ -1272,6 +1364,12 @@ class P7_DataBreed() :
         
         if imagename is not None :
             self._dict_data = {list_dirbreed[0]:[imagename]}
+
+        #-----------------------------------------------------------------------
+        # Number of breeds in sample is updated.
+        #-----------------------------------------------------------------------
+        if list_dirbreed is not None :
+            self._sampling_breed_count = len(list_dirbreed)
         
         #-----------------------------------------------------------------------
         # Total number of images files is computed.
@@ -1405,7 +1503,7 @@ class P7_DataBreed() :
 
             Such output is usefull for image display.
         '''
-        
+        #print("split_pil_image() : ratio= "+str(ratio))
         if self._split_ratio is not None :
             ratio = self._split_ratio
         else :
@@ -1417,19 +1515,28 @@ class P7_DataBreed() :
         else:        
             width  = int(self._std_size[0]/ratio[0])
             height = int(self._std_size[1]/ratio[1])
+        
         dict_pil_image = dict()
         imgwidth, imgheight = pil_image.size
-        
-        
+        # Image is resized in order to avoid border when splitting it
+        imgwidth  = width*ratio[0]
+        imgheight = height*ratio[1]
+        pil_image = pil_image.resize((imgwidth,imgheight))
+                
+        #print("split_pil_image() : (imgwidth, imgheight)= "+str(pil_image.size))
+        #print("split_pil_image() :( width, height)= "+str((width, height)))         
         #print("*** split_pil_image() : {} {}".format((imgwidth, imgheight),(width,height)))
+        i_row = 0
         for i in range(0,imgheight,height):
             list_pil_image_crop = list()
             for j in range(0,imgwidth,width):
                 box = (j, i, j+width, i+height)
+                #print("split_pil_image : box= {}".format(box))
                 list_pil_image_crop.append(pil_image.crop(box))
             labelname_i = str(i)+'_'+labelname
             dict_pil_image[labelname_i]=  list_pil_image_crop  
-        
+            i_row +=1
+        #print("split_pil_image : rows per image = "+str(i_row))
         return dict_pil_image
     #---------------------------------------------------------------------------
 
@@ -1522,13 +1629,15 @@ class P7_DataBreed() :
         row_index[:]=0
         col_index[:]=0
 
-        for i in range(0,row*col, col):
+        for i in range(0,row*col, row):
             row_index[i:i+col] = int(i/col)
 
         for i in range(0,row*col, col):
             col_index[i:i+col] = range(0,col,1)
 
         list_level_index=[row_index,col_index]
+        #print("_df_pil_image_kpdesc_build :")
+        #print(list_level_index, array_values.shape)
                 
         df_multi_level \
         = pd.DataFrame(array_values\
@@ -1548,7 +1657,7 @@ class P7_DataBreed() :
         --> number of rows from this matrix is the number of keypoints
         --> number of columns is the number of features (128) for each keypoint.
 
-        Build is processed following is_splitted falg. When activated, then 
+        Build is processed following is_splitted flag. When activated, then 
         image is splitted and matrix is built over each one of the splitted 
         images.
         
@@ -1578,7 +1687,11 @@ class P7_DataBreed() :
             #-------------------------------------------------------------------
             # dict_split_pil_image holds informations from pil_image image. 
             #-------------------------------------------------------------------
-            dict_split_pil_image = self.split_pil_image(pil_image,hr_breedname)
+            dict_split_pil_image \
+            = self.split_pil_image(pil_image,hr_breedname\
+            , ratio=self._split_ratio)
+            
+            
             
             for id_breedname, list_split_pil_image \
             in dict_split_pil_image.items() :
@@ -1616,10 +1729,19 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     
         
+    
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def apply_pil_processor(self, pil_image) :
+    def apply_pil_processor(self, pil_image, is_verbose=False) :
+        
+        if is_verbose is True :
+            for pil_processor in self._dict_pil_processor.values():
+                name_processor = p7_util.p7_get_name_from_function(pil_processor)
+                print("Applied filter : "+str(name_processor))
+        else :
+            pass
+        
         for pil_processor in self._dict_pil_processor.values():
             pil_image = pil_processor(pil_image)
         return pil_image
@@ -1657,7 +1779,7 @@ class P7_DataBreed() :
                 pass
         else :
             pass
-
+        self.build_ser_number_breedname()
         for dirbreed, list_imagename in self._dict_breed_sample.items():
             
             for imagename  in list_imagename :
@@ -1710,139 +1832,10 @@ class P7_DataBreed() :
                     continue                
         self._df_pil_image_kpdesc.index.names =['raw','col']
         print("\nINFO : Error = "+str(error)\
-        +" Total images processed= "+str(image_count))        
+        +" Total images processed= "+str(image_count))
+        self._image_process_count = image_count
     #---------------------------------------------------------------------------
 
-    #---------------------------------------------------------------------------
-    #
-    #---------------------------------------------------------------------------
-    def build_sift_desc_deprecated(self, is_splitted=False) :
-        '''Build SIFT descriptors from dictionary _dict_breed_sample.
-        This dictionary is structured as following : {dirbreed:list_imagename}
-        where : 
-            --> dirbreed is the directory name for a breed containing all images
-            --> list_imagename is the file name of all images under dirbreed.
-        Images are not stored in memory. They are loaded from information into 
-        _dict_breed_sample.
-        
-        Filters are applied before SIFT descriptors to be built.
-        
-        '''
-        image_count=0
-        error = 0
-
-        ratio = 5/100
-        self._dict_breed_kpdesc = dict()
-        self._is_splitted = is_splitted
-        self._df_pil_image_kpdesc = pd.DataFrame()
-        
-        print("*** build_sift_desc() ...")
-        if is_splitted is True :
-            if self._std_size is None :
-                print("*** ERROR : Images require square resizing for splitting!")
-                return
-            else :
-                pass
-        else :
-            pass
-
-        for dirbreed, list_imagename in self._dict_breed_sample.items():
-            
-            for imagename  in list_imagename :
-                #print(imagename)
-                
-                #---------------------------------------------------------------
-                # Load PIL image from file path
-                #---------------------------------------------------------------
-                imagepathname = self._build_pathname(dirbreed, imagename)
-                pil_image = p7_util.p7_pil_image_load(imagepathname\
-                , is_verbose=False, std_size=None)
-
-                #---------------------------------------------------------------
-                # Resize
-                #---------------------------------------------------------------
-                try :
-                    #-----------------------------------------------------------
-                    # When resized, image may be truncated to render std_size
-                    #-----------------------------------------------------------
-                    if self.std_size is not None :
-                        pil_image = pil_image.resize(self._std_size)
-                        #pil_image = pil_truncate(pil_image,self.std_size)
-                    else :
-                        pass
-
-                    #-----------------------------------------------------------
-                    # Gray transformation : removing channel dimension.
-                    #-----------------------------------------------------------
-                    pil_image = pil_2gray(pil_image)
-
-                    #-----------------------------------------------------------
-                    # Gaussian filtering
-                    #-----------------------------------------------------------
-                    #pil_image = pil_gaussian(pil_image)
-
-                    #-----------------------------------------------------------
-                    # Image is rendered with same weight and heigth 
-                    #-----------------------------------------------------------
-                    if self._is_squarred is True :
-                        pil_image = pil_square(pil_image)
-                    else :
-                        pass                    
-                    
-                    #-----------------------------------------------------------
-                    # Median filter is applied
-                    #-----------------------------------------------------------
-                    pil_image = p7_filter_median(pil_image)
-
-                    #-----------------------------------------------------------
-                    # AUto-contrast filter is applied: this allows to provide 
-                    # mode contrast for finding SIFT descriptors.
-                    # It is supposed here that more an imageis contrasted, 
-                    # the easiest SIFT descriptors will be extracted from 
-                    # shape. 
-                    #-----------------------------------------------------------
-                    pil_image = pil_autocontrast(pil_image)
-
-                    #-----------------------------------------------------------
-                    # Equalization
-                    #-----------------------------------------------------------
-                    #pil_image = pil_equalize(pil_image)
-                    
-                    #-----------------------------------------------------------
-                    # Edging
-                    #-----------------------------------------------------------
-                    pil_image = pil_edge(pil_image)
-
-                    #-----------------------------------------------------------
-                    # Store descriptor along with breed name. This will be 
-                    # usefull for classification.
-                    #-----------------------------------------------------------
-                    dict_breed_kpdesc, image_count\
-                    = self.kpdesc_build(dirbreed, pil_image,image_count\
-                    ,imagename)
-                    
-                    #-----------------------------------------------------------
-                    # Closing PIL image : all resources of PIL image are released.
-                    #-----------------------------------------------------------
-                    pil_image.close()
-
-                    #-----------------------------------------------------------
-                    # Increase number of processed image in case is_splitted 
-                    # flag in not activated.
-                    # When activated, number of processed images is increased 
-                    # inside kpdesc_build() method.
-                    #-----------------------------------------------------------
-                    if self._is_splitted is False :
-                        image_count +=1     
-                    
-                except AttributeError :
-                    error +=1
-                    #print("*** WARNING : attribute error for PIL image ")
-                    continue                
-        self._df_pil_image_kpdesc.index.names =['raw','col']
-        print("\nINFO : Error = "+str(error)\
-        +" Total images processed= "+str(image_count))        
-    #---------------------------------------------------------------------------
 
 
     #---------------------------------------------------------------------------
@@ -1924,6 +1917,25 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
+    def cluster_model_predict(self, desc) :
+        '''This is an abstraction layer to call predict() method depending of 
+        clustering model.
+        '''
+        if 'Hierarchical_clustering' == self._cluster_model_name :
+            return self.cluster_model.fit_predict(desc)
+        elif 'GMM' == self._cluster_model_name :
+            return self.cluster_model.predict(desc)
+        elif 'Kmeans' == self._cluster_model_name :
+            return self.cluster_model.predict(desc)
+        else :
+            print("*** ERROR : no cluster_model_predict() method \
+            implementation for model= "+str(self._cluster_model_name))
+        return None
+    #---------------------------------------------------------------------------
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
     def train_test_build(self, size_test=0.1):
 
         self._X_train, self._X_test, self._y_train,  self._y_test \
@@ -1936,7 +1948,7 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     def get_cluster_from_imagedesc(self, desc):
         '''Build histogram of clusters for image descriptors given as parameter
-        and convert if into a dataframe.
+        and convert result into a dataframe.
         
         Input : 
             * desc : image represented as SIFT key points descriptors.
@@ -1960,7 +1972,7 @@ class P7_DataBreed() :
             cluster_model = self.cluster_model
             df=pd.DataFrame(np.zeros(nb_cluster, dtype=int))
             #-------------------------------------------------------------------
-            # Initialization
+            # Initialization : histogram is placed into a dictionary.
             #-------------------------------------------------------------------
             dict_feature = dict()
             for i in range(0,nb_cluster) :
@@ -1969,7 +1981,7 @@ class P7_DataBreed() :
             # Get cluster from image represented as Key points descriptors
             #-------------------------------------------------------------------
             try :
-                y_label = cluster_model.predict(desc)
+                y_label = self.cluster_model_predict(desc)
                 #print("get_cluster_from_imagedesc : Label= "+str(y_label))
             except ValueError:
                 #print("\n*** get_cluster_from_imagedesc() : Error on desc array")
@@ -1984,6 +1996,17 @@ class P7_DataBreed() :
             df_tmp = pd.DataFrame(np.array(list(dict_feature.values())), \
             index=dict_feature.keys())
             df =df_tmp.T
+            
+            #-------------------------------------------------------------------
+            # Selected cluster list is applied to dataframe columns.
+            #-------------------------------------------------------------------
+            list_cluster = self._list_selected_cluster
+            if 0 < len(list_cluster) :
+                list_del_col = [col for col in df.columns.tolist() \
+                if col not in list_cluster ]
+                for col in list_del_col :
+                    del(df[col])
+
         return df
     #---------------------------------------------------------------------------
 

@@ -322,9 +322,10 @@ def gmm_models_plot_AIC_BIC(df, dict_list_gmm_model\
    plt.figure(figsize=p_figsize)
    
    f, ax = plt.subplots(1, 2, figsize=p_figsize, sharex=True)
-
+   i=0
    for hyper_param_type, list_gmm_model in dict_list_gmm_model.items():
-
+      print(i)
+      i+=1
       #----------------------------------------------------------------------------
       # Display graphics inside each areas :
       # 1st area : AIC
