@@ -21,6 +21,99 @@ import p5_util
 import p6_util
 import p7_util
 
+import matplotlib.pyplot as plt
+import cv2
+import P7_DataBreed
+
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def mask_original_pil_image(self,df_pil_image_filtered, df_pil_image_original ):
+    '''Build a new image from 2 dataframes containing informations and 
+    decriptors related to splitted PIL images.
+    
+    Image filtering is based on KP density in splitted PIL image.
+    Original informations from splitted image is used in order to display 
+    filtered splitted image.
+    Input : 
+        * df_pil_image_filtered : dataframe contains informations from 
+        filtered image.
+        * df_pil_image_original : dataframe contains informations from 
+        original image. This dataframe holds 2 levels indexes. First for rows 
+        and second for columns.
+    '''
+    #-----------------------------------------------------------------------
+    # Image to be returned is intialized.
+    #-----------------------------------------------------------------------
+    new_im = Image.new('L', self._std_size)
+
+    #-----------------------------------------------------------------------
+    # Building a black patch that replaces patch issued from splitted image 
+    # in original dataframe when this part does not belongs to filtered image.
+    #-----------------------------------------------------------------------
+    x_delta = int(self._std_size[0]/self._split_ratio[0])
+    y_delta = int(self._std_size[1]/self._split_ratio[1])
+    black_image = Image.new('L', (x_delta,y_delta))
+    
+    
+    #-----------------------------------------------------------------------
+    # Step for Y is initalized.
+    # df_pil_image_original
+    #-----------------------------------------------------------------------
+    y_delta = int(self._std_size[1]/self._split_ratio[1])
+    x_offset = 0
+    y_offset = 0
+    for raw in np.unique(df_pil_image_original.index.labels[0].tolist()) :
+        df_raw_filtered = df_pil_image_filtered[df_pil_image_filtered.raw==raw]
+        list_col = df_raw_filtered.col.tolist()
+        for col in np.unique(df_pil_image_original.index.labels[1].tolist()):
+            if col in list_col :
+                pil_image = df_pil_image_original.split_image.loc[raw,col]
+                new_im.paste(pil_image, (x_offset,y_offset))
+                x_offset += pil_image.size[0]
+            else :
+                pil_image = black_image
+                new_im.paste(pil_image, (x_offset,y_offset))
+                x_offset += pil_image.size[0]
+        x_offset = 0
+        y_offset +=y_delta
+    return new_im
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def plot_match_descriptor(list_pil_image, is_plot=True) :
+    list_kp = list()
+    list_desc = list()
+
+    for pil_image in list_pil_image :
+        kp, desc = get_image_kpdesc(pil_image)
+        list_kp.append(kp)
+        list_desc.append(desc)
+
+    # create BFMatcher object
+    bf = cv2.BFMatcher(cv2.NORM_L2SQR, crossCheck=True)
+    # Match descriptors.
+
+    matches = bf.match(list_desc[0],list_desc[1])
+
+    # Sort them in the order of their distance.
+    matches = sorted(matches, key = lambda x:x.distance)
+
+    pil_image = list_pil_image[0]
+    # Draw first 10 matches.
+    pil_image = cv2.drawMatches(np.array(list_pil_image[0]),list_kp[0]\
+                               ,np.array(list_pil_image[1]),list_kp[1]\
+                               ,matches[:40]
+                               ,np.array(pil_image), flags=2)
+    if is_plot is True :
+        plt.figure(figsize=(20,10))
+        z_=plt.imshow(pil_image),plt.show()
+    return pil_image
+
+#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 #
@@ -273,16 +366,24 @@ def p7_keras_X_train_test_build(ser_pil_image, ser_label\
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def show_pil_image_and_kp(pil_image,breedname,is_plot=False) :
+def show_pil_image_and_kp(pil_image,breedname,is_plot=False, resize=None) :
+    if resize is not None :
+        pil_image = pil_image.resize(resize)
+    else :
+        pass
     kp, desc = get_image_kpdesc(pil_image)
     print("KP= "+str(len(kp)))
     print("DESC= "+str(desc.shape))
     dict_breed_kpdesc = {breedname:[(kp,desc)]}
     dict_pil_image = {breedname : [pil_image] }
     dict_breed_kpdesc_image = dict()
-    for (breed, list_breed_kpdesc), list_image_pil in zip(dict_breed_kpdesc.items(), dict_pil_image.values()):
-        dict_breed_kpdesc_image[breed] = [cv2.drawKeypoints(np.array(image_pil), kp, np.array(image_pil)) \
-                                 for ((kp, desc),image_pil) in zip(list_breed_kpdesc,list_image_pil)]
+    
+    for (breed, list_breed_kpdesc), list_image_pil \
+    in zip(dict_breed_kpdesc.items(), dict_pil_image.values()):
+        dict_breed_kpdesc_image[breed] \
+        = [cv2.drawKeypoints(np.array(image_pil), kp, np.array(image_pil)) \
+                                 for ((kp, desc),image_pil) \
+                                 in zip(list_breed_kpdesc,list_image_pil)]
     if is_plot is True :
         p7_util.p7_image_pil_show(dict_breed_kpdesc_image,std_image_size=None)
     return dict_breed_kpdesc_image
@@ -327,7 +428,12 @@ def process_breed_sample(dirbreed, list_image_name, resize, is_filtered=True) :
 #
 #-------------------------------------------------------------------------------
 def get_breedname_from_dirbreed(dirbreed):
-    return dirbreed.split('-')[1]
+    dirbreed_splitted = dirbreed.split('-')
+    if len(dirbreed_splitted) == 2 :
+        return dirbreed_splitted[1]
+    else :
+        return dirbreed
+    #return dirbreed.split('-')[1]
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -673,6 +779,9 @@ class P7_DataBreed() :
         return
     #---------------------------------------------------------------------------
     
+    
+    
+    
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
@@ -764,11 +873,20 @@ class P7_DataBreed() :
         self.strprint("Assigned filters identifiers .. : "\
         +str(self._list_processor_id))
 
-        self.strprint("Assignable filters list ....... : ")
+        print()
+        self.strprint("Assigned filters list ......... : ")
         for key, pil_processor  in self._dict_pil_processor.items() :
             processor_name = p7_util.p7_get_name_from_function(pil_processor)
             print("Identifier : {0}   Filter= {1}".format(key,processor_name))
+        print()
+        self.strprint("Assignable filters list ....... : ")
+        for filter_id, pil_processor  \
+        in zip(range(0,len(P7_DataBreed.LIST_PIL_PROCESSOR),1),P7_DataBreed.LIST_PIL_PROCESSOR) :
+            processor_name = p7_util.p7_get_name_from_function(pil_processor)
+            print("Identifier : {0}   Filter= {1}".format(filter_id,processor_name))
 
+
+        print()
         self.strprint("Images processed count ........ : "\
         +str(self._image_process_count))
 
@@ -1006,7 +1124,6 @@ class P7_DataBreed() :
       
       
     def _set_dict_split_pil_image(self, dict_split_pil_image) :
-        #self._dict_split_pil_image = dict_split_pil_image.copy()
         print("\n*** WARN : assignement is not authorized !\n")
 
     def _get_split_ratio(self) :
@@ -1058,7 +1175,10 @@ class P7_DataBreed() :
     def _get_list_processor_id(self) :
       return self._list_processor_id
     def _set_list_processor_id(self, list_processor_id) :
+        self.list_processor_update(None)
         self._list_processor_id = list_processor_id.copy()
+        self.list_processor_update(self._list_processor_id)
+    
 
     def _get_image_process_count(self) :
       return self._image_process_count
@@ -1282,18 +1402,26 @@ class P7_DataBreed() :
     #-------------------------------------------------------------------------------
     #
     #-------------------------------------------------------------------------------
-    def image_explore(self,breed_name, image_name, is_show=False\
+    def image_explore(self,breed_name_, image_name, is_show=False\
     , is_squarred=True, std_size=None, is_plot=True) :
-        oP7_DataBreed_single = P7_DataBreed()
-        oP7_DataBreed_single.is_squarred = is_squarred
-        oP7_DataBreed_single.std_size = std_size
+    
+        # breed_name
+        breed_name = get_breedname_from_dirbreed(breed_name_)
         
-        oP7_DataBreed_single._dict_pil_processor = self._dict_pil_processor.copy()
-        oP7_DataBreed_single._list_processor_id = self._list_processor_id.copy()
+        oP7_DataBreed_single = P7_DataBreed()
+        
+        oP7_DataBreed_single.copy(self)
+        if False :
+            oP7_DataBreed_single.is_squarred = is_squarred
+            oP7_DataBreed_single.std_size = std_size
+            
+            oP7_DataBreed_single._dict_pil_processor = self._dict_pil_processor.copy()
+            oP7_DataBreed_single._list_processor_id = self._list_processor_id.copy()
 
         
         
-        oP7_DataBreed_single._dict_breed_sample=self._dict_breed_sample.copy()
+            oP7_DataBreed_single._dict_breed_sample=self._dict_breed_sample.copy()
+
         oP7_DataBreed_single.show(is_show=is_show)
         list_restricted_image = [(breed_name,[image_name])]
 
@@ -1370,6 +1498,13 @@ class P7_DataBreed() :
         #-----------------------------------------------------------------------
         if list_dirbreed is not None :
             self._sampling_breed_count = len(list_dirbreed)
+            
+        #-----------------------------------------------------------------------
+        # Deactivate random sampling 
+        #-----------------------------------------------------------------------
+        if len(list_dirbreed) >0 :
+            if imagename is not None : 
+                self._is_random_sampling_image = False
         
         #-----------------------------------------------------------------------
         # Total number of images files is computed.
@@ -2225,7 +2360,7 @@ class P7_DataBreed() :
     #
     #---------------------------------------------------------------------------
     def predict(self,dirbreed,imagename, top=3):
-        self.load(dirbreed=dirbreed, imagename=imagename)
+        self.load(list_dirbreed=[dirbreed], imagename=imagename)
         
         #-----------------------------------------------------------------------
         # SIFt descriptors are built
