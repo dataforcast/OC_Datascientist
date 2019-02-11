@@ -8,6 +8,8 @@ import cv2
 from PIL import ImageOps
 from PIL import Image
 from  sklearn import model_selection
+from sklearn.decomposition import PCA
+
 
  
 import numpy as np
@@ -755,6 +757,7 @@ class P7_DataBreed() :
             
         self._image_process_count = 0
         self._list_selected_cluster = list()
+        self._pca = None
         
     #---------------------------------------------------------------------------
 
@@ -893,6 +896,13 @@ class P7_DataBreed() :
         self.strprint("List of selected clusters ..... : "\
         +str(self._list_selected_cluster))
     
+        if self._pca is not None :
+            self.strprint("PCA components ................ : "\
+            +str(self._pca.n_components_))
+        else : 
+            self.strprint("PCA components ................ : None")
+            
+
         self.strprint("")
 
     #---------------------------------------------------------------------------
@@ -945,9 +955,13 @@ class P7_DataBreed() :
         self._dict_pil_processor = copied_object._dict_pil_processor.copy()
         self._list_processor_id = copied_object._list_processor_id.copy()
         self._image_process_count = copied_object._image_process_count
+        self._list_selected_cluster = copied_object._list_selected_cluster.copy()
+        if copied_object._pca is not None :
+            self._pca= copied_object._pca
+        else : 
+            self._pca= None
         
         if is_new_attribute is True :
-            self._list_selected_cluster = copied_object._list_selected_cluster.copy()
             pass
         else :
             print("\n*** WARN : new attributes from copied_object are not \
@@ -1190,6 +1204,11 @@ class P7_DataBreed() :
     def _set_list_selected_cluster(self, list_selected_cluster) :
       self._list_selected_cluster = list_selected_cluster.copy()
     
+    def _get_pca(self) :
+        return self._pca
+    def _set_pca(self, pca) :
+        print("\n*** WARN : assignement is not authorized !\n")    
+
     
     dir_path = property(_get_dir_path,_set_dir_path)
     std_size = property(_get_std_size,_set_std_size)
@@ -1244,6 +1263,35 @@ class P7_DataBreed() :
     list_selected_cluster = property(_get_list_selected_cluster\
     , _set_list_selected_cluster)
     
+    pca = property(_get_pca , _set_pca)
+    
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def kpdesc_pca_reshape(self, nb_components) :
+        ''' Reshape KP array using PCA reduction.
+        '''
+
+        #-----------------------------------------------------------------------
+        # Get standardized data
+        #-----------------------------------------------------------------------
+        X_scaled = p3_util.df_get_std_scaled_values(self.df_desc)
+
+        #-----------------------------------------------------------------------
+        # Build PCA algorithm
+        #-----------------------------------------------------------------------
+        self._pca = PCA(n_components=nb_components)
+        self._pca.fit(X_scaled)
+
+        X_projected = self._pca.transform(X_scaled)
+
+        #-----------------------------------------------------------------------
+        # Replace original data with reduced PCA data.
+        #-----------------------------------------------------------------------
+        self._Xdesc = X_projected.copy()
+    #---------------------------------------------------------------------------
+
+
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
@@ -2188,6 +2236,91 @@ class P7_DataBreed() :
         df = None
         dict_label = dict()
         error =0
+        list_index_error = list()
+        #-----------------------------------------------------------------------
+        # Dataframe index are converted as 2 levels indexes : 
+        # index for rows and for each row, index for columns.
+        #-----------------------------------------------------------------------
+        self._df_pil_image_kpdesc.reset_index(drop=True, inplace=True)
+
+        #-----------------------------------------------------------------------
+        # Each descriptor from any row of dataframe is picked, PCA reduction 
+        # is applied on it. 
+        # index for rows and for each row, index for columns.
+        #-----------------------------------------------------------------------        
+        for index in range(0, len(self._df_pil_image_kpdesc)) : 
+            imagedesc= self._df_pil_image_kpdesc.desc.iloc[index]
+            breedname = self._df_pil_image_kpdesc.breed.iloc[index]
+            if self._pca is not None :
+                if imagedesc is not None :
+                    imagedesc \
+                    = p3_util.df_get_std_scaled_values(pd.DataFrame(data=imagedesc))
+                    imagedesc = self.pca.transform(imagedesc)
+                else :
+                    pass
+
+            df_tmp = self.get_cluster_from_imagedesc(imagedesc)
+            if df_tmp is None :
+                error +=1
+                list_index_error.append(index)
+            else :            
+                # Index is matched with index
+                df_tmp.rename(index={0:index}, inplace=True)
+                if df is None :
+                    df = df_tmp.copy()
+                else:
+                    df = pd.concat([df, df_tmp])
+                # Used for Y label
+                breedlabel = self.get_breedlabel_from_breedname(breedname)
+                
+                # Assign a label for each image.
+                dict_label[index] = breedlabel
+
+        print("\n***Nb of errors..............= "+str(error))
+        print("\n***Nb of labelized images ...= "+str(len(dict_label)))
+
+        
+        #-----------------------------------------------------------------------
+        # Labels are encoded in a multi-class way
+        #-----------------------------------------------------------------------
+        self.ylabel_encode(dict_label) 
+        
+        #-----------------------------------------------------------------------
+        # L2 Normalization with :
+        # * L2 per column is computed summing all terms for any column
+        # * Normalization is applied on all terms or any column 
+        #-----------------------------------------------------------------------
+
+        ser_sqrt = df.apply(lambda x: np.sqrt(x.dot(x.T)), axis=0)
+        ser_sqrt
+        df = df/ser_sqrt
+    
+        self._df_bof = df.copy()
+        
+        #-----------------------------------------------------------------------
+        # Reset index removing gaps due to errors from cluster assignement.
+        #-----------------------------------------------------------------------
+        self._df_bof.reset_index(drop=True, inplace=True)
+        
+        if 0 < error:
+            print("\n***WARN : build_datakp_bof() : errors= "+str(error))
+    #---------------------------------------------------------------------------
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def build_datakp_bof_deprecated(self) :
+        '''Build representation of key-points dataset in a bag of features.
+        Result is normalized and stored into a pandas data-frame.
+        Clustering should have been built before this step.
+        Output :
+            * dataframe structured as following : 
+                --> Rows index are references to images from sampling 
+                --> Columns are features occurencies.
+        '''
+        df = None
+        dict_label = dict()
+        error =0
         list_image_id_error = list()
         self._df_pil_image_kpdesc.reset_index(drop=True, inplace=True)
 
@@ -2231,7 +2364,7 @@ class P7_DataBreed() :
         # * L2 per column is computed summing all terms for any column
         # * Normalization is applied on all terms or any column 
         #-----------------------------------------------------------------------
-        print(df.shape)
+
         ser_sqrt = df.apply(lambda x: np.sqrt(x.dot(x.T)), axis=0)
         ser_sqrt
         df = df/ser_sqrt
