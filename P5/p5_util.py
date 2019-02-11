@@ -185,7 +185,7 @@ def p5_convert_timestamp_to_days(timestamp):
 #-------------------------------------------------------------------------------
 def p5_score_r2_linear_regression(df, feature,model_name='LinearRegression') :
 
-    #feature='Detergents_Paper'
+
     df_droped=df.drop([feature],inplace=False,axis=1)
     df_y=pd.DataFrame(df[feature], index= df_droped.index)
 
@@ -263,13 +263,48 @@ def func_rfm_scoring(rfm_value,rfm_threshold,rfm_column) :
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
+def tsne_X_dim_process_perplexity(X, tsne_iter=3000\
+    , dim = 2\
+   ,list_tsne_perplexity=[var for var in range(5,55,5)]) :
+   
+   """Builds data points reduction in X dimensions set using tSNE algorihtm.
+   This set is leaded by perplexity values ranged from 5 to 50.
+   
+   Input : 
+    *   X_std_sample standardized array of N rows and C columns.
+    *   dim : numbers of dimensions issued from t-SNE processing.
+    *   list_tsne_perplexity : list of t-SNE perplexities values.
+    
+   Return : 
+    *   dictionary with perplexity as keys and 2D reduced points as values.
+   """
+
+   dict_tsne_result=dict()
+
+   for tsne_perplexity in list_tsne_perplexity :
+      print("tSNE perplexity : "+str(tsne_perplexity)+"/50 ...")
+      manifold_embedd=TSNE(n_components=dim\
+      ,n_iter=tsne_iter,perplexity=tsne_perplexity)
+      
+      dict_tsne_result[tsne_perplexity]=manifold_embedd.fit_transform(X)
+
+   return dict_tsne_result 
+#-------------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
 def tsne_2D_process_perplexity(X, tsne_iter=3000\
    ,list_tsne_perplexity=[var for var in range(5,55,5)]) :
    
    """Builds data points reduction set thanks to tSNE algorihtm.
    This set is leaded by perplexity values ranged from 5 to 50.
-   Input : X_std_sample array of N rows and C columns
-   Return : dictionary with perplexity as keys  and 2D reduced points as values.
+   
+   Input : 
+    *   X_std_sample array of N rows and C columns
+   Return : 
+    *   dictionary with perplexity as keys and 2D reduced points as values.
    """
    nb_components=2
    dict_tsne_result=dict()

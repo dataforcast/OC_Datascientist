@@ -120,14 +120,22 @@ def p5_df_subplot(df,type_plot='dist', is_outliers_removed = True\
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def plot_2D_dict_tsne_result(dict_dbscan_result, nb_col, ratio=1.0\
+def plot_2D_dict_tsne_result(dict_tsne_result, nb_col, ratio=1.0\
     , annotation=None):
-    """Plot 2D results issue from dict_dbscan_result dictionary.
+    """Plot 2D results issue from dict_tsne_result dictionary.
     Plotting is expanded over nb_col and multiple rows. 
     Each row contain nb_col diagrams.
+    
+    Input  :
+        * dict_tsne_result : dictionary structured as following : 
+        {perplexity:t-SNE reduction result vector}
+        * ratio : 
+        * annotation :
+    Output : none
+        
     """
     
-    len_dict = len(dict_dbscan_result)
+    len_dict = len(dict_tsne_result)
     max_row = (int(len_dict/nb_col)+(min(1,len_dict%nb_col)))
     row = 0
     col = 0
@@ -136,7 +144,7 @@ def plot_2D_dict_tsne_result(dict_dbscan_result, nb_col, ratio=1.0\
         
         
     
-    for perplexity, X in dict_dbscan_result.items():
+    for perplexity, X in dict_tsne_result.items():
         # col variable is ranged from 0 to nb_col        
         if col == nb_col:
             row += 1

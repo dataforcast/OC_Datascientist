@@ -10,6 +10,8 @@ from PIL import Image
 from  sklearn import model_selection
 from sklearn.decomposition import PCA
 
+from keras.preprocessing.image import load_img, img_to_array
+from keras.applications import vgg16
 
  
 import numpy as np
@@ -648,14 +650,13 @@ def p7_read_image(imagepathname, image_type='PIL') :
 #-------------------------------------------------------------------------------
 class P7_DataBreed() :
     '''This class implements breeds data structure.
-        oP7_DataBreed
-            +
+            oP7_DataBreed
             |
             +-->load()
             |   |
             |   +--> p7_util.p7_load_dict_filename()
             |   
-            +-->sampling()
+            +-->sampling()//Optional     
             |   |
             |   +--> build_ser_number_breedname()
             |
@@ -665,7 +666,13 @@ class P7_DataBreed() :
             |   |
             |   +--> p7_util.p7_pil_image_load()
             |   |
+            |   +--> apply_pil_processor()
+            |   |
             |   +--> kpdesc_build()
+            |        |
+            |        +-->split_pil_image
+            |        |
+            |        +-->_df_pil_image_kpdesc_build
             |
             +-->kp_filter()
             |
@@ -2383,6 +2390,19 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
+    def list_breeddir(self) :
+        
+        self.build_ser_number_breedname()
+        list_breeddir = list()
+
+        for name,id in self._dict_breedname_id.items() :
+            list_breeddir.append(str(id)+'-'+name)
+        return list_breeddir
+    #---------------------------------------------------------------------------
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
     def breed_show(self) :
         print("")
         self.build_ser_number_breedname()
@@ -2434,6 +2454,16 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
+    def list_image_filename(self, dirbreed) :
+        dirbreed = self._dir_path+'/'+dirbreed
+        list_image_name = os.listdir(dirbreed)
+        return list_image_name
+    #---------------------------------------------------------------------------
+
+    
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
     def show_image_name(self, breedname, is_sample_show=False):
         '''Display images files names issued from sampling from a human readable 
         breedname.
@@ -2445,7 +2475,7 @@ class P7_DataBreed() :
             * breedname : human readable breed name.
             * is_sample_show : when fixed to False, then images stored in sample 
             are not displayed. Then only images names out of sample are displayed.
-            This may be relevant when testing image out of sample.
+            This may be relevant when testing single image out of sample.
             
             Images from sample are those used for training a ML or DL algorithm.
         '''
@@ -2656,6 +2686,66 @@ class P7_DataBreed() :
         +str(self._df_pil_image_kpdesc.shape))
     #---------------------------------------------------------------------------
     
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def keras_vgg16_predict(self, keras_vgg16) :
+        '''Predict breeds from sample using CNN VGG16 model given as parameter.
+        
+        Input : 
+            * keras_vgg16 : CNN network
+        Output :
+            * df_result : dataframe containing score prediction for any breed 
+            * score_average : average score prediction in between all breeds.
+        '''
+        top_results = 1
+        status = 0
+        count = 0
+        dict_predict = dict()
+        for dirbreed in self.list_breeddir():
+            print("\nPrediction for : "+str(dirbreed)+" ...")
+
+            for image_filename in self.list_image_filename(dirbreed):
+                image_pathname = self._build_pathname(dirbreed,image_filename)
+
+                # Charger l'image PIL
+                pil_image = load_img(image_pathname, target_size=(224, 224))  
+
+                # Convertir en tableau numpy
+                arr_image = img_to_array(pil_image)  
+
+                # Créer la collection d'images (un seul échantillon)
+                sample_count=1
+                arr_image \
+                = arr_image.reshape((sample_count, arr_image.shape[0]\
+                , arr_image.shape[1], arr_image.shape[2]))  
+
+                # Prétraiter l'image comme le veut VGG-16
+                X_test = vgg16.preprocess_input(arr_image)  
+
+                # Predict image breed thanks to VGG16 pre-trained model
+                y_pred = keras_vgg16.predict(X_test)  
+                my_tuple = vgg16.decode_predictions(y_pred, top=top_results)[0][0]
+                predict_dirbreed = my_tuple[0]+'-'+my_tuple[1]
+                status += int(predict_dirbreed == dirbreed)
+                count +=1
+            breedname = dirbreed.split('-')[1]
+            dict_predict[breedname] = status/count
+            print('Breed : '+breedname+' Count='+str(count))
+            count=0
+            status=0
+        #-----------------------------------------------------------------------
+        # Dictionary is converted into a pandas dataframe.
+        #-----------------------------------------------------------------------
+        df_result = pd.DataFrame.from_dict(dict_predict,orient='index')
+        df_result.rename(columns={0:'Score'}, inplace=True)
+        df_result = df_result.reset_index()
+        df_result.rename(columns={'index':'Breed'}, inplace=True)
+        score_average = df_result.Score.mean()
+        print("Average score = {0:1.2F}".format(score_average))
+        return df_result, score_average
+    #---------------------------------------------------------------------------
     
 #-------------------------------------------------------------------------------
 
