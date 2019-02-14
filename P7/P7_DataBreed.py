@@ -548,9 +548,19 @@ def pil_square(pil_image,square=None):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
+def pil_edge_only(pil_image):
+    edges = cv2.Canny(np.array(pil_image),pil_image.size[0],pil_image.size[1])
+    pil_image = edges
+    
+    return Image.fromarray(pil_image)
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
 def pil_edge(pil_image):
     edges = cv2.Canny(np.array(pil_image),pil_image.size[0],pil_image.size[1])
-    pil_image = edges-np.array(pil_image)
+    pil_image = edges - np.array(pil_image)
     
     return Image.fromarray(pil_image)
 #-------------------------------------------------------------------------------
@@ -701,7 +711,8 @@ class P7_DataBreed() :
     , pil_gradient\
     , pil_laplacien_kernel_4\
     , pil_laplacien_kernel_8\
-    , pil_low_pass]
+    , pil_low_pass\
+    , pil_edge_only]
 
     #---------------------------------------------------------------------------
     #
@@ -742,7 +753,7 @@ class P7_DataBreed() :
         self._split_ratio = (4,4)
         self._df_pil_image_kpdesc = pd.DataFrame()
         self._is_kp_filtered = True
-        self._is_squarred = True
+        self._is_squarred = False
         self._is_random_sampling_image = True
         
         self._dict_pil_processor = dict()
@@ -1598,6 +1609,7 @@ class P7_DataBreed() :
         # Update sampling data
         #-----------------------------------------------------------------------
         self._dict_breed_sample = self._dict_data.copy()
+        return True
     #---------------------------------------------------------------------------
 
     #---------------------------------------------------------------------------
@@ -1940,7 +1952,7 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def build_sift_desc(self, is_splitted=False) :
+    def build_sift_desc(self, is_splitted=False, is_prediction=False) :
         '''Build SIFT descriptors from dictionary _dict_breed_sample.
         This dictionary is structured as following : {dirbreed:list_imagename}
         where : 
@@ -1969,7 +1981,11 @@ class P7_DataBreed() :
                 pass
         else :
             pass
-        self.build_ser_number_breedname()
+        if is_prediction is False :
+            self.build_ser_number_breedname()
+        else :
+            pass
+
         for dirbreed, list_imagename in self._dict_breed_sample.items():
             
             for imagename  in list_imagename :
@@ -1988,7 +2004,6 @@ class P7_DataBreed() :
                 try :
                     if self.std_size is not None :
                         pil_image = pil_image.resize(self._std_size)
-                        #pil_image = pil_truncate(pil_image,self.std_size)
                     else :
                         pass
 
@@ -2212,7 +2227,13 @@ class P7_DataBreed() :
     #
     #---------------------------------------------------------------------------
     def get_breedname_from_breedlabel(self, breedlabel) :
-        return self._ser_breed_number[breedlabel]
+        print("get_breedname_from_breedlabel() : breedlabel = "+str(breedlabel))
+        if breedlabel in self._ser_breed_number.index:
+            return self._ser_breed_number[breedlabel]
+        else : 
+            print("*** WARN : Unmatched key for breed label: "+str(breedlabel))
+            print()
+        return None
     #---------------------------------------------------------------------------
 
     #---------------------------------------------------------------------------
@@ -2220,10 +2241,11 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     def ylabel_encode(self,dict_label):
         list_tags_ref = list(self._ser_breed_number.keys())
-        print("Number of referenced labels= "+str(len(list_tags_ref)))
+
+        #print("Number of referenced labels= "+str(len(list_tags_ref)))
 
         list_list_tags = [[tag] for tag in list(dict_label.values())]
-        print("Number of labels to be encoded= "+str(len(list_list_tags)))
+        #print("Number of labels to be encoded= "+str(len(list_list_tags)))
         y_label = p6_util.p6_encode_target(list_tags_ref, list_list_tags)
         self._y_label =  np.array(y_label).copy()
     #---------------------------------------------------------------------------
@@ -2252,7 +2274,7 @@ class P7_DataBreed() :
 
         #-----------------------------------------------------------------------
         # Each descriptor from any row of dataframe is picked, PCA reduction 
-        # is applied on it. 
+        # is applied on it if required.
         # index for rows and for each row, index for columns.
         #-----------------------------------------------------------------------        
         for index in range(0, len(self._df_pil_image_kpdesc)) : 
@@ -2496,7 +2518,8 @@ class P7_DataBreed() :
             
             list_image_name = os.listdir(dirbreed)
             
-            print("Directory breed name = "+dirbreed)
+            print("Directory breed name = "+dirbreed+ " Nb of images = "\
+            +str(len(list_image_name)))
             
             #-----------------------------------------------------------------------
             # Do not show images stored in sampling when is_sample_show is False
@@ -2523,26 +2546,37 @@ class P7_DataBreed() :
     #
     #---------------------------------------------------------------------------
     def predict(self,dirbreed,imagename, top=3):
-        self.load(list_dirbreed=[dirbreed], imagename=imagename)
+        oP7_DataBreed = P7_DataBreed(self.dir_path)
+        oP7_DataBreed.copy(self)
+        
+        
+        status = oP7_DataBreed.load(list_dirbreed=[dirbreed], imagename=imagename)
+        if status is False :
+            print("*** WARN : access to file failed!")
+            return
+        else :
+            oP7_DataBreed._ser_breed_number = self._ser_breed_number.copy()
         
         #-----------------------------------------------------------------------
         # SIFt descriptors are built
         #-----------------------------------------------------------------------
-        self.build_sift_desc(is_splitted=True)
-        self.build_arr_desc()
+        is_splitted = self.is_splitted
+        oP7_DataBreed.build_sift_desc(is_splitted=True, is_prediction=True)
+        oP7_DataBreed.build_arr_desc()
 
 
         #-----------------------------------------------------------------------
         # Bag Of Feature is built
         #-----------------------------------------------------------------------
-        self.build_datakp_bof()
+        oP7_DataBreed.build_datakp_bof()
         
         #-----------------------------------------------------------------------
         # Classification take place
         #-----------------------------------------------------------------------
-        classifier = self.classifier
-        result = classifier.predict(self.df_bof)
-        #print(classifier.predict_proba(self.df_bof))
+        classifier = oP7_DataBreed.classifier
+        result = classifier.predict(oP7_DataBreed.df_bof)
+
+        print("\n Processing result after prediction ...")
 
         #-----------------------------------------------------------------------
         # Sum over each column is computed; result is sorted.
@@ -2550,6 +2584,7 @@ class P7_DataBreed() :
         ser = pd.DataFrame(result).apply(lambda x:x.sum())
         ser.sort_values(ascending=False, inplace=True)
 
+        #return oP7_DataBreed
         #-----------------------------------------------------------------------
         # Get breed label
         #-----------------------------------------------------------------------
@@ -2558,14 +2593,16 @@ class P7_DataBreed() :
             #-------------------------------------------------------------------
             # Get breed name
             #-------------------------------------------------------------------
-            breedname = self.get_breedname_from_breedlabel(breedlabel)
+            breedname = oP7_DataBreed.get_breedname_from_breedlabel(breedlabel)
             list_predicted.append(breedname)
 
         #-----------------------------------------------------------------------
         # Get breed name
         #-----------------------------------------------------------------------
         breedname = get_breedname_from_dirbreed(dirbreed)
-        return breedname, list_predicted
+        
+        pil_image_requested = self.read_image(dirbreed,imagename)
+        return breedname, list_predicted, pil_image_requested
 
     #---------------------------------------------------------------------------
     

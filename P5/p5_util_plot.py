@@ -121,7 +121,7 @@ def p5_df_subplot(df,type_plot='dist', is_outliers_removed = True\
 #
 #-------------------------------------------------------------------------------
 def plot_2D_dict_tsne_result(dict_tsne_result, nb_col, ratio=1.0\
-    , annotation=None):
+    , annotation=None, dim=(0,1)):
     """Plot 2D results issue from dict_tsne_result dictionary.
     Plotting is expanded over nb_col and multiple rows. 
     Each row contain nb_col diagrams.
@@ -158,26 +158,95 @@ def plot_2D_dict_tsne_result(dict_tsne_result, nb_col, ratio=1.0\
         size=len(X)
         nb_index = int(size*ratio)
         index_array = np.random.randint(0,size,nb_index)
-        
+
         #-----------------------------------------------------------------------
         # Select part of array sliding original array with random indexes
         #-----------------------------------------------------------------------
         X = X[index_array]
 
         if isinstance(ax, np.ndarray) is False:
-            ax.scatter(X[:, 0], X[:, 1], c='grey', alpha=0.6)
+            ax.scatter(X[:, dim[0]], X[:, dim[1]], c='grey', alpha=0.6)
             ax.set_title("Perplexity= "+str(perplexity),color='blue')
             ax.grid(True)
             if annotation is not None:
                 annotation = annotation[index_array]
                 for i in range(0,len(index_array)):
-                    ax.annotate(annotation[i], (X[i, 0], X[i, 1]))
+                    ax.annotate(annotation[i], (X[i, dim[0]], X[i, dim[1]]))
         else:
-            ax[row,col].scatter(X[:, 0], X[:, 1], c='grey', alpha=0.6)
+            ax[row,col].scatter(X[:, dim[0]], X[:, dim[1]], c='grey', alpha=0.6)
             ax[row,col].set_title("Perplexity= "+str(perplexity),color='blue')
             ax[row,col].grid(True)
         col += 1
 #-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def plot_3D_dict_tsne_result(dict_tsne_result, nb_col, ratio=1.0\
+    , annotation=None):
+    """Plot 2D results issue from dict_tsne_result dictionary.
+    Plotting is expanded over nb_col and multiple rows. 
+    Each row contain nb_col diagrams.
+    
+    Input  :
+        * dict_tsne_result : dictionary structured as following : 
+        {perplexity:t-SNE reduction result vector}
+        * ratio : 
+        * annotation :
+    Output : none
+        
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+    import numpy as np
+
+    #from mpl_toolkits.mplot3d.axes3d import get_test_data
+    # This import registers the 3D projection, but is otherwise unused.
+    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
+
+
+    # set up a figure twice as wide as it is tall
+    #fig = plt.figure(figsize=plt.figaspect(0.5))
+    fig = plt.figure(figsize=(20,20))
+
+    #===============
+    #  First subplot
+    #===============
+    # set up the axes for the first plot
+    #ax = fig.add_subplot(1, 1, 1, projection='3d')
+    ax = plt.axes(projection='3d')
+    
+    # Displays title upper left
+    #ax.text2D(0.05, 0.95, title, transform=ax.transAxes)
+
+
+    p_rows = 1
+    p_cols = 1
+    p_figsize = (10,10)
+    #f, ax = plt.subplots(p_rows, p_cols, figsize=p_figsize, sharex=True, projection='3d')
+
+    for perplexity, X in dict_tsne_result.items():
+        print("Perplexity= "+str(perplexity))
+
+        # plot a 3D wireframe like in the example mplot3d/wire3d_demo
+        x= X[:, 0]
+        y= X[:, 1]
+        z= X[:, 2]
+        xmin, xmax = np.min(x),np.max(x)
+        ymin, ymax = np.min(y),np.max(y)
+        zmin, zmax = np.min(z),np.max(z)
+        
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
+        ax.set_zlim(zmin, zmax)
+
+        ax = plt.axes(projection='3d')
+
+        ax.scatter3D(x, y, z, c='grey', alpha=0.6);
+
+    plt.show()
+#-------------------------------------------------------------------------------
+
 
 #-------------------------------------------------------------------------------
 #
@@ -403,10 +472,10 @@ def gmm_models_plot_AIC_BIC_deprecated(df, dict_list_gmm_model\
 #-------------------------------------------------------------------------------
 def gmm_models_plot_silhouette(df, dict_dict_silhouette_score\
 , p_figsize, p_title, areas_raws, areas_colums):
-   """Plot silhouette scores for any GMM models and for any hyper-parameter.
-   GMM models are ranking from cluster_start to cluster_end.
-   Hyper-parameters are keys from dict_dict_silhouette_score.
-   Input : 
+    """Plot silhouette scores for any GMM models and for any hyper-parameter.
+    GMM models are ranking from cluster_start to cluster_end.
+    Hyper-parameters are keys from dict_dict_silhouette_score.
+    Input : 
       * df : dataframe containing values from which, GMM models are built then 
       evaluated against silhouette coefficient.
       * dict_dict_silhouette_score : dictionaty of dictionaries.
@@ -419,33 +488,82 @@ def gmm_models_plot_silhouette(df, dict_dict_silhouette_score\
       * p_title : figure title
       * areas_raws : number of raws against witch figures areas are expanded
       * areas_colums : number of columns against witch figure is expanded
-   Output : none
-   """
+    Output : none
+    """
 
-   f, ax = plt.subplots(areas_raws, areas_colums, figsize=p_figsize\
-   , sharex=True, sharey=True)
+    f, ax = plt.subplots(areas_raws, areas_colums, figsize=p_figsize\
+    , sharex=True, sharey=True)
 
+    #---------------------------------------------------------------------------
+    # Build iterator allowing to walk through rows and columns
+    #---------------------------------------------------------------------------
+    list_row_col = list()
+    for i in range(0,2):
+        for j in range(0,2) :
+            list_row_col.append((i,j))
+    
 
-   range_area = range(areas_raws-1,areas_colums)
-   for hyper_parameter,col_area in zip(dict_dict_silhouette_score,range_area):
-       dict_silhouette_score = dict_dict_silhouette_score[hyper_parameter]    
-       if 1 == areas_colums:
-        ax_area = ax
-       else:
-        ax_area = ax[col_area]
-       #------------------------------------------------------------------------
-       # For any GMM model from list_gmm_model, plot both BIC and AIC 
-       #------------------------------------------------------------------------
-       ax_area.plot(dict_silhouette_score.keys()\
-       , dict_silhouette_score.values(), label=str(hyper_parameter))
-       ax_area.scatter(dict_silhouette_score.keys()\
-       , dict_silhouette_score.values(), label=str(hyper_parameter))
-       ax_area.legend(loc='best')
-       
-       ax_area.set_title(p_title, color='blue')
-       ax_area.set_xlabel('Nb clusters', color='blue');
+    for hyper_parameter,row_col in zip(dict_dict_silhouette_score,list_row_col):
+            dict_silhouette_score = dict_dict_silhouette_score[hyper_parameter]    
+            if isinstance(ax,np.ndarray):
+                for i_row in range(0, areas_raws):
+                    for i_col in range(0, areas_colums):
+                        ax_area = ax[i_row,i_col]
+                        #-----------------------------------------------------------
+                        # Plot silhouette.
+                        #-----------------------------------------------------------
+                        ax_area.plot(dict_silhouette_score.keys()\
+                        , dict_silhouette_score.values(), label=str(hyper_parameter))
+                        
+                        ax_area.scatter(dict_silhouette_score.keys()\
+                        , dict_silhouette_score.values(), label=str(hyper_parameter))
+                        
+                        ax_area.legend(loc='best')
 
-   return
+                        ax_area.set_title(p_title, color='blue')
+                        ax_area.set_xlabel('Nb clusters', color='blue');
+            
+            else :
+                ax_area = ax
+                #-----------------------------------------------------------
+                # Plot silhouette.
+                #-----------------------------------------------------------
+                ax_area.plot(dict_silhouette_score.keys()\
+                , dict_silhouette_score.values(), label=str(hyper_parameter))
+                ax_area.scatter(dict_silhouette_score.keys()\
+                , dict_silhouette_score.values(), label=str(hyper_parameter))
+                ax_area.legend(loc='best')
+
+                ax_area.set_title(p_title, color='blue')
+                ax_area.set_xlabel('Nb clusters', color='blue');
+        
+    
+    
+
+    if False :
+        range_area = range(areas_raws-1,areas_colums)
+        for hyper_parameter,col_area in zip(dict_dict_silhouette_score,range_area):
+            dict_silhouette_score = dict_dict_silhouette_score[hyper_parameter]    
+            if 1 == areas_colums:
+                ax_area = ax
+            else:
+                for i_row in range(0, areas_raws):
+                    for i_col in range(0, areas_colums):
+                        ax_area = ax[i_row,i_col]
+                        #-----------------------------------------------------------
+                        # Plot silhouette.
+                        #-----------------------------------------------------------
+                        ax_area.plot(dict_silhouette_score.keys()\
+                        , dict_silhouette_score.values(), label=str(hyper_parameter))
+                        ax_area.scatter(dict_silhouette_score.keys()\
+                        , dict_silhouette_score.values(), label=str(hyper_parameter))
+                        ax_area.legend(loc='best')
+
+                        ax_area.set_title(p_title, color='blue')
+                        ax_area.set_xlabel('Nb clusters', color='blue');
+
+    plt.plot()
+    return
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------

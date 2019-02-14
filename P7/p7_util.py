@@ -18,6 +18,122 @@ import p3_util_plot
 import p3_util
 import p5_util
 import p7_util
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def p7_plot_dict_dict_score(dict_dict_silhouette_score\
+, p_figsize, p_title, areas_raws, areas_colums):
+    """Plot silhouette scores for any GMM models and for any hyper-parameter.
+    GMM models are ranking from cluster_start to cluster_end.
+    Hyper-parameters are keys from dict_dict_silhouette_score.
+    Input : 
+      * dict_dict_silhouette_score : dictionaty of dictionaries.
+      Keys dictionary of dict_dict_silhouette_score are GMM hyper-parameters.
+      Values dictionaries of dict_dict_silhouette_score are dictionaries 
+      from which  :
+         --> keys are clusters
+         --> values are silhouette scores for a cluster.
+      * p_figsize : tuple, for sizing pyplot figure.
+      * p_title : figure title
+      * areas_raws : number of raws against witch figures areas are expanded
+      * areas_colums : number of columns against witch figure is expanded
+    Output : none
+    """
+
+    f, ax = plt.subplots(areas_raws, areas_colums, figsize=p_figsize\
+    , sharex=True, sharey=True)
+
+
+    #---------------------------------------------------------------------------
+    # Build iterator allowing to walk through rows and columns
+    #---------------------------------------------------------------------------
+    list_row_col = list()
+    for i in range(0,len(dict_dict_silhouette_score)):
+        for j in range(0,areas_colums) :
+            list_row_col.append((i,j))
+    
+    list_row_col = [(j-j,j-j) for j in range(0,len(dict_dict_silhouette_score))]
+    if isinstance(ax,np.ndarray):
+        for hyper_parameter,row_col in zip(dict_dict_silhouette_score,list_row_col):
+            row = row_col[0]
+            col = row_col[1]
+            if 1 == areas_raws :
+                ax_area = ax[col]    
+            else : 
+                ax_area = ax[row,col]
+            
+            print(hyper_parameter)
+            dict_silhouette_score = dict_dict_silhouette_score[hyper_parameter]    
+            #-----------------------------------------------------------
+            # Plot silhouette.
+            #-----------------------------------------------------------
+            ax_area.plot(dict_silhouette_score.keys()\
+            , dict_silhouette_score.values(), label=str(hyper_parameter))
+                            
+            ax_area.legend(loc='best')
+
+            ax_area.set_title(p_title, color='blue')
+            ax_area.set_xlabel('Nb clusters', color='blue');
+    
+    else :
+        ax_area = ax
+        for hyper_parameter,row_col in zip(dict_dict_silhouette_score,list_row_col):
+            print(hyper_parameter)
+                        
+            dict_silhouette_score = dict_dict_silhouette_score[hyper_parameter]    
+            #-----------------------------------------------------------
+            # Plot silhouette.
+            #-----------------------------------------------------------
+            ax_area.plot(dict_silhouette_score.keys()\
+            , dict_silhouette_score.values(), label=str(hyper_parameter))
+            ax_area.scatter(dict_silhouette_score.keys()\
+            , dict_silhouette_score.values(), label=str(hyper_parameter))
+            ax_area.legend(loc='best')
+
+            ax_area.set_title(p_title, color='blue')
+            ax_area.set_xlabel('Nb clusters', color='blue');
+    
+    
+    if False :
+        for hyper_parameter,row_col in zip(dict_dict_silhouette_score,list_row_col):
+                dict_silhouette_score = dict_dict_silhouette_score[hyper_parameter]    
+                if isinstance(ax,np.ndarray):
+                    for i_row in range(0, areas_raws):
+                        for i_col in range(0, areas_colums):
+                            ax_area = ax[i_row,i_col]
+                            #-----------------------------------------------------------
+                            # Plot silhouette.
+                            #-----------------------------------------------------------
+                            ax_area.plot(dict_silhouette_score.keys()\
+                            , dict_silhouette_score.values(), label=str(hyper_parameter))
+                            
+                            ax_area.scatter(dict_silhouette_score.keys()\
+                            , dict_silhouette_score.values(), label=str(hyper_parameter))
+                            
+                            ax_area.legend(loc='best')
+
+                            ax_area.set_title(p_title, color='blue')
+                            ax_area.set_xlabel('Nb clusters', color='blue');
+                
+                else :
+                    ax_area = ax
+                    #-----------------------------------------------------------
+                    # Plot silhouette.
+                    #-----------------------------------------------------------
+                    ax_area.plot(dict_silhouette_score.keys()\
+                    , dict_silhouette_score.values(), label=str(hyper_parameter))
+                    ax_area.scatter(dict_silhouette_score.keys()\
+                    , dict_silhouette_score.values(), label=str(hyper_parameter))
+                    ax_area.legend(loc='best')
+
+                    ax_area.set_title(p_title, color='blue')
+                    ax_area.set_xlabel('Nb clusters', color='blue');
+        
+
+    plt.plot()
+    return
+#-------------------------------------------------------------------------------
+
 
 #-------------------------------------------------------------------------------
 #
@@ -482,7 +598,11 @@ def p7_load_dict_filename(root_directory_path, list_dirbreed=None) :
     #---------------------------------------------------------------------------
     dict_filename = dict()
     for dirbreed in list_dirbreed :
-        dict_filename[dirbreed] = os.listdir(root_directory_path+'/'+dirbreed)
+        try :
+            dict_filename[dirbreed] = os.listdir(root_directory_path+'/'+dirbreed)
+        except FileNotFoundError :
+            print("*** ERROR : File not found : "+str(root_directory_path+'/'+dirbreed))
+            return None
     return dict_filename
 #-------------------------------------------------------------------------------
 

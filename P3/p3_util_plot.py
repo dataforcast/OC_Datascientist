@@ -659,6 +659,7 @@ def plot_3D(X, title, parameter_figsize=(10,10), colordir=1):
    nb_components = X.shape[1]
 
    _z = plt.figure(figsize=parameter_figsize)
+   
    if 3 == nb_components :
       # Cadrage de l'affichage selon X,Y,Z
       xmin, xmax = np.min(X[:,0]),np.max(X[:,0])
@@ -671,6 +672,7 @@ def plot_3D(X, title, parameter_figsize=(10,10), colordir=1):
       ax.set_xlim(xmin, xmax)
       ax.set_ylim(ymin, ymax)
       ax.set_zlim(zmin, zmax)
+      
       _z= ax.set_title(title, size=17, color='b')
       _z= ax.set_xlabel('X', size=17, color='b')
       _z= ax.set_ylabel('Y', size=17, color='b')
