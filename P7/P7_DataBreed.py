@@ -712,8 +712,14 @@ class P7_DataBreed() :
     , pil_laplacien_kernel_4\
     , pil_laplacien_kernel_8\
     , pil_low_pass\
-    , pil_edge_only]
+    , pil_edge_only\
+    ,]
 
+    LIST_NN_MODEL_NAME = [\
+    'mlp'\
+    ,'cnn'\
+    ,]
+    
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
@@ -776,6 +782,10 @@ class P7_DataBreed() :
         self._image_process_count = 0
         self._list_selected_cluster = list()
         self._pca = None
+        
+        self._nn_model_name = str()
+        self._mlp_model = None
+        self._nn_model = None
         
     #---------------------------------------------------------------------------
 
@@ -920,7 +930,15 @@ class P7_DataBreed() :
         else : 
             self.strprint("PCA components ................ : None")
             
-
+        print()
+        self.strprint("Neural Network supported models ... : ")
+        for nn_model_name in P7_DataBreed.LIST_NN_MODEL_NAME :
+            self.strprint(nn_model_name)
+        print()
+        
+        self.strprint("Activated Neural Network model .. : "\
+        +str(self.nn_model_name))
+        
         self.strprint("")
 
     #---------------------------------------------------------------------------
@@ -974,12 +992,29 @@ class P7_DataBreed() :
         self._list_processor_id = copied_object._list_processor_id.copy()
         self._image_process_count = copied_object._image_process_count
         self._list_selected_cluster = copied_object._list_selected_cluster.copy()
+
+        self._nn_model_name = copied_object._nn_model_name
+        if copied_object._nn_model is not None :
+            self._nn_model = copied_object._nn_model
+        else :
+            self._nn_model = None
+
+
+
+
+        if copied_object._mlp_model is not None :
+            self._mlp_model = copied_object._mlp_model
+        else :
+            self._mlp_model = None
+
+
         if copied_object._pca is not None :
             self._pca= copied_object._pca
         else : 
             self._pca= None
         
-        if is_new_attribute is True :
+        if is_new_attribute is False :
+            self._mlp_model = copied_object._mlp_model
             pass
         else :
             print("\n*** WARN : new attributes from copied_object are not \
@@ -1227,6 +1262,26 @@ class P7_DataBreed() :
     def _set_pca(self, pca) :
         print("\n*** WARN : assignement is not authorized !\n")    
 
+    def _get_nn_model_name(self) :
+        return self._nn_model_name
+    def _set_nn_model_name(self,nn_model_name) :
+        if nn_model_name not in P7_DataBreed.LIST_NN_MODEL_NAME:
+            print("*** ERROR : Neural Network not supported : "\
+            +str(nn_model_name))
+        else :
+            self._nn_model_name = nn_model_name
+
+    def _get_nn_model(self) :
+        print("*** ERROR : access to NN model not allowed!")
+    def _set_nn_model(self, nn_model) :
+        self._nn_model = nn_model
+        
+
+    def _get_mlp_model(self) :
+        print("*** ERROR : access to MLP model not allowed!")
+    def _set_mlp_model(self, mlp_model) :
+        self._mlp_model = mlp_model
+
     
     dir_path = property(_get_dir_path,_set_dir_path)
     std_size = property(_get_std_size,_set_std_size)
@@ -1282,6 +1337,10 @@ class P7_DataBreed() :
     , _set_list_selected_cluster)
     
     pca = property(_get_pca , _set_pca)
+    
+    nn_model_name = property(_get_nn_model_name, _set_nn_model_name)
+    nn_model = property(_get_nn_model, _set_nn_model)
+    mlp_model = property(_get_mlp_model, _set_mlp_model)
     
     #---------------------------------------------------------------------------
     #
@@ -1503,14 +1562,6 @@ class P7_DataBreed() :
                                       ,std_image_size=None, is_title=False)
         return oP7_DataBreed_single
     #-------------------------------------------------------------------------------
-
-
-    #---------------------------------------------------------------------------
-    #
-    #---------------------------------------------------------------------------
-    def predict_image(pil_image) :
-        pass
-    #---------------------------------------------------------------------------
 
     #---------------------------------------------------------------------------
     #
@@ -2227,7 +2278,6 @@ class P7_DataBreed() :
     #
     #---------------------------------------------------------------------------
     def get_breedname_from_breedlabel(self, breedlabel) :
-        print("get_breedname_from_breedlabel() : breedlabel = "+str(breedlabel))
         if breedlabel in self._ser_breed_number.index:
             return self._ser_breed_number[breedlabel]
         else : 
@@ -2481,7 +2531,19 @@ class P7_DataBreed() :
         list_image_name = os.listdir(dirbreed)
         return list_image_name
     #---------------------------------------------------------------------------
-
+    
+    
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def image_show(self, breedname) :
+        '''This method is a wrapper of show_image_name.
+        Given a breed name, the list of image file name is returned.
+        
+        '''
+        self.show_image_name(breedname, is_sample_show=True)
+    #---------------------------------------------------------------------------
+    
     
     #---------------------------------------------------------------------------
     #
@@ -2535,7 +2597,8 @@ class P7_DataBreed() :
             +str(len(list_image_name)-count_image_sample_show))
             for image_name in list_image_name :
                 if image_name not in list_sample_breed_image :
-                    print("Image name= {}".format(image_name))
+                    print("{} ".format(image_name), end='',flush=True)
+                    #print("Image name= {} ".format(image_name), end='',flush=True)
         else : 
             print("\n*** ERROR : breadname= "+str(breedname)+" not found into sample! Enter show_breed_name()\n")
             
@@ -2545,10 +2608,12 @@ class P7_DataBreed() :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def predict(self,dirbreed,imagename, top=3):
+    def predict(self,dirbreed,imagename, classifier_name = None, top=3):
         oP7_DataBreed = P7_DataBreed(self.dir_path)
         oP7_DataBreed.copy(self)
+        breedname = str()
         
+        pil_image_requested = oP7_DataBreed.read_image(dirbreed,imagename)
         
         status = oP7_DataBreed.load(list_dirbreed=[dirbreed], imagename=imagename)
         if status is False :
@@ -2556,54 +2621,82 @@ class P7_DataBreed() :
             return
         else :
             oP7_DataBreed._ser_breed_number = self._ser_breed_number.copy()
-        
-        #-----------------------------------------------------------------------
-        # SIFt descriptors are built
-        #-----------------------------------------------------------------------
-        is_splitted = self.is_splitted
-        oP7_DataBreed.build_sift_desc(is_splitted=True, is_prediction=True)
-        oP7_DataBreed.build_arr_desc()
+            
+        if classifier_name is None : 
+            #-----------------------------------------------------------------------
+            # SIFT descriptors are built
+            #-----------------------------------------------------------------------
+            is_splitted = self.is_splitted
+            oP7_DataBreed.build_sift_desc(is_splitted=True, is_prediction=True)
+            oP7_DataBreed.build_arr_desc()
 
 
-        #-----------------------------------------------------------------------
-        # Bag Of Feature is built
-        #-----------------------------------------------------------------------
-        oP7_DataBreed.build_datakp_bof()
-        
-        #-----------------------------------------------------------------------
-        # Classification take place
-        #-----------------------------------------------------------------------
-        classifier = oP7_DataBreed.classifier
-        result = classifier.predict(oP7_DataBreed.df_bof)
+            #-----------------------------------------------------------------------
+            # Bag Of Feature is built
+            #-----------------------------------------------------------------------
+            oP7_DataBreed.build_datakp_bof()
+            
+            #-----------------------------------------------------------------------
+            # Classification take place
+            #-----------------------------------------------------------------------
+            classifier = oP7_DataBreed.classifier
+            result = classifier.predict(oP7_DataBreed.df_bof)
 
-        print("\n Processing result after prediction ...")
+            #-----------------------------------------------------------------------
+            # Sum over each column is computed; result is sorted.
+            #-----------------------------------------------------------------------
+            ser = pd.DataFrame(result).apply(lambda x:x.sum())
+            ser.sort_values(ascending=False, inplace=True)
 
-        #-----------------------------------------------------------------------
-        # Sum over each column is computed; result is sorted.
-        #-----------------------------------------------------------------------
-        ser = pd.DataFrame(result).apply(lambda x:x.sum())
-        ser.sort_values(ascending=False, inplace=True)
+            #return oP7_DataBreed
+            #-----------------------------------------------------------------------
+            # Get breed label
+            #-----------------------------------------------------------------------
+            list_predicted = list()
+            for breedlabel, value in ser[:top].items():
+                #-------------------------------------------------------------------
+                # Get breed name
+                #-------------------------------------------------------------------
+                breedname = oP7_DataBreed.get_breedname_from_breedlabel(breedlabel)
+                list_predicted.append(breedname)
 
-        #return oP7_DataBreed
-        #-----------------------------------------------------------------------
-        # Get breed label
-        #-----------------------------------------------------------------------
-        list_predicted = list()
-        for breedlabel, value in ser[:top].items():
-            #-------------------------------------------------------------------
+            #-----------------------------------------------------------------------
             # Get breed name
-            #-------------------------------------------------------------------
-            breedname = oP7_DataBreed.get_breedname_from_breedlabel(breedlabel)
-            list_predicted.append(breedname)
+            #-----------------------------------------------------------------------
+            breedname = get_breedname_from_dirbreed(dirbreed)
+            
+        else : 
+            if classifier_name in P7_DataBreed.LIST_NN_MODEL_NAME : 
+                if classifier_name != oP7_DataBreed.nn_model_name :
+                    print("*** WARNING: Classifier= "+str(classifier_name)\
+                    +" NOT SELECTED!")
+                    pil_image_requested = None
+                else : 
+                    df = oP7_DataBreed.df_build()
+                    ser_pil_image = df['image']
+                    ser_label = df['label']
+                    square = None
+                    resize = (224,224)
+                    X, y = p7_keras_X_y_build(ser_pil_image, ser_label\
+                    , square=square, resize=resize)
+                    X = X.astype('float32')
 
-        #-----------------------------------------------------------------------
-        # Get breed name
-        #-----------------------------------------------------------------------
-        breedname = get_breedname_from_dirbreed(dirbreed)
-        
-        pil_image_requested = self.read_image(dirbreed,imagename)
+                    dimData = np.prod(X.shape[1:])
+                    print(dimData)
+
+                    X = X.reshape(X.shape[0], dimData)
+                    X /= 255
+
+                    list_predicted = self._mlp_model.predict_proba(X)
+
+            else :
+                pil_image_requested = None
+                list_predicted = list()
+                print("*** ERROR : Classifier= "+str(classifier_name)\
+                +" NOT SUPPORTED!")
+
         return breedname, list_predicted, pil_image_requested
-
+                
     #---------------------------------------------------------------------------
     
     #---------------------------------------------------------------------------

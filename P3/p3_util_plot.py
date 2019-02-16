@@ -605,6 +605,9 @@ def clustering_plot(X_clustered, cluster_labels, nclusters, title=None\
         else: 
          alpha = 0.6
         
+        print("clustering_plot()"+str(X_clustered.shape))
+        print("clustering_plot()"+str(X_clustered[0, 0]))
+        
         for i in range(X_clustered.shape[0]):
             plt.scatter(X_clustered[i, 0], X_clustered[i, 1],\
             c=cm.Oranges(cluster_labels[i] / nclusters), alpha=alpha)
@@ -761,11 +764,15 @@ def clustering_kmeans_plot_and_metrics(X_train, X_test ,parameter_clusters=20\
 # ------------------------------------------------------------------------------
 #
 # ------------------------------------------------------------------------------
-def clustering_gmm_plot_and_metrics(X_train, X_test, parameter_clusters=20) :
+def clustering_gmm_plot_and_metrics(X_train, X_test, parameter_clusters=20\
+    ,gmm_clustering=None) :
     #----------------------------------------------------
     # Building cluster 
     #----------------------------------------------------
-    gmm_clustering = GaussianMixture(n_components=parameter_clusters).fit(X_train)
+    if gmm_clustering is None : 
+        gmm_clustering = GaussianMixture(n_components=parameter_clusters).fit(X_train)
+    else : 
+        pass
     labels_trained = gmm_clustering.predict(X_train)
 
     #----------------------------------------------------
@@ -777,8 +784,7 @@ def clustering_gmm_plot_and_metrics(X_train, X_test, parameter_clusters=20) :
     #----------------------------------------------------
     # Compute metrics for this cluster
     #----------------------------------------------------
-    X_clustered_test_label = gmm_clustering.fit_predict(X_test)
-    labels_predicted = gmm_clustering.labels_
+    labels_predicted = gmm_clustering.fit_predict(X_test)
     clustering_compute_metrics(X_train, labels_trained, labels_predicted)    
     return labels_trained, labels_predicted
 # ------------------------------------------------------------------------------
