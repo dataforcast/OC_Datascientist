@@ -19,6 +19,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from keras.utils import to_categorical
+from keras.applications.vgg16 import decode_predictions
 
 import p3_util
 import p5_util
@@ -2612,6 +2613,7 @@ class P7_DataBreed() :
         oP7_DataBreed = P7_DataBreed(self.dir_path)
         oP7_DataBreed.copy(self)
         breedname = str()
+        list_predicted = list()
         
         pil_image_requested = oP7_DataBreed.read_image(dirbreed,imagename)
         
@@ -2652,7 +2654,6 @@ class P7_DataBreed() :
             #-----------------------------------------------------------------------
             # Get breed label
             #-----------------------------------------------------------------------
-            list_predicted = list()
             for breedlabel, value in ser[:top].items():
                 #-------------------------------------------------------------------
                 # Get breed name
@@ -2687,8 +2688,22 @@ class P7_DataBreed() :
                     X = X.reshape(X.shape[0], dimData)
                     X /= 255
 
-                    list_predicted = self._mlp_model.predict_proba(X)
+                    # Afficher les 3 classes les plus probables
+                    print('Top 3 :', )
 
+                    y_pred = oP7_DataBreed._mlp_model.predict_proba(X)[0]
+                    #list_predicted = list(y_pred)
+                    
+                    
+                    df = pd.DataFrame(data=y_pred, columns=['proba'])
+                    for case in range(0, top) :
+                        max_val = df.max()
+                        index = df[df['proba']==max_val[0]].index[0]
+                        breedname = oP7_DataBreed.get_breedname_from_breedlabel(index)
+                        list_predicted.append(breedname)
+                        df.drop([index], inplace=True)
+
+                    
             else :
                 pil_image_requested = None
                 list_predicted = list()
