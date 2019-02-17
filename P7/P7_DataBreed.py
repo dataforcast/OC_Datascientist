@@ -2024,7 +2024,7 @@ class P7_DataBreed() :
         self._is_splitted = is_splitted
         self._df_pil_image_kpdesc = pd.DataFrame()
         
-        print("*** build_sift_desc() ...")
+        #print("*** build_sift_desc() ...")
         if is_splitted is True :
             if self._std_size is None :
                 print("*** ERROR : Images require square resizing for splitting!")
@@ -2088,8 +2088,9 @@ class P7_DataBreed() :
                     #print("*** WARNING : attribute error for PIL image ")
                     continue                
         self._df_pil_image_kpdesc.index.names =['raw','col']
-        print("\nINFO : Error = "+str(error)\
-        +" Total images processed= "+str(image_count))
+        
+        #print("\nINFO : Error = "+str(error)\
+        #+" Total images processed= "+str(image_count))
         self._image_process_count = image_count
     #---------------------------------------------------------------------------
 
@@ -2356,8 +2357,8 @@ class P7_DataBreed() :
                 # Assign a label for each image.
                 dict_label[index] = breedlabel
 
-        print("\n***Nb of errors..............= "+str(error))
-        print("\n***Nb of labelized images ...= "+str(len(dict_label)))
+        #print("\n***Nb of errors..............= "+str(error))
+        #print("\n***Nb of labelized images ...= "+str(len(dict_label)))
 
         
         #-----------------------------------------------------------------------
@@ -2614,9 +2615,10 @@ class P7_DataBreed() :
         oP7_DataBreed.copy(self)
         breedname = str()
         list_predicted = list()
+        cls_name = str()
         
-        pil_image_requested = oP7_DataBreed.read_image(dirbreed,imagename)
-        
+        print("---> Loading image")
+        pil_image_requested = oP7_DataBreed.read_image(dirbreed,imagename)        
         status = oP7_DataBreed.load(list_dirbreed=[dirbreed], imagename=imagename)
         if status is False :
             print("*** WARN : access to file failed!")
@@ -2625,9 +2627,11 @@ class P7_DataBreed() :
             oP7_DataBreed._ser_breed_number = self._ser_breed_number.copy()
             
         if classifier_name is None : 
+            cls_name = oP7_DataBreed.classifier_name
             #-----------------------------------------------------------------------
             # SIFT descriptors are built
             #-----------------------------------------------------------------------
+            print("---> Building SIFT descriptors...")
             is_splitted = self.is_splitted
             oP7_DataBreed.build_sift_desc(is_splitted=True, is_prediction=True)
             oP7_DataBreed.build_arr_desc()
@@ -2636,11 +2640,13 @@ class P7_DataBreed() :
             #-----------------------------------------------------------------------
             # Bag Of Feature is built
             #-----------------------------------------------------------------------
+            print("---> Build BOF issued from SIFT descriptors...")
             oP7_DataBreed.build_datakp_bof()
             
             #-----------------------------------------------------------------------
             # Classification take place
             #-----------------------------------------------------------------------
+            print("---> Breed prediction...")
             classifier = oP7_DataBreed.classifier
             result = classifier.predict(oP7_DataBreed.df_bof)
 
@@ -2654,6 +2660,7 @@ class P7_DataBreed() :
             #-----------------------------------------------------------------------
             # Get breed label
             #-----------------------------------------------------------------------
+            print("---> Getting breed classes from prediction...")
             for breedlabel, value in ser[:top].items():
                 #-------------------------------------------------------------------
                 # Get breed name
@@ -2673,6 +2680,8 @@ class P7_DataBreed() :
                     +" NOT SELECTED!")
                     pil_image_requested = None
                 else : 
+                    cls_name = oP7_DataBreed.nn_model_name
+                    print("--->Data pre-processing for Keras NN ... ")
                     df = oP7_DataBreed.df_build()
                     ser_pil_image = df['image']
                     ser_label = df['label']
@@ -2691,16 +2700,20 @@ class P7_DataBreed() :
                     # Afficher les 3 classes les plus probables
                     print('Top 3 :', )
 
+                    print("--->Breed prediction ... ")
                     y_pred = oP7_DataBreed._mlp_model.predict_proba(X)[0]
                     #list_predicted = list(y_pred)
                     
                     
+                    print("--->Breed name extracted ... ")
+                    breedname = dirbreed
                     df = pd.DataFrame(data=y_pred, columns=['proba'])
                     for case in range(0, top) :
                         max_val = df.max()
                         index = df[df['proba']==max_val[0]].index[0]
-                        breedname = oP7_DataBreed.get_breedname_from_breedlabel(index)
-                        list_predicted.append(breedname)
+                        pred_breedname \
+                        = oP7_DataBreed.get_breedname_from_breedlabel(index)
+                        list_predicted.append(pred_breedname)
                         df.drop([index], inplace=True)
 
                     
@@ -2710,6 +2723,13 @@ class P7_DataBreed() :
                 print("*** ERROR : Classifier= "+str(classifier_name)\
                 +" NOT SUPPORTED!")
 
+        #-----------------------------------------------------------------------
+        # Result is displayed
+        #-----------------------------------------------------------------------
+        print("\n===> Classifier= "+str(cls_name)+"\n===> Expected breed= "+str(breedname)\
+        +"\n===> Returned top predictions= "+str(list_predicted))
+        p7_util.p7_image_pil_show({'Requested':[pil_image_requested]}\
+        , is_title=str(list_predicted),std_image_size=(300,300))
         return breedname, list_predicted, pil_image_requested
                 
     #---------------------------------------------------------------------------

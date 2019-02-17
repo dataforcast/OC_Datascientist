@@ -139,6 +139,8 @@ def p7_plot_dict_dict_score(dict_dict_silhouette_score\
 #
 #-------------------------------------------------------------------------------
 def p7_get_name_from_function(_function) :
+    '''Extract and return function name from a given function.
+    '''
     splitted_information = str(_function).split(' ')
     return splitted_information[1]
 #-------------------------------------------------------------------------------
@@ -180,6 +182,9 @@ def p7_plot_cnn_history(cnn_model ,X_test, y_test, history=None) :
 #------------------------------------------------------------------------------
 def p7_filter_convolutional(image, kernel, size=(3,3), title=str()\
 , xlabel=str(), ylabel=str(), is_show=False, extension='conv'):
+    ''' Apply convolutional filter over PIL image given as parameter of this 
+    function.
+    '''
     filename = str()
     #---------------------------------------------------------------------------
     # Les filtres par convolution ne supportent que les formats RGB et L 
@@ -226,6 +231,10 @@ def p7_filter_convolutional(image, kernel, size=(3,3), title=str()\
 #------------------------------------------------------------------------------
 def p7_filter_median(image, size=3, title=str(), xlabel=str(), ylabel=str()\
 ,is_show=False) :
+    ''' Apply median filter over PIL image given as parameter of this 
+    function.
+    '''
+
     image_filtered = image.filter(ImageFilter.MedianFilter(size=size))
     filename = str()
     if is_show is True :
@@ -247,6 +256,10 @@ def p7_filter_median(image, size=3, title=str(), xlabel=str(), ylabel=str()\
 #------------------------------------------------------------------------------
 def p7_filter_gaussian(image, size=3, title=str(), xlabel=str(), ylabel=str()\
 , is_show=False) :
+    ''' Apply gaussian filter over PIL image given as parameter of this 
+    function.
+    '''
+
     filename = str()
     image_filtered = image.filter(ImageFilter.GaussianBlur(size))
 
@@ -265,6 +278,9 @@ def p7_filter_gaussian(image, size=3, title=str(), xlabel=str(), ylabel=str()\
 #
 #-------------------------------------------------------------------------------
 def p7_image_hist(image, title=None, xlabel=None, ylabel=None, cumulative=False):
+    ''' Displays histogram issued from  PIL image given as parameter of this 
+    function.
+    '''
     arr_img = np.array(image)
 
     n, bins, patches = plt.hist(arr_img.flatten(), bins=range(256)\
@@ -327,6 +343,11 @@ def p7_image_load(filename, is_verbose=True) :
 #------------------------------------------------------------------------------
 def filter_convolutional(image, kernel, size=(3,3), title=str()\
 , xlabel=str(), ylabel=str(), is_show=False, extension='conv'):
+    '''Apply convolutional filter over a PIL image using a kernel given as 
+    parameter of this function.
+    Image is converted into gray levels.
+    Transformed image histogram may also be displayed.
+    '''
     #---------------------------------------------------------------------------
     # Les filtres par convolution ne supportent que les formats RGB et L 
     # d'encodage des pixels. L'image est réencodée en L
@@ -391,13 +412,16 @@ def image_hist(image, title=None, xlabel=None, ylabel=None, cumulative=False):
 #
 #-------------------------------------------------------------------------------
 def p7_gen_sift_features(gray_img):
+    '''Extract SIFT features from a gray level image given as parameter.
+    Key points and descriptors issued from image are returned.
+    '''
     sift = cv2.xfeatures2d.SIFT_create()
     
-    # kp are the keypoints
-    
+    #---------------------------------------------------------------------------
+    # kp are the keypoints.    
     #
-    # desc is the SIFT descriptors, they're 128-dimensional vectors
-    # that we can use for our final features
+    # desc is the SIFT descriptors, they're 128-dimensional vectors.
+    #---------------------------------------------------------------------------
     kp, desc = sift.detectAndCompute(gray_img, None)
     return kp, desc
 #-------------------------------------------------------------------------------
@@ -406,6 +430,8 @@ def p7_gen_sift_features(gray_img):
 #
 #-------------------------------------------------------------------------------
 def p7_show_sift_features(gray_img, color_img, kp):
+    '''Display SIFT key points along with image they are issued.
+    '''
     
     return plt.imshow(cv2.drawKeypoints(gray_img, kp, color_img.copy()))
 #-------------------------------------------------------------------------------
@@ -460,52 +486,11 @@ def p7_image_pil_show(dict_image_pil, std_image_size=(200,200),size_x=10, is_tit
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def p7_image_pil_show_deprecated(dict_image_pil\
-, std_image_size=(200,200),size_x=10, is_title=True) :
-    '''Plot images in the dictionary given as parameter.
-    Input :
-        * dict_image_pil : dicitonay structures as following : {list_name:list_PIL_image}
-        * std_image_size : ( weight, height) values for resizing image before plot.
-        * size_x :
-        * is_title : title to be displayed along with plotted image.
-    '''
-    
-    for breed in  dict_image_pil.keys():
-        list_image_pil = dict_image_pil[breed]
-        image_count = len(list_image_pil)
-
-        size_y = int(size_x/image_count)
-        size_y = size_x
-        f, axs = plt.subplots(1, image_count, figsize=(size_x,size_y))
-
-        if( 1 < len(list_image_pil)) :
-            for index in range(0,len(list_image_pil)) :
-                image_pil = list_image_pil[index].copy()
-                axs[index].axis('off')
-                if std_image_size is not None :
-                    axs[index].imshow(image_pil.resize(std_image_size))
-                else :
-                    axs[index].imshow(image_pil)
-                if is_title is True :
-                    axs[index].set_title(breed)
-        else :
-            for index in range(0,len(list_image_pil)) :
-                image_pil = list_image_pil[index].copy()
-                axs.axis('off')
-                if std_image_size is not None :
-                    axs.imshow(image_pil.resize(std_image_size))
-                else :
-                    axs.imshow(image_pil)
-                if is_title is True :
-                    axs.set_title(breed)
-    #plt.tight_layout(pad=-2)
-    plt.show()
-#-------------------------------------------------------------------------------
-
-#-------------------------------------------------------------------------------
-#
-#-------------------------------------------------------------------------------
 def p7_dict_image_pil_resize(dict_img_pil, resize):
+    '''Resize images conatained into a dictionary.
+    Dictionary keys are breed name.
+    Dictionary values are list of images belonging to breed.
+    '''
     dict_img_pil_tmp = dict() 
     for breed in dict_img_pil.keys():
         list_img_pil = [img_pil.resize(resize) for img_pil \
@@ -519,6 +504,8 @@ def p7_dict_image_pil_resize(dict_img_pil, resize):
 #
 #-------------------------------------------------------------------------------
 def p7_get_image_name(filename) :
+    '''Returns image name from path file name.
+    '''
     list_split = filename.split('/')
     pos = len(list_split)
     return list_split[pos-1]
@@ -528,6 +515,8 @@ def p7_get_image_name(filename) :
 #
 #-------------------------------------------------------------------------------
 def p7_get_std_size(dict_breed_filename):
+    '''Computes median (X,Y) size from images contained into a dictionary.
+    '''
     image_count=0
     df= pd.DataFrame()
     for breed_ref_name in dict_breed_filename.keys():
@@ -547,6 +536,9 @@ def p7_get_std_size(dict_breed_filename):
 #
 #-------------------------------------------------------------------------------
 def p7_load_breed_name(directory_name) :
+    '''Read directories names stored as keys into dictionary given as parameter 
+    then store list of images file names under each directory. 
+    '''
     #---------------------------------------------------------------------------
     # List of all directories, each directory contains a list of all 
     # images from breed.
@@ -610,6 +602,9 @@ def p7_load_dict_filename(root_directory_path, list_dirbreed=None) :
 #
 #-------------------------------------------------------------------------------
 def p7_load_dict_breed_imagename(dict_breed_filename):
+    '''Read and store images from image file names issued from values of
+    directory given as parameter.
+    '''
     dict_breed_imagename = dict()
     for breed, list_filename in dict_breed_filename.items():
         for filename in list_filename:
@@ -627,23 +622,24 @@ def p7_load_dict_image(image_directory, dict_breed_name, list_breed_sample\
     # From any of the dogs breeds, a sample of dogs is selected.
     # Means, images from these sampling are read from files.
     #---------------------------------------------------------------------------
-
     dict_breed_image = dict()
     dict_breed_filename = dict()
     dict_image_pil = dict()
     list_breed_all =[ breed for breed in dict_breed_name.values()]
-    #-------------------------------------------------------------------------------
-    # List of name containing directories is built and duplicated names are removed
-    #-------------------------------------------------------------------------------
+    
+    #---------------------------------------------------------------------------
+    # List of name containing directories is built and duplicated names are 
+    # removed
+    #---------------------------------------------------------------------------
     list_breed_sample_name =[list_breed_all[index] for index in list_breed_sample]
     list_breed_sample_name = list(set(list_breed_sample_name))
     list_breed_sample_name
 
     
-    #-------------------------------------------------------------------------------
+    #---------------------------------------------------------------------------
     # A random list of directories are selected among dogs breeds
     # list_breed_sample contains the sampled list of dogs breeds.
-    #-------------------------------------------------------------------------------
+    #---------------------------------------------------------------------------
     for directory, breed in dict_breed_name.items() :
         if directory.split('-')[1] in list_breed_sample_name :
             #print(directory)
@@ -659,7 +655,7 @@ def p7_load_dict_image(image_directory, dict_breed_name, list_breed_sample\
             dict_breed_image[breed] = list_image
             dict_breed_filename[breed] = list_filename
             dict_image_pil[breed] = list_image_pil
-    print(len(dict_breed_image))
+    #print(len(dict_breed_image))
     return dict_breed_image, dict_breed_filename,dict_image_pil 
 #-------------------------------------------------------------------------------
 
@@ -808,77 +804,3 @@ def plot_filtered_kpdesc_image(list_breed_kpdesc, dict_breed_kpdesc_image\
     return dict_breed_kpdesc_image
 #-------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------
-#
-#-------------------------------------------------------------------------------
-def plot_filtered_kpdesc_image_deprecated(list_breed_kpdesc, dict_breed_kpdesc_image) :
-    '''Plot a splitted image that has been filtered based on KP distribution
-    in each splitted image.
-    
-    Input :
-        * list_breed_kpdesc : list of tuples; tuples are structured as following :
-            (kp_array, descriptors)
-        * dict_breed_kpdesc_image : dictionary 
-    '''
-
-    #---------------------------------------------------------------------------
-    # Building KP occurancies for each splitted image 
-    #---------------------------------------------------------------------------
-    dict_kp_occurency = dict()
-    range_list = range(0,len(list_breed_kpdesc))
-
-    for i_raw, tuple_kp_image in zip(range_list, list_breed_kpdesc) :
-        dict_kp_occurency[i_raw] = len(tuple_kp_image[0])
-            
-    ser = pd.Series(dict_kp_occurency)
-    df_kp = pd.DataFrame([ser]).T.rename(columns={0:'count'})
-
-    p3_util_plot.df_boxplot_display(df_kp, 'count')
-
-    q1,q3,zmin,zmax = p3_util.df_boxplot_limits(df_kp , 'count')
-    
-    if True :
-        print("Q1   = "+str(q1))
-        print("Q3   = "+str(q3))
-        print("Zmin = "+str(zmin))
-        print("Zmax = "+str(zmax))
-        print("Min  = "+str(df_kp['count'].min()))
-        print("Max  = "+str(df_kp['count'].max()))
-    
-    #---------------------------------------------------------------------------
-    # Filtering is applied
-    #---------------------------------------------------------------------------
-    min_limit = q1
-    max_limit = q3
-    
-    if True :
-        print("Min limit= "+str(min_limit))
-        print("Max limit= "+str(max_limit))
-    
-    df_kp_filtered = df_kp[df_kp['count']<=max_limit]
-    df_kp_filtered = df_kp_filtered[df_kp_filtered['count']>=min_limit]
-
-    list_filtered_index = list(df_kp_filtered.index)
-    
-    index=0
-    #for i_raw in range(0,raw):
-    print(list_filtered_index)
-    #if True :
-    for i_raw in range(0,len(dict_breed_kpdesc_image)) :
-        col = dict_breed_kpdesc_image[i_raw].shape[0]
-        
-        for i_col in range(0,col):
-            if index in list_filtered_index :
-                pass
-            else :
-                # Image index out of filter is erased 
-                arr_ = dict_breed_kpdesc_image[i_raw][i_col]
-                dict_breed_kpdesc_image[i_raw][i_col] \
-                = np.zeros((arr_.shape[0],arr_.shape[1],3))
-            index += 1
-    
-    p7_util.p7_image_pil_show(dict_breed_kpdesc_image\
-                              ,size_x=10,std_image_size=None,is_title=False)  
-    return df_kp
-#-------------------------------------------------------------------------------
-    
