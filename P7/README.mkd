@@ -1,0 +1,387 @@
+# <center><h1>Dogs image classification regarding to breed</h1></center>
+This project carried out on behalf of the Master 2 Centrale Supélec / Openclassrooms training in datasience
+<hr>
+
+<br><br><br>
+<h2><font size=5>Abstract</font></h2>
+<hr>
+<font size=4>
+This project presents the realization of an algorithm to detect the breed of a dog from an image.
+</font>
+
+<br>
+<font size=4>
+Two methods are presented : 
+<br>
+</font>
+<pre>
+    **1. The Bag of features method applied to Machine Learning algorithms**
+        
+        
+        1.a SIFT descriptors are extracted from each image from a train-dataset. All images are represented as a set of these descriptors. 
+        
+        1.b The same descriptors may have different  numerical representation. For this reason, descriptors are grouped into clusters, using an appropriate cluster algorithm.
+        
+        1.c Bag of features representation of an image consists in counting, per cluster, occurencies of features belonging to this image.
+        
+        1.d A machine learning algorithm is trained with this Bag Of Features representation of train-dataset.
+        
+        1.e Computation model issued from this process allows to predict a breed when an image is submitted to the model.
+        
+        1.f Performances of a such model is evaluated thanks to an accuracy measurement.
+        
+        1.g Results are exposed for a range of  Bayesian and not Bayesiens supervized Machine Learning algorithms.
+    
+</pre>
+<br>
+<pre>
+    **2. Deep Learning algorithms **
+    <br>
+    
+
+        2.a Multi-layer Perceptron network is built and trained using Keras API.
+        
+        2.b Convolutional Neural Network is built and trained using Keras API.
+        
+        2.c Pre-trained VGG16 neural network is used in order to predict breed from a Dog Image.
+        
+        2.d Transfer-learning method is applied to VGG16 pre-trained neural network, freezing the learn of convolutional layers.
+        
+        2.e Transfer-learning method is applied to VGG16 pre-trained neural network, forcing the learn of convolutional layers.
+
+</pre>
+
+<br><br><br>
+<h2>Project artefacts</h2>
+<hr>
+
+<br>
+
+* Project artefacts are located under <a href="URL">http://bit.ly/FBangui_Datascience_CNN</a>
+<br>
+
+* These slides present the overall approach of the study : <a href="URL">
+        OC_Datascientist/P7/report/report/Openclassrooms_ParcoursDatascientist_P7-V1.pdf
+      </a>
+<br>
+
+* Jupyter notebook : <a href="URL">http://bit.ly/CNN_JupyterNotebook</a>
+<br>
+
+* Python source code : <a href="URL">http://bit.ly/CNN_Python</a>
+<br>
+
+<br>
+
+Description of task to be accomplished along with asumptions are schematized below : 
+
+<center><img src="./P6_Mission.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>
+<h2>Problem type</h2>
+<hr>
+<font size=4>The problem posed is formulated as that of classifying dogs according to their breed. Due to the fact that a dog belongs to a unique breed, this problem is typed as a multi-class classification.</font>
+
+<center><img src="./report/P7_PbType.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>
+<h2>1. Using machine learning algorithms for classification<h2>
+<hr>
+
+<h3><font size=4>1.1 Exploratory analysis</font></h3>
+<br>
+
+  * <font size=4> This step is conducted in order to dicsover best filters allowing efficient features extraction. Filters are discrete convolutional kernels applied to images pixels.
+</font>
+<br>
+  * <font size=4> Aim of applying filters is to extract SIFT descriptors in the most efficient way.
+</font>
+<br>
+
+* <font size=4>Images are resized in order all images from bank to have the same shape. Then they are convert into greys scales. Once done, a set of filters is applied. Plot below shows the size distribution for the bank of images.</font>
+
+
+
+<center><img src="./report/P7_Filters1.png" alt="Drawing" style="width: 200px;"/></center>
+
+* <font size=4>Filtering process is exposed on sheme below. Images are resized in order all images from bank to have the same shape. Then they are convert into grey scales. Once done, a set of combination of filters is applied. Multiple combinations have been explored and some results are displayed on the figure below.
+</font>
+
+<center><img src="./report/P7_FilterCombination.png" alt="Drawing" style="width: 200px;"/></center>
+
+* <font size=4> Filters are applied with followings expectations: </font>
+    * <font size=3>*Gaussian* filter is applied in order to render  background more smooth.
+    </font>
+    * <font size=3>*Median* filter allows to remove pixels irregularities.</font> 
+    * <font size=3>*Edgeonly* filter allows to highlight the pixels forming the edge of an object. </font> 
+
+
+
+<br>
+<h3><font size=4>1.2 Features extraction with SIFT algorithm</font></h3>
+<br>
+<font size=4>SIFT algorithm is used to extract features from an image. This algorithm leads to identify key points (KP), each of them forming a vector in 128 dimensions.</font> 
+
+<br>
+<font size=4>Components of KP over the 128 dimensions are <u>KP descriptors</u>.</font> 
+
+<br>
+<font size=4>KP are points over images that have invariant properties considering scaling and geometric transformations. Then it is a natural way to think that similar key points will characterize similat breeds and, by the way, characterize a breed.</font>
+<br>
+
+<font size=4>Result of such process using combination of {*Grey, Median, Edge*} filters is showned below : </font>
+
+
+<center><img src="./report/P7_FeaturesExtraction1.png" alt="Drawing" style="width: 200px;"/></center>
+<br>
+<font size=4>It can be observe that : </font>
+
+* <font size=4>Some areas expose a high density of key points, some ot them located out of targeted objects, mean, dogs.</font>
+* <font size=4>Also, some areas expose a low density of key points, some ot them located out of targeted objects.</font>
+* <font size=4>The picture above also shows how the key points of two dogs of the same breed can match each other.</font>
+
+<br>
+<font size=4>Filtering those low and high density areas may lead to keep more efficiently expected key points. For doing so, image is splitted into equal parts. Filter criteria is fixed based on Q1 and Q3 quantile of KP empiric distribution.</font>
+<br>
+<center><img src="./report/P7_KeyPointDistribution.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>
+<font size=4>This KP filtering process shows below an example of matching KP between two dogs of the same breed. </font>
+<br>
+<center><img src="./report/P7_KeyPointFilterMatching.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>
+<font size=4>Most of the key points from issued from low and high densities areas have been removed. Key points on edges of the two dogs are more likely to match each-other.</font>
+<br>
+<br>
+
+<font size=4>This process, however, suffers from a disadvantage. Many key points are inside the target object. Key points within the target object are not relevant to dog characterization. They can come from different directions of lighting.</font>
+
+<br>
+<font size=4>A simplifying hypothesis is posed: <u>dogs are characterized by their shape</u>. Due to this hypothesis, pixels filtering process should lead to key points to be located over dog edges.</font>
+
+
+<br>
+<font size=4>Picture below shows the combination of applied filters (on the left side of the picture) that leads to extract key points with SIFT algorithm (upper side of the picture) and how  key points on edges of the two dogs are more likely to match each-other.</font>
+
+<br>
+<center><img src="./report/P7_KeyPointFilterMatching2.png" alt="Drawing" style="width: 200px;"/></center>
+
+
+
+
+<br>
+<br>
+<h3><font size=4> 1.3 Dimensions reduction  & data visualization</font></h3>
+
+<br>
+<font size=4>
+The use of PCA shows, on the plot below, that 90% of the variance is captured with 60 first dimensions over 128 dimensions.
+</font>
+
+<br>
+<font size=4>
+This means that results will not be significantly changed if the dimension of KP matrix is reduced to more than 50%.
+this information can be useful to exploit if the memory resources are a critical point.</font>
+<center><img src="./report/P7_KeyPointPCA.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>
+
+<font size=4>
+In order to have an intuitive idea of KP representation, t-SNE as well as ISOMAP have been applied and 2D as well as 3D dimensions (for t-SNE) results have been plotted below.</font>
+
+<br>
+<font size=4>In the higher space, t-SNE defines points similarities as belonging to same distributions. Same considerations is done with lower space. To preserve distributions in both spaces, divergence in between distributions is minimized.</font>
+
+<br>
+<font size=4>
+"Distance" used between the two distributions is the divergence of `Kullback Leibler`.
+</font>
+
+
+<br>
+<center><img src="./report/P7_KeyPoint2D3D.png" alt="Drawing" style="width: 200px;"/></center>
+
+<font size=4>
+For both algorithms, result shows that 2D data are easily separable with a straight line. 
+</font>
+<br>
+<font size=4>
+It can be deduced that, in a plan, classification of KP is not complexe. This mean a biais value that is significantly hight while variance value is low. 
+<font>
+
+<br>
+<font size=4>
+This high estimation of the biais is mainly due to hypothesis that have been formulated : 
+<font>
+<br>
+
+  * <font size=4>dogs color have not been taken in account</font>
+  * <font size=4>dogs are characterized with their shape only</font>
+
+<br>
+<h3><font size=4> 1.4 Bag of features using clusters</font></h3>
+<font size=4>
+It has been noted previously that different KPs may have different numerical representations (so differents descriptors) while being similars in terms of representing an image characteristic. Similarity fit well with clustering.</font>
+<font>
+
+<br>
+<font size=4>
+KP descriptors are clusterized. Each cluster has a centroid (in case of K-means) or parameters that represents the center of the cluster (GMM). This center is regarded as a feature for any image.
+<font>
+
+<br>
+<font size=4>
+Algorithm for transforming an image into a Bag Of features is as following :
+<font>
+
+* <font size=4>For any image, SIFT KP along with their descriptors are extracted.</font>
+* <font size=4>Once extracted, any descriptor from this image is assigned a cluster.</font>
+* <font size=4>For image, an histogram of clusters is built increasing the count number for any assigned cluster.</font>
+* <font size=4>At the end, Bag Of Features for any image is represented as an historgram of clusters.</font>
+
+<br>
+<font size=4>
+Figure below shows result with the used of *Gaussian Mixture Model (GMM)* clustering over descriptors issued from a trained dataset.
+</font>
+
+<center><img src="./report/P7_GMMClustering.png" style="width: 200px;"/></center>
+<br>
+<font size=4>
+Applying  GMM clustering with hyper-parameters ranging from 2 to 20 clusters and with an exhaustive search across covariance type = *{full, diag, tied, spherical}* provides the plot below.
+</font>
+ 
+<br>
+<font size=4>
+The elbow criterion used in conjunction with the silhouette coefficient leads to select 3 clusters for the Bag Of Features.
+</font>
+
+<br>
+<h3><font size=4> 1.5 Machine Learing model building oberview </font></h3>
+<font size=4>
+Scheme below provides the global process overview applied in order to benchmark Machine Learning (M.L.) algorithms.
+</font>
+
+<center><img src="./report/P7_MLBuilding.png" style="width: 200px;"/></center>
+<br>
+<font size=4>The steps of the overall process break down as follows:</font>
+<pr>
+<br>
+> <font size=4>A) Filters (also named convolution kernels) are applied over all 460 images and SIFT descriptors are extracted. The result is a matrix of `31K` rows and `128` columns.<font >
+
+> <font size=4>B) Using GMM algorithm, each image is expanded as a Bag Of Features. This results in a array having `460` rows and `3` colmns. <font >
+
+> <font size=4>C) Dataset is splitted over 368 points for training and 93 points for testing. <font >
+
+
+> <font size=4>D) 4 types of M.L. algorithms are benchmarked : Random Forest, SVM, Gaussian Naive Bayse, Bernouilli Naive Bayse. Train dataset (*X_train, y_train*) is used to train those algorithms. This leads to 4 trained M.L. algorithms.
+
+> <font size=4>E) All types of M.L. algorithms are tested using (*X_test, y_test*) dataset. Results are  then exposed
+
+<br>
+
+</pr>
+<h3><font size=4> 1.6 Machine Learning benchmarks results vs binary classification</font></h4>
+<font size=4>
+<center><img src="./report/P7_MLBinary.png" style="width: 200px;"/></center>
+
+<font size=4> Breeds for test have been selected in order dogs to have shape not too fare from each-other.</font></h4>
+<font size=4>
+<center><img src="./report/P7_MLBinaryResult.png" style="width: 200px;"/></center>
+
+<font size=4>
+With 2 classes, performances show better results then a ramdom classifier, that should provide an average accuracy of 50%. Linear SVC (support vector machine classifier with linear kernel) provides the best results.
+</font>
+
+<br>
+<h4><font size=4> 1.7 Machine Learning benchmarks vs multi-classes classification</font></h4>
+<font size=4>
+</font>
+<center><img src="./report/P7_MLMulticlass.png" style="width: 200px;"/></center>
+<center><img src="./report/P7_MLMulticlassResult.png" style="width: 200px;"/></center>
+<br>
+
+<font size=4>
+With more then 2 classes, performances drop dramaticaly. Random Forest shows the best score. Nevertheless, Random Forest does not performs better then a random classifier that will provide an average of 33% results.
+</font>
+<br>
+<font size=4>
+
+<br>
+<font size=4>This poor results may come from several sources : </font>
+
+*   <font size=4>Descriptors issued from SIFT KP extraction do not characterize well enough dogs images. This method may be efficient with images containing simple and repetitive geometric patterns. </font>
+*   <font size=4>Convolutional filters that ha been applied may have remove informations required to efficently classify more then 2 breeds.</font>
+*   <font size=4>Grey scale transformation has also lead of loss of relevant information required to classsify more then 2 breeds.</font>
+*   
+</font>
+
+<br>
+<font size=4>**The results of this benchmark lead us to explore other ways to obtain better classifiers.** </font>
+<font size=4>This is the purposes of the next part of this study. </font>
+
+<br><br><br>
+<br>
+<h2>2. Using Neural Networks (NN) architectures for classification</h2>
+<hr>
+
+<font size=4>4 types of architectures are considered this part : </font>
+<br>
+
+
+  * <font size=4>Multi-Layers Perceptron (MLP) </font>
+  * <font size=4>A convolutional neural network (CNN) built with Keras </font>
+  * <font size=4>A partial tuned pre-trained convolutional neural network </font>
+  * <font size=4>A fine tuned tuned pre-trained convolutional neural network </font>
+
+<br>
+<h3>2.1 Multi-layers Perceptron</h3>
+
+<br>
+<font size=4>MLP is a kind of neural network architecture. Most of features described for MLP are also available for other neural networks architectures. It will be focused on differences when necessary.</font>
+
+<br>
+<font size=4>Layers are structures containings a set of neurons drawned as N_1,N_2 on picture below. First layer is input the input layer and last one is the output layer, the place where results come out. For the classification problem it is faced here, each neuron in last layer is made responsible of a dog breed while each neuron in input layer is assigned with 1 pixel from the image feeding this layer.</font>
+
+<br>
+<font size=4>Such architecture is named *feed-forward* because any output from a layer is feeding inputs of the next layer <u>and of the next layer only</u>.   </font>
+
+<br>
+<font size=4>For MLP, layers in-between are fully connected layers, means, considering two consecutives layers, any neuron from previous layer are connected to any neuron of next layer.</font>
+
+<center><img src="./report/P7_NN_MLP.png" style="width: 200px;"/></center>
+
+<br>
+<font size=4>A neuron, a perceptron (2nd neuron of the 2nd layer), is described on the lower part of the figure above. A neuron receives input values *X* from any neuron from the input layer and, using weights values *w* related to any neuron-to-neuron connection, it computes a linear combination of weights, input values and a bias, named *b*. Bias is a variable value assigned to any neuron.  Result of this linear combination is then composed with a  function, the *Activation Function*, named Sigma and drawned with the greek symbol on the figure above.</font>
+
+<br>
+<font size=4>Historicaly, activation function inside a neuron named perceptron, is a threshold function. Activation function used for the benchmark is the *Softmax* function. <u>By abuse of language, this neuron is still named Perceptron</u>.</font>
+
+
+<br>
+<font size=4>The goal of such architecture is to find proper values of weights and bias in every neurons in a such way results in last layer produce a distribution of expected breeds classification. Weights and bias are computed into each neuron in a such way that, <u>step after step</u>, a cost function, written as a metric between the true results and the expected results, becomes lowest as possible. </font>
+
+<br>
+<font size=4>For achieving that, cost function require to have a particular shape and also, weights and bias are expressed in a relation with the gradient of the cost function. </font>
+
+
+<br>
+<font size=4>It's all about the algorithms used : *gradient descent* and *back propagation* algorithm shown on picture below. </font>
+<br>
+<center><img src="./report/P7_NN_algo.png" style="width: 200px;"/></center>
+
+<br>
+
+  * <font size=4>Last equation 4) says how to update weights and bias once gradient of the cost function is known. Gradient is noted with nabla greek symbol. </font>
+
+  * <font size=4>Equation 3) tell us how to compute gradient of the cost function, once error over X is computed </font>
+
+  * <font size=4>Equation 2) tell us how to compute error over X in the current layer when error over X is known on next layer. This is the sens of expression *back propagation*. When X values are propagated from lower layers toward upper layers, errors are back-propagated from upper layer to lower layer in order to, step by step, decrease the cost function.</font>
+
+  * <font size=4>Endly, equation 1) tell us how to compute error over X in the last layer. This is the point where back-propagation starts.</font>
+
+<font size=4>An expression of the cost function is provided in 1). For classification problems, results matter with statistics distributions *p*. A well known metric, the *Kullback-Leibler* metric allows to estimate "how far" two distributions *p* and *q* are. The *Kullback-Leibler* divergence is the expression of the 2nd term of the cost function. </font>
+
+<br>
+<font size=4>Note also that statistics distributions matter with uncertainity. Entropy also allows to measure uncertainity of an event given a statistic distribution *p*. This expression of the cost function is also named *cross-entropy*. </font>
+
