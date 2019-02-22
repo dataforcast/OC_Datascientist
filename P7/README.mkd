@@ -72,7 +72,14 @@ This project presents the realization of an algorithm to detect the breed of a d
 
 <font size=4>Description of tasks to be accomplished along with asumptions are schematized below :</font> 
 
-<center><img src="./P6_Mission.png" alt="Drawing" style="width: 200px;"/></center>
+<center><img src="./report/P7_TasksDescription.png" alt="Drawing" style="width: 200px;"/></center>
+<br>
+<font size=4>2 classifiers types are benchmarked : Macjine Learning classifiers and Deep Learning classifiers.</font>
+<br>
+<font size=4>Exploratory analysis will lead to define the M.L. parameters and to pose the asumptions.</font>
+
+<br>
+<font size=4>Track of this analysis has been recorded in the notebooks *FilterDescription.ipynb* and *ClusteringDedscriptors.ipynb*.</font>
 
 <br>
 <h2>Problem type</h2>
@@ -406,6 +413,6 @@ With more then 2 classes, performances drop dramaticaly. Random Forest shows the
 
 <br>
 <font size=4>On second raw on the plot above, drop of 50% neurons lead to reduce over-fitting problem.
-As a counterpart, learning tends to slow-down. </font>
+As a counterpart, learning tends to slow down. </font>
 
 
