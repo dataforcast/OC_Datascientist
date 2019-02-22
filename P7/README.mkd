@@ -10,14 +10,12 @@ This project presents the realization of an algorithm to detect the breed of a d
 </font>
 
 <br>
-<font size=4>
-Two methods are presented : 
+<font size=4>Two methods are presented :</font>
+
 <br>
-</font>
 <pre>
     **1. The Bag of features method applied to Machine Learning algorithms**
-        
-        
+                    
         1.a SIFT descriptors are extracted from each image from a train-dataset. All images are represented as a set of these descriptors. 
         
         1.b The same descriptors may have different  numerical representation. For this reason, descriptors are grouped into clusters, using an appropriate cluster algorithm.
@@ -57,23 +55,22 @@ Two methods are presented :
 
 <br>
 
-* Project artefacts are located under <a href="URL">http://bit.ly/FBangui_Datascience_CNN</a>
+* <font size=4>Project artefacts are located under <a href="URL">http://bit.ly/FBangui_Datascience_CNN</font></a>
 <br>
 
-* These slides present the overall approach of the study : <a href="URL">
-        OC_Datascientist/P7/report/report/Openclassrooms_ParcoursDatascientist_P7-V1.pdf
-      </a>
+* <font size=4>These slides present the overall approach of the study : <a href="URL">
+        OC_Datascientist/P7/report/report/Openclassrooms_ParcoursDatascientist_P7-V1.pdf</font></a>
 <br>
 
-* Jupyter notebook : <a href="URL">http://bit.ly/CNN_JupyterNotebook</a>
+* <font size=4>Jupyter notebook : <a href="URL">http://bit.ly/CNN_JupyterNotebook</font></a>
 <br>
 
-* Python source code : <a href="URL">http://bit.ly/CNN_Python</a>
+* <font size=4>Python source code : <a href="URL">http://bit.ly/CNN_Python</font></a>
 <br>
 
 <br>
 
-Description of task to be accomplished along with asumptions are schematized below : 
+<font size=4>Description of tasks to be accomplished along with asumptions are schematized below :</font> 
 
 <center><img src="./P6_Mission.png" alt="Drawing" style="width: 200px;"/></center>
 
@@ -352,14 +349,14 @@ With more then 2 classes, performances drop dramaticaly. Random Forest shows the
 <center><img src="./report/P7_NN_MLP.png" style="width: 200px;"/></center>
 
 <br>
-<font size=4>A neuron, a perceptron (2nd neuron of the 2nd layer), is described on the lower part of the figure above. A neuron receives input values *X* from any neuron from the input layer and, using weights values *w* related to any neuron-to-neuron connection, it computes a linear combination of weights, input values and a bias, named *b*. Bias is a variable value assigned to any neuron.  Result of this linear combination is then composed with a  function, the *Activation Function*, named Sigma and drawned with the greek symbol on the figure above.</font>
+<font size=4>A neuron, a perceptron (2nd neuron of the 2nd layer), is described on the lower part of the figure above. A neuron receives input values *X* from any neuron from the input layer and, using weights values *w* related to any neuron-to-neuron connection, it computes a linear combination of weights, input values and a biases, named *b*. Bias is a variable value assigned to any neuron.  Result of this linear combination is then composed with a  function, the *Activation Function*, named Sigma and drawned with the greek symbol on the figure above.</font>
 
 <br>
 <font size=4>Historicaly, activation function inside a neuron named perceptron, is a threshold function. Activation function used for the benchmark is the *Softmax* function. <u>By abuse of language, this neuron is still named Perceptron</u>.</font>
 
 
 <br>
-<font size=4>The goal of such architecture is to find proper values of weights and bias in every neurons in a such way results in last layer produce a distribution of expected breeds classification. Weights and bias are computed into each neuron in a such way that, <u>step after step</u>, a cost function, written as a metric between the true results and the expected results, becomes lowest as possible. </font>
+<font size=4>The goal of such architecture is to find proper values of weights and biases in every neurons in a such way results in last layer produce a distribution of expected breeds classification. Weights and bias are computed into each neuron in a such way that, <u>step after step</u>, a cost function, written as a metric between the true results and the expected results, becomes lowest as possible. </font>
 
 <br>
 <font size=4>For achieving that, cost function require to have a particular shape and also, weights and bias are expressed in a relation with the gradient of the cost function. </font>
@@ -368,11 +365,11 @@ With more then 2 classes, performances drop dramaticaly. Random Forest shows the
 <br>
 <font size=4>It's all about the algorithms used : *gradient descent* and *back propagation* algorithm shown on picture below. </font>
 <br>
-<center><img src="./report/P7_NN_algo.png" style="width: 200px;"/></center>
+<center><img src="./report/P7_NN_BackPropagation.png" style="width: 200px;"/></center>
 
 <br>
 
-  * <font size=4>Last equation 4) says how to update weights and bias once gradient of the cost function is known. Gradient is noted with nabla greek symbol. </font>
+  * <font size=4>Last equation 4) says how to update weights and biases once gradient of the cost function is known. Gradient is noted with nabla greek symbol. </font>
 
   * <font size=4>Equation 3) tell us how to compute gradient of the cost function, once error over X is computed </font>
 
@@ -380,8 +377,35 @@ With more then 2 classes, performances drop dramaticaly. Random Forest shows the
 
   * <font size=4>Endly, equation 1) tell us how to compute error over X in the last layer. This is the point where back-propagation starts.</font>
 
-<font size=4>An expression of the cost function is provided in 1). For classification problems, results matter with statistics distributions *p*. A well known metric, the *Kullback-Leibler* metric allows to estimate "how far" two distributions *p* and *q* are. The *Kullback-Leibler* divergence is the expression of the 2nd term of the cost function. </font>
+<font size=4>An expression of the cost function Cost(A) is provided in 1). For multi-classification models, cross-entropy function is used where `p` is the distribution when all images are properly classified, A the distribution issued to the prediction results.</font>
 
 <br>
-<font size=4>Note also that statistics distributions matter with uncertainity. Entropy also allows to measure uncertainity of an event given a statistic distribution *p*. This expression of the cost function is also named *cross-entropy*. </font>
+<br>
+<h3>2.2 Multi-layers Perceptron results</h3>
+<br>
+<font size=4>3 (denses) layers havee been used for MLP for a total of 77 335 043 parmeters. </font> 
+<font size=4>On the loss curves, loss function from train dataset curve decrease weirdly while loss function from test dataset remains "weirdly" stable after 10 epochs.</font>
+<center><img src="./report/P7_MLP_Result1.png" style="width: 200px;"/></center>
+
+<br>
+<font size=4>Behaviour of accuracy curves reflect the loss curves behaviors. With train dataset, MLP is able to learn until reach of nearly 90% of properly classified images.</font> 
+ 
+<br>
+<font size=4>With inputs from test dataset, accuracy does not increases after 10 epochs. With weights and biases values issued from frain dataset, MLP is not able to generalize its behaviour with new inputs. This behavior is named as <u>over-fitting issue</u>.</font>
+
+<br>
+<h3>2.3 Regularized Multi-layers Perceptron results</h3>
+
+<br>
+<font size=4>Over-fitting issue is the insight of too much complexity of classifiers. It may be addressed with regularization. L2 regularization leads to decrease weights values into each neuron before gradient descent update. Randomly drop of neurons is another way to decrease the neuron network  complexity.</font>
+
+<center><img src="./report/P7_MLP_Result2.png" style="width: 200px;"/></center>
+
+<br>
+<font size=4>On first raw on the plot above, loss curves and accuracy curves both issued from train and test dataset inputs show that loss function decrease more smoothly while accuracy is not improved. Over-fit problem is not mitigated. </font>
+
+<br>
+<font size=4>On second raw on the plot above, drop of 50% neurons lead to reduce over-fitting problem.
+As a counterpart, learning tends to slow-down. </font>
+
 
