@@ -2,6 +2,7 @@
 This project carried out on behalf of the Master 2 Centrale Supélec / Openclassrooms training in datasience
 <hr>
 
+
 <br><br><br>
 <h2><font size=5>Abstract</font></h2>
 <hr>
@@ -87,6 +88,14 @@ This project presents the realization of an algorithm to detect the breed of a d
 <font size=4>The problem posed is formulated as that of classifying dogs according to their breed. Due to the fact that a dog belongs to a unique breed, this problem is typed as a multi-class classification.</font>
 
 <center><img src="./report/P7_PbType.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>
+<font size=4>Picture belows shows a sample of images bank. Images have differents background, may have more then one subject per image.</font>
+
+<center><img src="./report/P7_ImagesSample.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>
+<font size=4>Dogs are represented according to different points of view, profile, face, from near distance ...</font>
 
 <br>
 <h2>1. Using machine learning algorithms for classification<h2>
@@ -339,8 +348,9 @@ With more then 2 classes, performances drop dramaticaly. Random Forest shows the
   * <font size=4>A fine tuned tuned pre-trained convolutional neural network </font>
 
 <br>
-<h3>2.1 Multi-layers Perceptron</h3>
+<h3>2.1 Multi-layers Perceptron (MLP)</h3>
 
+<h3>2.1.1 Brief description of MLP architecture</h3>
 <br>
 <font size=4>MLP is a kind of neural network architecture. Most of features described for MLP are also available for other neural networks architectures. It will be focused on differences when necessary.</font>
 
@@ -387,8 +397,8 @@ With more then 2 classes, performances drop dramaticaly. Random Forest shows the
 <font size=4>An expression of the cost function Cost(A) is provided in 1). For multi-classification models, cross-entropy function is used where `p` is the distribution when all images are properly classified, A the distribution issued to the prediction results.</font>
 
 <br>
-<br>
-<h3>2.2 Multi-layers Perceptron results</h3>
+
+<h3>2.1.2 Multi-layers Perceptron results</h3>
 <br>
 <font size=4>3 (denses) layers havee been used for MLP for a total of 77 335 043 parmeters. </font> 
 <font size=4>On the loss curves, loss function from train dataset curve decrease weirdly while loss function from test dataset remains "weirdly" stable after 10 epochs.</font>
@@ -401,7 +411,7 @@ With more then 2 classes, performances drop dramaticaly. Random Forest shows the
 <font size=4>With inputs from test dataset, accuracy does not increases after 10 epochs. With weights and biases values issued from frain dataset, MLP is not able to generalize its behaviour with new inputs. This behavior is named as <u>over-fitting issue</u>.</font>
 
 <br>
-<h3>2.3 Regularized Multi-layers Perceptron results</h3>
+<h3>2.1.3 Regularized Multi-layers Perceptron results</h3>
 
 <br>
 <font size=4>Over-fitting issue is the insight of too much complexity of classifiers. It may be addressed with regularization. L2 regularization leads to decrease weights values into each neuron before gradient descent update. Randomly drop of neurons is another way to decrease the neuron network  complexity.</font>
@@ -414,5 +424,117 @@ With more then 2 classes, performances drop dramaticaly. Random Forest shows the
 <br>
 <font size=4>On second raw on the plot above, drop of 50% neurons lead to reduce over-fitting problem.
 As a counterpart, learning tends to slow down. </font>
+
+<br>
+<h3>2.2 Convolutional Neurons Network (CNN)</h3>
+
+<h3>2.2.1 A brief description of CNN architecture</h3>
+<br>
+<font size=4>Convolutional Neurons Networks is another type of neuron networks specially used for text processing or images classifications.</font>
+
+<br>
+<font size=4>Most of the concepts exposed for MLP, such as activation functions, loss functions, gradient descent, backpropagaation are still available.</font>
+
+<br>
+<font size=4>As for  MLP, such networks holds with an input layer and an output layers with the same role as MLP first and last layers. Main differences come from hidden layers, as shown on scheme below.</font>
+
+
+<center><img src="./report/P7_CNN_Architecture1.png" style="width: 200px;"/></center>
+
+<br>
+<font size=4>Hidden layers are sub-divised in convolutional layers and fully connected layers. </font>
+
+  * <font size=4>*Convolutional layers* are in charge to create features just like we did with filters for SIFT keypoints extraction. </font>
+  * <font size=4>*Dense layers* are in charge to classify inputs features coming from convolutional layers, just like last layer from MLP does. Dense layers are named so because all neurons from a layer are connected with all other neurons in adjacent layers. Such layers are "costly" considering parameters required to define them.</font>
+
+  * <font size=4>In between convolutional layers, *pooling layers* are inserted. Those layers have the ability to operate a spatial reduction of representation of the pixels. It "summarizes" informations assigned to an area of the image, rendering representation of these areas more "abstract".</font>
+
+<font size=4>More details are given over convolutional layers below.</font>
+
+<center><img src="./report/P7_CNN_Architecture2.png" style="width: 200px;"/></center>
+<br>
+<font size=4>As per MLP, one neuron into input layer manages the luminous intensity of one pixel from an input image.</font>
+
+<br>
+<font size=4>On the scheme above, first convolutional layer manages 64 convolutional kernels, one convolutional kernel per plan. Activity of first plan is detailed, represented with three neurons. Each neuron of this plan is connected to some neurons in the input layer, mean, connected with a spatial area of the input image. Weights and biases in any neuron of the same plan have same values. <u>Weights in a plan are values of a convolutional kernel</u>. 
+<br>
+
+<font size=4>This lead to the fact that any plan from a convolutional layer extract the same unique feature in an image. It results that neurons in a plan hold a map of the same features. Such plans iare also named *feature maps*</font>
+
+<font size=4>Assigning 64 convolutional kernels (mean 64 filters) in the first convolutional layer allow to extract from an image 64 different characteristics.</font>
+
+<br>
+<font size=4>Backpropagation algorithm along with gradeint descent algorithm leads to compute, step by step, proper filters (convolutional kernels) in order to extract features from an image.</font>
+
+<br>
+<font size=4>Defining more filters after a pool reduction leads to extract features mapped on specific and biggest areas, issued from a combination of smaller detailed features. This is all about building abstraction of features. </font>
+
+<br>
+<font size=4>Once features have been extracted in a sufficient abstract manner, then dense layers are in charge to properly classify combinations of abstrcat dogs features in order to match with a breed. </font>
+
+
+<h3>2.2.2 Results from a built CNN architecture</h3>
+<br>
+<font size=4>Keras is a framework, an abstraction layer of functionalities built over tensorflow, allowing to build neural networks (as well CNN) and also to download and use pre-trained neuron networks.</font>
+
+<center><img src="./report/P7_CNN_Result1.png" style="width: 200px;"/></center>
+
+<font size=4>Built CNN is a 8 layers network with more then 18 millions parameters.</font>
+
+<br>
+<font size=4>Network overfit comparing accuracy performances between inputs from trained dataset and test dataset.</font>
+
+<center><img src="./report/P7_CNN_Result2.png" style="width: 200px;"/></center>
+
+<font size=4>Results above shows effect of regularization while droping 50% neurins in the classification layer. Loss function decreases more dynamicaly as well as accuracy improves and over-fiting is improved.</font>
+<br>
+
+<h3>2.2.3 Results from a pre-trained CNN architecture</h3>
+<br>
+<font size=4>VGG-16 network has been used in order to test this network performance against datatset of 3 breeds we've used in this study. VGG-16 has been trained over 1000 breeds of dogs. This 16 layers network has been used "off the shelve". Each image from dataset has been submitted to the network and classification result has been picked.</font>
+<br>
+<center><img src="./report/P7_VGG16_OffShelveResult.png" style="width: 200px;"/></center>
+
+<font size=4>Results on the picture above shows that accuracy depends on breeds. This network is defined with more then 138 millions parameters, 8 times more parameters then built CNN.</font>
+
+<h3>2.2.4 Results from a pre-trained CNN architecture with partial tuning</h3>
+<br>
+<font size=4>It has been investigated if, using transfer learning, results may be improved, keeping convolutional layers and replacing classification layers. Convolutional layers have weights and biases already trained over 1000 breeds.</font>
+<br>
+<center><img src="./report/P7_VGG16_PartialTuningResult.png" style="width: 200px;"/></center>
+<br>
+<font size=4>Doing so, without any speficic action over this network, accuracy is not improved considering previous results.</font>
+
+<h3>2.2.5 Results from a pre-trained CNN architecture with fine tuning</h3>
+<br>
+<font size=4>It has been investigated if, using transfer learning, results may be improved, keeping convolutional layers and replacing classification layers. Weights and biaises from convolutional layers have been used with their intial value and continued to be trained with trained dataset. Classification layers from VGG16 have been replaced and trained. This results with a CNN of more then 27 millions parameters.</font>
+<br>
+<center><img src="./report/P7_VGG16_FineTuningResult.png" style="width: 200px;"/></center>
+<br>
+<font size=4>Results shows while re-training all weights and biases from network, lead to the best results gained with VGG-16 pretrained network.</font>
+
+
+<h2>3. Benchmark global results</h2>
+
+<font size=4>All results have been compouned in a single graph, showned below.</font>
+<br>
+
+<center><img src="./report/P7_AllResult.png" style="width: 200px;"/></center>
+<font size=4>This benchamrk has been performed on a computer with 16GB RAM and 8 cores Intel core i7. This resources have limited the number of breeds to be used for benchmarking the dataset.</font>
+
+<br>
+<font size=4>There is a gap between M.L. classifiers based on SIFT features and neural networks. With such data model, M.L. classifiers are not able to perform correctly with more then 2 breeds.</font>
+
+<br>
+<font size=4>M.L with such data-model may be considered for binary classification. Such data-model uses very few ressources, less then 1500 parameters, for an accuracy of around 60%, considering VGG16-pretrained model with closed to 140 millions parameters. </font>
+
+<br>
+<font size=4>Classifiers based on artificial neural networks may be still improved and should be benchmarked against more breeds and so, more dogs images.</font>
+
+<br>
+<font size=4>For doing so, using much more ressources is required such as GPU and memory capacities.</font>
+
+
+
 
 
