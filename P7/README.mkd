@@ -106,8 +106,8 @@ This project presents the realization of an algorithm to detect the breed of a d
 
   * <font size=4>*P7_DataBreed* handles two classes of classifiers : Artificial neuron networks (ANN) and machine learning classfiers (ML).</font>
   
-      *     <font size=4>Machine learnings classifiers support a data model based on SIFT features extrcation.</font>
-      *     <font size=4>Neuron network classfiers are of two types : Multi layer perceptron (MLP) and Convolutional network layers (CNN).</font>
+      *  <font size=4>Machine learnings classifiers support a data model based on SIFT features extraction.</font>
+      *  <font size=4>Artificial neurons network classifiers are of two types : Multi layer perceptron (MLP) and Convolutional network layers (CNN).</font>
 
 <br>
 <h2>Problem type</h2>
