@@ -81,6 +81,33 @@ This project presents the realization of an algorithm to detect the breed of a d
 
 <br>
 <font size=4>Track of this analysis has been recorded in the notebooks *FilterDescription.ipynb* and *ClusteringDedscriptors.ipynb*.</font>
+<br>
+<font size=4>Scheme below describes software architecture, designed for both parametrization and deployment.</font>
+
+
+<font size=4>A model may be able to be rebuilt and deployed in a flexible way.E.G new breed may be able to be added in the data model as well as new dogs images from an existing breed.</font>
+<br>
+
+<font size=4>Also, it might be possible to add a new clasifier in the model while using existing ones. It should also be possible to run multipme classifiers for same image and select the result based on all results provided by differents classifiers.</font>
+<br>
+
+<font size=4>Software implementation of classifiers presented on scheme below allow to achieve such flexibility.</font>
+<br>
+
+<center><img src="./report/P7_SoftwareArchitecture.png" alt="Drawing" style="width: 200px;"/></center>
+
+  * <font size=4>*P7_DataBreed* is a data model builder. This is a Python class in which attributes handle classifiers model parameters. Such parameters are issued from data exploratory analysis task.</font>
+ 
+  * <font size=4>*User* is allowed to fixe models parameters in order to control and test classifiers behavior. </font>
+
+  * <font size=4>Utilities files, *p3_util, p5_util, p5_util* are python sources files used by *P7_DataBreed*. These files implement functions issued from other previous projects. </font>
+
+  * <font size=4>*File System* is used by *P7_DataBreed* in order to access images to be processed. Due to ressources limitations, images are loaded and processed one per one. *P7_DataBreed* may be upgraded in order to support many other data sources, such as databases or Blockchains.</font>
+
+  * <font size=4>*P7_DataBreed* handles two classes of classifiers : Artificial neuron networks (ANN) and machine learning classfiers (ML).</font>
+  
+      *     <font size=4>Machine learnings classifiers support a data model based on SIFT features extrcation.</font>
+      *     <font size=4>Neuron network classfiers are of two types : Multi layer perceptron (MLP) and Convolutional network layers (CNN).</font>
 
 <br>
 <h2>Problem type</h2>
