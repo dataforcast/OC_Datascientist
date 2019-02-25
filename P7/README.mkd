@@ -302,7 +302,7 @@ With 2 classes, performances show better results then a ramdom classifier, that 
 </font>
 
 <br>
-<h4><font size=4> 1.7 Machine Learning benchmarks vs multi-classes classification</font></h4>
+<h3><font size=4> 1.7 Machine Learning benchmarks vs multi-classes classification</font></h3>
 <font size=4>
 </font>
 <center><img src="./report/P7_MLMulticlass.png" style="width: 200px;"/></center>
@@ -316,7 +316,7 @@ With more then 2 classes, performances drop dramaticaly. Random Forest shows the
 <font size=4>
 
 <br>
-<h4><font size=4> 1.8 Why such model does not work so well?</font></h4>
+<h3><font size=4> 1.8 Why such model does not work so well?</font></h3>
 <font size=4>In order to have an intuitive idea of KP representation, t-SNE as well as ISOMAP have been applied and 2D as well as 3D dimensions (for t-SNE) results have been plotted below.</font>
 
 <br>
@@ -357,7 +357,7 @@ This high estimation of the bias is mainly due to hypothesis that have been form
 
 </font>
 <br>
-<h4><font size=4> 1.9 Should we expect better results with more Key points issued from SIFT?</font></h4>
+<h3><font size=4> 1.9 Should we expect better results with other options related to Key Points issued from SIFT?</font></h3>
 <font size=4>This is a relevant question, considering that a combination of filters leaving Key Points not only on dogs edges, but also inside the edge area may feed model with more relevant information.</font>
 <br>
 <font size=4>Combination of filters is shown on the picture below leading to the expected results, in terms of SIFT key points distribution.</font>
