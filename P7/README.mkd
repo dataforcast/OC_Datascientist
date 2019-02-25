@@ -358,7 +358,7 @@ This high estimation of the bias is mainly due to hypothesis that have been form
 </font>
 <br>
 <h3><font size=4> 1.9 Should we expect better results with other options related to Key Points issued from SIFT?</font></h3>
-<font size=4>This is a relevant question, considering that a combination of filters leaving Key Points not only on dogs edges, but also inside the edge area may feed model with more relevant information.</font>
+<font size=4>This is a relevant question, considering that a combination of filters leaving Key Points not only on dogs edges, but also inside the edge area may feed model with more relevant informations.</font>
 <br>
 <font size=4>Combination of filters is shown on the picture below leading to the expected results, in terms of SIFT key points distribution.</font>
 <br>
