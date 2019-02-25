@@ -32,6 +32,7 @@ This project presents the realization of an algorithm to detect the breed of a d
         1.g Results are exposed for a range of  Bayesian and not Bayesiens supervized Machine Learning algorithms.
     
 </pre>
+
 <br>
 <pre>
     **2. Deep Learning algorithms **
@@ -227,39 +228,6 @@ this information can be useful to exploit if the memory resources are a critical
 
 <br>
 
-<font size=4>
-In order to have an intuitive idea of KP representation, t-SNE as well as ISOMAP have been applied and 2D as well as 3D dimensions (for t-SNE) results have been plotted below.</font>
-
-<br>
-<font size=4>In the higher space, t-SNE defines points similarities as belonging to same distributions. Same considerations is done with lower space. To preserve distributions in both spaces, divergence in between distributions is minimized.</font>
-
-<br>
-<font size=4>
-"Distance" used between the two distributions is the divergence of `Kullback Leibler`.
-</font>
-
-
-<br>
-<center><img src="./report/P7_KeyPoint2D3D.png" alt="Drawing" style="width: 200px;"/></center>
-
-<font size=4>
-For both algorithms, result shows that 2D data are easily separable with a straight line. 
-</font>
-<br>
-<font size=4>
-It can be deduced that, in a plan, classification of KP is not complexe. This mean a biais value that is significantly hight while variance value is low. 
-<font>
-
-<br>
-<font size=4>
-This high estimation of the biais is mainly due to hypothesis that have been formulated : 
-<font>
-<br>
-
-  * <font size=4>dogs color have not been taken in account</font>
-  * <font size=4>dogs are characterized with their shape only</font>
-
-<br>
 <h3><font size=4> 1.4 Bag of features using clusters</font></h3>
 <font size=4>
 It has been noted previously that different KPs may have different numerical representations (so differents descriptors) while being similars in terms of representing an image characteristic. Similarity fit well with clustering.</font>
@@ -348,15 +316,65 @@ With more then 2 classes, performances drop dramaticaly. Random Forest shows the
 <font size=4>
 
 <br>
-<font size=4>This poor results may come from several sources : </font>
-
-*   <font size=4>Descriptors issued from SIFT KP extraction do not characterize well enough dogs images. This method may be efficient with images containing simple and repetitive geometric patterns. </font>
-*   <font size=4>Convolutional filters that ha been applied may have remove informations required to efficently classify more then 2 breeds.</font>
-*   <font size=4>Grey scale transformation has also lead of loss of relevant information required to classsify more then 2 breeds.</font>
-*   
-</font>
+<h4><font size=4> 1.8 Why such model does not work so well?</font></h4>
+<font size=4>In order to have an intuitive idea of KP representation, t-SNE as well as ISOMAP have been applied and 2D as well as 3D dimensions (for t-SNE) results have been plotted below.</font>
 
 <br>
+<font size=4>In the higher space, t-SNE defines similar points as belonging to the same neighborhood. Such neighborhood is defined thanks to normal distributions. Same considerations is done with lower space. To preserve distributions in both spaces, divergence in between distributions is minimized.</font>
+
+<br>
+<font size=4>
+"Distance" used between the two distributions is the divergence of `Kullback Leibler`.
+</font>
+
+
+<br>
+<center><img src="./report/P7_KeyPoint2D3D.png" alt="Drawing" style="width: 200px;"/></center>
+
+<font size=4>For both algorithms, result shows that 2D data are easily separable with a straight line. 
+</font>
+<br>
+<font size=4>It can be deduced that, in a plan, classification of Key Points is not complexe, very simple. This mean a bias value that is significantly high while variance value is low. In other words, this model with high bias and low variance is not able to keep into account the complexity of this classification problem.
+<font>
+
+<br>
+<font size=4>
+This high estimation of the bias is mainly due to hypothesis that have been formulated : 
+<font>
+<br>
+
+  * <font size=4>dogs color have not been taken in account. Grey scale transformation may have lead of loss of relevant informations required to classsify more then 2 breeds.</font>
+  * <font size=4>dogs are characterized with their shape only, along with, ket points are stuck.</font>
+
+<br>
+
+
+<br>
+<font size=4>This poor results may come also from additional sources : </font>
+
+*   <font size=4>Descriptors issued from SIFT KP extraction do not characterize well enough dogs images. This method may be efficient with images containing simple and repetitive geometric patterns. </font>
+*   <font size=4>Convolutional filters that has been applied may have remove informations required to efficently classify more then 2 breeds.</font>
+
+</font>
+<br>
+<h4><font size=4> 1.9 Should we expect better results with more Key points issued from SIFT?</font></h4>
+<font size=4>This is a relevant question, considering that a combination of filters leaving Key Points not only on dogs edges, but also inside the edge area may feed model with more relevant information.</font>
+<br>
+<font size=4>Combination of filters is shown on the picture below leading to the expected results, in terms of SIFT key points distribution.</font>
+<br>
+<center><img src="./report/P7_KeyPointDistribution.png" alt="Drawing" style="width: 200px;"/></center>
+
+<font size=4>Results on graph below, <u>for binary classification</u>, shows that accuracy is not improved significantly, despite the fact the total number number of Key Points has been increased from 15K units (key points located on edge only) to more then 25K units.</font>
+
+<br>
+<center><img src="./report/P7_MLBinaryResult2.png" alt="Drawing" style="width: 200px;"/></center>
+
+**What about Key points filtering while splitting images?**
+<font size=4>Results on graph below, <u>for binary classification</u>, shows that accuracy has not increased. The total number number of Key Points has been decreased to 8K units, half value of the reference model (15K). The number of images, due to splitting, has jumped to 1231, against 400 images for the reference model.</font>
+<br>
+<center><img src="./report/P7_MLBinaryResult3.png" alt="Drawing" style="width: 200px;"/></center>
+
+
 <font size=4>**The results of this benchmark lead us to explore other ways to obtain better classifiers.** </font>
 <font size=4>This is the purposes of the next part of this study. </font>
 
@@ -394,7 +412,7 @@ With more then 2 classes, performances drop dramaticaly. Random Forest shows the
 
 <br>
 <font size=4>A neuron, a perceptron (2nd neuron of the 2nd layer), is described on the lower part of the figure above. A neuron receives input values *X* from any neuron from the input layer and, using weights values *w* related to any neuron-to-neuron connection, it computes a linear combination of weights, input values and a biases, named *b*. Bias is a variable value assigned to any neuron.  Result of this linear combination is then composed with a  function, the *Activation Function*, named Sigma and drawned with the greek symbol on the figure above.</font>
-
+ 
 <br>
 <font size=4>Historicaly, activation function inside a neuron named perceptron, is a threshold function. Activation function used for the benchmark is the *Softmax* function. <u>By abuse of language, this neuron is still named Perceptron</u>.</font>
 
