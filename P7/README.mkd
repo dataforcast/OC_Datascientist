@@ -1,9 +1,8 @@
-# <center><h1>Dogs image classification regarding to breed</h1></center>
+# <center><h1>Dogs images classification regarding to breed</h1></center>
 This project carried out on behalf of the Master 2 Centrale Supélec / Openclassrooms training in datasience
 <hr>
 
-
-<br><br><br>
+<br>
 <h2><font size=5>Abstract</font></h2>
 <hr>
 <font size=4>
@@ -76,7 +75,7 @@ This project presents the realization of an algorithm to detect the breed of a d
 
 <center><img src="./report/P7_TasksDescription.png" alt="Drawing" style="width: 200px;"/></center>
 <br>
-<font size=4>2 classifiers types are benchmarked : Macjine Learning classifiers and Deep Learning classifiers.</font>
+<font size=4>2 classifiers types are benchmarked : Machine Learning classifiers and Deep Learning classifiers.</font>
 <br>
 <font size=4>Exploratory analysis will lead to define the M.L. parameters and to pose the asumptions.</font>
 
@@ -358,7 +357,7 @@ This high estimation of the bias is mainly due to hypothesis that have been form
 </font>
 <br>
 <h3><font size=4> 1.9 Should we expect better results with other options related to Key Points issued from SIFT?</font></h3>
-<font size=4>This is a relevant question, considering that a combination of filters leaving Key Points not only on dogs edges, but also inside the edge area may feed model with more relevant informations.</font>
+<font size=4>This is a relevant question, considering that a combination of filters leaving Key Points not only on dogs edges, but also inside the edge area may feed model with more relevant information.</font>
 <br>
 <font size=4>Combination of filters is shown on the picture below leading to the expected results, in terms of SIFT key points distribution.</font>
 <br>
@@ -574,10 +573,10 @@ As a counterpart, learning tends to slow down. </font>
 <font size=4>M.L with such data-model may be considered for binary classification. Such data-model uses very few ressources, less then 1500 parameters, for an accuracy of around 60%, considering VGG16-pretrained model with closed to 140 millions parameters. </font>
 
 <br>
-<font size=4>Classifiers based on artificial neural networks may be still improved and should be benchmarked against more breeds and so, more dogs images.</font>
+<font size=4>Classifiers based on artificial neural networks may be still improved and should be benchmarked against more breeds and so, more dogs images. As exposed earlier, the built CNN network with 6 convolutional layers and 2 full connected layers hold more then 18 millions parameters while the whole train dataset represents 5 millions pixels. In such conditions, network captures noise from images during training set then, is not able generalize with new images from test dataset. </font>
 
 <br>
-<font size=4>For doing so, using much more ressources is required such as GPU and memory capacities.</font>
+<font size=4>Beyond techniques such as the L2 regularization of the cost function or the random drop of neurons, the use of more data, such as the number of dog images per breece, or the data augmentation, is necessary to increase network performances. To do this, more resources such as GPU and memory capabilities are required. To do this, cloud computing is a relevant option.</font>
 
 
 
