@@ -60,7 +60,8 @@ Results of the use of linear Machine Learning estimators are presented in order 
 <br>
 See project description on : 
 <br>
-<a href="URL">https://github.com/dataforcast/OC_Datascientist/tree/master/P4/soutenance/README.md</a>
+
+<a href="URL">https://github.com/dataforcast/OC_Datascientist/blob/master/P4/soutenance/README.md</a>
 
 <hr>
 
