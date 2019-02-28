@@ -45,7 +45,8 @@ Results of the use of generative Machine Learing algorithms along with supervize
 <br>
 See project description on : 
 <br>
-<a href="URL">https://github.com/dataforcast/OC_Datascientist/tree/master/P5/p5_soutenance_F-BANGUI_V2/README.mkd</a>
+
+<a href="URL">https://github.com/dataforcast/OC_Datascientist/blob/master/P5/p5_soutenance_F-BANGUI_V2/README.mkd</a>
 
 <br>
 
