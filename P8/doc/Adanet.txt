@@ -1,0 +1,89 @@
+
+ADANET est un framework léger basé sur TensorFlow.
+AdaNet offre des garantees d'apprentissage. Il est basé sur les technologies d'apprentissage par renforcement et sur l'AUTO ML.
+Il assure des garanties d'apprentissage.
+AdaNet n'est pas limité aux architectures NN, il est applicables aux autres algorithmes 
+d'apprentissage ensemblistes.
+
+
+
+AdaNet implémente un algorithme adaptatif et apprend une architecture de neurones 
+à partir de sous-réseaux (de neurones?).
+
+
+AdaNet implémente l'interface Estimator de Tensorflow.
+AdaNet peut être utilisé avec les outils TensorFlow Hub Modules et TensorFlow Model Analysis.
+
+Les performances du modele Adanet pendant la phase d'entraînement sont accessibles depuis l'outil 
+TensoBoard.
+
+
+
+
+Un candidiat est ajouté a l'ensemble des sous-réseaux lorsque l'erreur 
+d'entraînement de ce dernier améliore la performance de la fonction de coût plus 
+qu'il n'affecte sa capacité à généraliser.
+Le critere de la selection d'un sous-réseau candidat est la performance de sa fonction de coût 
+plus que sa capacité à généraliser.
+Chaque sous-réseau sera le plus performant sur les données sur lesquels il a été entraîné.
+
+Il s'ensuit que : 
+    *   L'erreur de généralisation de l'ensemble est bornée par son erreur d'entraînement et sa complexité.
+    *   La minimisation de cette borne est la conséquence de l'optimisation de cet objectif.
+
+ADANET procede de façon incrémentale : il part d'un réseau simple, linéaire et étape après étape,
+complexifie l'ensemble de sous réseaux en y ajoutant des réseaux plus complexes, 
+avec plus de couches et plus d'unités dans chacune des couches.
+
+Les criteres de choix des nouveaux sous-réseaux : ils sont guidés par le critère "ADANET learning guarantees".
+
+    
+    
+Les garanties d'apprentissage
+-----------------------------
+Résulte de l'optimisation de la fonction objective suivante : 
+    *   compromis entre : 
+        --> les performances d'entraînement de l'ensemble et 
+        --  la capacité à généraliser     
+        
+Un nouveau sous réseau est intégré quand sa capacité à rendre plus performant 
+l'ensemble dans la phase d'entraînement est supérieure à sa capacité à rendre 
+plus performant l'ensemble dans la phase de généralisation.
+
+Ce critère d'intégration garantie que : 
+    *    L'erreur de généralisation de l'ensemble <= à son erreur d'entraînement et sa complexité.
+    *   L'optimisation de ce critère fait décroître l'erreur d'entraînement de l'ensemble.
+
+Espace de fonctions
+-------------------
+AdaNet, pour optimiser la fonction objective, convexe, recherche la solution dans 
+un espace fonctionnel très grand. Dans cet espace H (privé de la fonction nulle) 
+les fonctions h modelisent un sous réseau, une couche de neurones.
+
+L'algorithme consistant a trouver les fonctions h qui minimisent la fonction objective 
+conduit a construire un réseau composé de ces fonctions h.
+
+
+Algorithme incrémentale de construction d'un réseau
+---------------------------------------------------
+Cet algorithme incrémentale conduit à optimiser une fonction objective.
+
+Il semble que quand un réseau est ajouté, un lien dense est créé avec les réseaux précédents.
+
+A chaque iteration, le sous-sreseau candidat sont examinés selon un certain critere.
+
+Le nouveau sous réseau peut avoir une profondeur de +1 par rapport à l'actuel réseau AdaNet.
+Mais, les couches précédentes du réseau AdaNet sont utilisées comme couches basses du nouveau réseau.
+De fait, le nouveau réseau bénéficie de l'apprentissage des couches précédentes d'AdaNet.
+
+On obtient ainsi un algorithme de type "Boosting" qui est basé sur l'algorithme 
+de descente dit de "coordonnées de bloc".
+
+La résolution du problème d'optimisation de la fonction convexe conduit à calculer 
+le pas de descente qui va minimiser la fonction de cout, dans l'espace H (privé de 0) 
+des fonctions h.
+
+    
+
+     
+    

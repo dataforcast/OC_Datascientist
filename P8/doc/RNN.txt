@@ -1,0 +1,114 @@
+Machine de Turing : modele mathématiques de calcul
+Algorithme : c'est une procedure pour calculer une fonction.
+Toute fonction calculable peut etre décrite comme un algorithme, ie une procédure calculatoire.
+Une instance de machine de Turing calcule une fonction, ie implemente un algorithme et un seul.
+Elle ne peut en calculer qq'un seul.
+
+Une machine de Turing universelle calcule toutes les fonctions calculables.
+Une machine Turing complete peut calculer une machine de Turing universelle.
+
+Il existe des RNN qui sont Turing complet, et qui peuvent calculer n'importe quelle fonction.
+
+1)  Pourquoi utiliser des RNN?
+    --------------------------
+
+    * ANN (Artificial Neuron Network) : traitent de données de taille fixe.
+    La taille des données en entrée est conditionnée par le nombre de neuronnes en entrées.
+    Idem pour les données en sorties.
+    
+    * ANN ne peut traiter de séquences, ie de mots ordonnés de taille variable. La 
+    sortie d'un ANN n'est pas adaptée pour stocker des séquences de mots. C'est un général 
+    une probabilité qui décode l'encodage one hot encoding.
+    
+    Dans le NLP, les mots sont représentés numériquement par des vecteurs dans une base, le vocabulaire numérisé.
+    Des séquences variables nécessitent des vecteurs de dimension variable.
+    
+    Une séquence de mots est telle que les mots sont dépendants les unes des autres, ce dont il n'est pas tenu  
+    compte dans un réseau feed-forward. Il n'est pas tenu compte du contexte.
+    
+    Il n'y a pas de notion de mémoire pour prendre en compte le contexte.
+    
+    * Le nombre de couches d'un ANN est fixe. Ce n'est pas le cas d'un RNN.
+    Dans ce dernier cas, les cellules se "déploient" en fonction des entrées.
+    
+    
+    * RNN doit contenir une mémoire court terme ET long terme. C'est le cas de LSTM et GRU.
+    
+    * Dans ANN :chaque layer est un vecteur. Chaque neurone traite un scalaire.
+    * Dans RNN : chaque cellule est une couche, chaque neurone peut traiter un vecteur de taille variable.
+    
+    1.1 ) Fonctionnement 1 a plusieurs : image caption
+        *   LCRN = CNN + RNN ==> Image caption
+            Le flot de données d'un reseau LCRN : CNN --> Output --> RNN
+            !!! Sans la derniere couche dense !!!
+        
+        *   Dans un RNN, la sortie, à une étape T, est déduite non pas de la sortie à l'étape précédante, mais 
+        de l'état caché de la cellule a cette étape T .
+        Le dépendance de deux sorties consécutives dans une séquence est indirecte.
+        
+        *   Dans un réseau 1 a plusieurs, l'état d'une cellule a chaque étape dépend l'état de cette cellule à l'étape précédante.
+    
+    1.2 ) Fonctionnement plusieurs à 1 : Analyse de sentiments.
+        
+        *   Plusieurs entrées, une seule sortie :
+            --> Entrée : séquence de mots
+            --> Sortie : Une valeur représentant l'état d'un sentiment.
+            
+        
+        *   Dans ce type de réseau, l'étaat d'une cellule à l'étape T depend de l'état de cette cellule à l'étape précédante et de la donnée à l'étaape T.
+           
+    1.3 ) Fonctionnement plusieurs à plusieurs : Traduction de texte, résumé de texte.
+    
+        *   Plusieurs entrées, plusieurs sorties :
+            --> Entrée : séquence de mots
+            --> Sortie : séquence de mots
+        
+    
+2)  Formalisme / Limites du RNN
+    *   Fonction d'activation : en RNN, tanh() est utilisée de préférence.
+        --> Cette fonction a une amplitude entre -1 et 1    
+        --> La derivée 1ere de cette fonction ne s'évanouit pas facilement
+        --> La derivée 2nd de cette fonction a une certaine amplitude. 
+
+    *   Dans un réseau plusieurs a plusieurs, il est nécessaire d'introduire un 
+    caractere de début et de fin de séquence. Ce caractere informe le réseau de la 
+    séquence qu'il traite.
+    
+    
+    *   Les réseaux RNN sont inutilisables en pratique car tres profonds et 
+    subissent le pb de l'explosion du gradient ou de la disparition du gradient.
+    
+    L'utilisation de la fonction ReLU ou de cette famille de fonctions conduit 
+    a l'explosion du gradient de par l'explosion des valeurs activées (par ReLU) 
+    à partir desquelles les gradients sont calculés. Les grandes valeurs de gradient 
+    entraînent de grandes valeurs des poids.
+
+3)  Solutions aux pb de RNN : LSTM    
+    L'état interne d'une cellule, h, represente la faàon dont la cellule se représente 
+    l'état de la cellule qui a traitée tous les mots précédants.
+    Cela représente la connaisssace a priori avant qu'un nuveau mot ne soit traité.
+    
+    La sortie : elle peut etre calculée step by step ou la la fin de chacune des séquences.
+    Step by step : Pos tagging
+    A la fin de la sequence : sentiment analysis.
+    
+    Dans les réseaux LSTM, l'état h est mis a jour avec la mémoire a long terme 
+    de la cellule.
+    
+    Les portes de la cellule sont implémentées par la fonction sigmoid().
+    
+    
+    
+4)  GRU
+    Dans le GRU, al mémoire a long terme, C, n'est plus!
+    
+    
+
+    
+    
+    
+    
+    
+
+
+

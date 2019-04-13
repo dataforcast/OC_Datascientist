@@ -1,0 +1,79 @@
+Compute ENgine
+--------------
+Service de la classe IaaS (Infrastructure as a service).
+Permet d'utiliser l'infra pour faire tourner des algorithmes.
+
+Cloud Storage : DaaS
+--------------------
+Service de stockage dans le cloud.
+
+
+Installer Gloud Fuse :
+----------------------
+Permet de monter un bucker dans une instance de VM.
+
+Il faut demarrer l'instance de la VM.
+
+Dans le shell de l'instance (activé depuis la console Gcloud --> SSH de Google Compute Engine )
+
+export GCSFUSE_REPO=gcsfuse-`lsb_release -c -s`
+echo "deb http://packages.cloud.google.com/apt $GCSFUSE_REPO main" | sudo tee /etc/apt/sources.list.d/gcsfuse.list
+curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+
+sudo apt-get update
+sudo apt-get install gcsfuse
+
+Donner les droits d'acces a un bucket:
+-------------------------------------
+gsutil iam ch serviceAccount:514444253496-compute@developer.gserviceaccount.com:objectViewer gs://bucket-p8-adanet
+gsutil iam ch serviceAccount:514444253496-compute@developer.gserviceaccount.com:objectCreator gs://bucket-p8-adanet
+
+Montage de'un bucket par gcloud-fuse
+------------------------------------
+Si le repertoire de montage n'existe aps : 
+    mkdir mount-bucket-p8-adanet
+
+Montage du bucket sur le point d'acces : mount-bucket-p8-adanet
+    gcsfuse bucket-p8-adanet ./mount-bucket-p8-adanet
+
+
+
+Jupyter Notebook
+----------------
+
+
+Pour installer l'environnment virtuel Python 3
+    sudo apt-get install python3-distutils
+    virtualenv --python python3 env
+
+Pour lancer l'environnement virutel Python 3 :    
+    source env/bin/activate
+
+Installer le noyau python 3 : 
+    conda create -n ipykernel_py3 python=3 ipykernel
+        
+Lancer le noyau python 3 : 
+    conda activate ipykernel_py3
+
+
+Un fois l'environnement virtuel lancé :
+    jupyter notebook --ip=0.0.0.0 --port=5555 --no-browser
+
+
+
+Datalab : 
+-------
+Creation d'une VM datalab
+    datalab create dalatab-instance1
+
+** Zone geographique : us-west1-a
+
+Pour se reconnecter a une instance datalab existante : 
+    datalab connect datalab-instance1
+
+Pour purger les ressources disque datalab et detruire datalab : 
+    datalab delete --delete-disk datalab-instance1    
+    
+conda create -n ipykernel_py3 python=3 ipykernel
+source activate ipykernel_py3
+python -m ipykernel install --user
