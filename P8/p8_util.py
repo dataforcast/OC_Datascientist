@@ -93,8 +93,13 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         self._cnn_cnnlayer = 0
         self._cnn_denselayer = 0
         if self._nn_type == 'CNN' :
-            self._cnn_cnnlayer = self._num_layers        
+            # Number of CNN layers
+            self._cnn_cnnlayer = self._num_layers  
+
+            # Number of dense layers      
             self._cnn_denselayer = 1
+            
+            # Number of units in CNN dense layer.
             self._cnn_layersize = layer_size
         else : 
             pass
@@ -188,6 +193,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         last_layer = input_layer
 
         print("*** _build_cnn_subnetwork() : width={} / Heigh={} / Channel={}".format(w, h,c))
+        print("*** _build_cnn_subnetwork() : CNN layer size={}".format(self._cnn_layersize))
         if self._cnn_cnnlayer > 0 : 
             last_layer =  features['images']       
             for layer in range(self._cnn_cnnlayer) :     
@@ -216,7 +222,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         
             last_layer = tf.contrib.layers.flatten(last_layer)
             #print("\n*** *** Last layer shape= {}".format(last_layer))
-            last_layer = tf.layers.dense(inputs=last_layer, units=100, activation=tf.nn.relu)
+            last_layer = tf.layers.dense(inputs=last_layer, units=self._cnn_layersize, activation=tf.nn.relu)
             last_layer = tf.layers.dropout(inputs=last_layer, rate=self._dropout, training=is_training)
         
         # Logits Layer
