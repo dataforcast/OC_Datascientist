@@ -32,13 +32,16 @@ FEATURES_KEY = 'images'
 #-------------------------------------------------------------------------------
 # Estimator configuration.
 #-------------------------------------------------------------------------------
-def make_config(model_name):
+def make_config(model_name, output_dir=None):
     '''Reset output directory.
     Returns a TF configuration object for feeding Esmimator.
     '''
-    outdir = os.path.join(LOG_DIR, model_name)
-    shutil.rmtree(outdir, ignore_errors = True)
+    if output_dir is None : 
+        output_dir=LOG_DIR
 
+    outdir = os.path.join(output_dir, model_name)
+    shutil.rmtree(outdir, ignore_errors = True)
+        
     return tf.estimator.RunConfig(
         save_checkpoints_steps=100000,
         save_summary_steps=100000,
@@ -87,8 +90,8 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         self._nb_class = nb_class
         self._cnn_rate = 0.5
         self._cnn_seed = 10
-        self._cnn_cnnlayer = None
-        self._cnn_denselayer = None
+        self._cnn_cnnlayer = 0
+        self._cnn_denselayer = 0
         if self._nn_type == 'CNN' :
             self._cnn_cnnlayer = self._num_layers        
             self._cnn_denselayer = 1
@@ -98,65 +101,6 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         print("\n*** _NNAdaNetBuilder : Classes={}".format(self._nb_class))
         
         
-    #----------------------------------------------------------------------------
-    #
-    #----------------------------------------------------------------------------
-    def build_cnn_simple_subnetwork(self,
-                             input_layer,
-                             features,
-                             logits_dimension,
-                             training ):            
-            images = list(features.values())[0]
-            x = images
-        
-            for i in range(self._cnn_cnnlayer):
-                x = Conv2D(32, kernel_size=7, activation='relu')(x)
-                x = MaxPooling2D(strides=2)(x)
-            
-            x = Flatten()(x)
-            x = Dense(100, activation='relu')(x)
-            
-            logits = Dense(logits_dimension)(x)
-            return x,logits
-    #----------------------------------------------------------------------------
-    #
-    #----------------------------------------------------------------------------
-    def _build_cnn_subnetwork(self, input_layer, features\
-    , logits_dimension, is_training) :
-    
-        features_key = list(features.keys())[0]
-        w = features[features_key].shape[1]
-        h = features[features_key].shape[2]
-        c = features[features_key].shape[3]
-        last_layer = input_layer
-
-        print("*** _build_cnn_subnetwork() : width={} / Heigh={} / Channel={}".format(w, h,c))
-        
-        for layer in range(self._cnn_cnnlayer) :     
-        
-            last_layer = tf.layers.conv2d(features['images'], filters=64,
-                                  kernel_size=(3,3) , strides=1,
-                                  padding='same', activation=tf.nn.relu)
-            pool_size = (2, 2)
-            last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
-
-
-            last_layer = tf.layers.conv2d(last_layer, filters=128,
-                                  kernel_size=(3,3), strides=1,
-                                  padding='same', activation=tf.nn.relu)
-            last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
-        
-            # Dense Layer
-            #pool2_flat = tf.reshape(pool2, [-1, width * heigh * 3])
-            last_layer = tf.contrib.layers.flatten(last_layer)
-            print("\n*** *** Last layer shape= {}".format(last_layer))
-            last_layer = tf.layers.dense(inputs=last_layer, units=100, activation=tf.nn.relu)
-            last_layer = tf.layers.dropout(inputs=last_layer, rate=self._dropout, training=is_training)
-        
-        # Logits Layer
-        logits = tf.layers.dense(inputs=last_layer, units=self._nb_class)
-        return last_layer,logits
-   #----------------------------------------------------------------------------
 
     #----------------------------------------------------------------------------
     #
@@ -200,59 +144,6 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         return last_layer, logits_
    #----------------------------------------------------------------------------
 
-    #----------------------------------------------------------------------------
-    #
-    #----------------------------------------------------------------------------
-    def _build_cnn_subnetwork_keras_deprecated(self, input_layer, features\
-   , logits_dimension, is_training) :
-    
-        kernel_initializer = tf.keras.initializers.he_normal(seed=self._seed)
-        #model = keras.models.Sequential()  # Création d'un réseau de neurones vide 
-
-        # Ajout de la première couche de convolution, suivie d'une couche ReLU
-        features_key = list(features.keys())[0]
-        w = features[features_key].shape[1]
-        h = features[features_key].shape[2]
-        c = features[features_key].shape[3]
-        
-        print("\n*** _build_cnn_subnetwork_keras() : logits_dimension= {}".format(logits_dimension))
-        print("*** _build_cnn_subnetwork_keras() : features= {}".format(list(features.keys())))
-        print("*** _build_cnn_subnetwork_keras() : width={} / Heigh={} / Channel={}".format(w, h,c))
-        print("*** _build_cnn_subnetwork_keras() : Features keys={}".format(features_key))
-        print("*** _build_cnn_subnetwork_keras() : features shape= {}\n".format(features[features_key].shape))
-
-        images = list(features.values())[0]
-        layer_input = keras.layers.Conv2D(32, (3, 3), input_shape=(w, h, c), padding='same', activation='relu')(images)
-        #model.add(layer_input)
-
-        # 1st convolution layer
-        
-        layer_conv1 = keras.layers.Conv2D(32, (3, 3), padding='same', activation='relu')(layer_input)
-        #model.add(layer_conv1)
-        #model.summary()
-        layer_dropout = keras.layers.Dropout(self._cnn_rate, seed =self._cnn_seed)(layer_conv1)
-
-
-        # Pooling convolution layer
-        layer_pool = keras.layers.MaxPooling2D(pool_size=(2,2), strides=(2,2))(layer_dropout)
-        #model.add()
-        #model.summary()
-
-        #Flatten model before dense later
-        #model.add(keras.layers.Flatten()) 
-        
-        layer_flatten = keras.layers.Flatten()(layer_pool)
-        layer_last = keras.layers.Dense(100, activation='relu')(layer_flatten)
-
-
-
-        # Ajout de la dernière couche fully-connected qui permet de classifier
-        layer_logits = keras.layers.Dense(units=self._nb_class , activation='softmax')(layer_last)
-        #model.add(Dense(layer_logits))
-        print("*** _build_cnn_subnetwork_keras() : Done!")
-
-        return layer_last, layer_logits
-    #----------------------------------------------------------------------------
 
     #----------------------------------------------------------------------------
     #
@@ -281,8 +172,54 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         
         
         return last_layer, logits
-    #----------------------------------------------------------------------------
+    #---------------------------------------------------------------------------
             
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def _build_cnn_subnetwork(self, input_layer, features\
+    , logits_dimension, is_training) :
+    
+        features_key = list(features.keys())[0]
+        w = features[features_key].shape[1]
+        h = features[features_key].shape[2]
+        c = features[features_key].shape[3]
+        last_layer = input_layer
+
+        print("*** _build_cnn_subnetwork() : width={} / Heigh={} / Channel={}".format(w, h,c))
+        if self._cnn_cnnlayer > 0 : 
+            last_layer =  features['images']       
+            for layer in range(self._cnn_cnnlayer) :     
+            
+                last_layer = tf.layers.conv2d(last_layer, filters=64,
+                                      kernel_size=(3,3) , strides=1,
+                                      padding='same', activation=tf.nn.relu)
+                                      
+                last_layer = tf.layers.conv2d(last_layer, filters=64,
+                                      kernel_size=(3,3), strides=1,
+                                      padding='same', activation=tf.nn.relu)
+                
+                pool_size = (2, 2)
+                last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
+                last_layer = tf.layers.dropout(inputs=last_layer, rate=self._dropout)
+                                  
+            last_layer = tf.layers.conv2d(last_layer, filters=128,
+                                  kernel_size=(3,3), strides=1,
+                                  padding='same', activation=tf.nn.relu)
+
+            pool_size = (2, 2)
+            last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
+            last_layer = tf.layers.dropout(inputs=last_layer, rate=self._dropout)
+        
+            last_layer = tf.contrib.layers.flatten(last_layer)
+            #print("\n*** *** Last layer shape= {}".format(last_layer))
+            last_layer = tf.layers.dense(inputs=last_layer, units=100, activation=tf.nn.relu)
+            last_layer = tf.layers.dropout(inputs=last_layer, rate=self._dropout, training=is_training)
+        
+        # Logits Layer
+        logits = tf.layers.dense(inputs=last_layer, units=self._nb_class)
+        return last_layer,logits
+   #----------------------------------------------------------------------------
     
     #----------------------------------------------------------------------------
     #
