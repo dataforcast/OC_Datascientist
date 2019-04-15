@@ -95,6 +95,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         if self._nn_type == 'CNN' :
             self._cnn_cnnlayer = self._num_layers        
             self._cnn_denselayer = 1
+            self._cnn_layersize = layer_size
         else : 
             pass
         
@@ -202,6 +203,8 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
                 pool_size = (2, 2)
                 last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
                 last_layer = tf.layers.dropout(inputs=last_layer, rate=self._dropout)
+
+
                                   
             last_layer = tf.layers.conv2d(last_layer, filters=128,
                                   kernel_size=(3,3), strides=1,
