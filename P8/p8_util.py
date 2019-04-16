@@ -22,6 +22,9 @@ from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D
 from keras.layers import Flatten, Dense, Dropout
 
+
+import p5_util
+
 # The random seed to use.
 RANDOM_SEED = 42
 
@@ -29,6 +32,89 @@ LOG_DIR = './tmp/models'
 
 _NUM_LAYERS_KEY = "num_layers"
 FEATURES_KEY = 'images'
+
+#-------------------------------------------------------------------------------
+#   
+#-------------------------------------------------------------------------------
+def my_model_fn( features, labels, mode, params ): 
+    '''This function implements training, evalaution and prediction.
+    It also implements the predictor model.
+    It is designed in the context of a customized Estimator.
+
+    This function is invoked form Estimator's train, predict and evaluate methods.
+        features : batch of features provided from input function.
+        labels : batch labels provided from input function.
+        mode : provided by input function.
+        params : parameters used in this function, passed to Estimator by higher level call.
+
+    '''
+    #-----------------------------------------------------------------------------
+    # Get from parameters object that is used form Adanet to build NN sub-networks.
+    #-----------------------------------------------------------------------------
+    net_builder = params['net_builder']
+    feature_columns = net_builder.feature_columns
+    logits_dimension = net_builder.nb_class
+    input_layer = tf.feature_column.input_layer(features=features, feature_columns=feature_columns)
+    is_training = False
+
+    if mode == tf.estimator.ModeKeys.TRAIN :
+        is_training = True
+        
+    _, logits = net_builder._build_cnn_subnetwork(input_layer, features\
+                                                           , logits_dimension, is_training)
+    predicted_classes = tf.argmax(logits, 1)
+
+    accuracy = tf.metrics.accuracy(labels=labels, predictions=predicted_classes
+    , name='accuracy')
+    print("\n*** INFO : accuracy= {}".format(accuracy))
+    loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
+
+    if mode == tf.estimator.ModeKeys.TRAIN :
+        optimizer = tf.train.RMSPropOptimizer(learning_rate=params['learning_rate'])
+        train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
+        tf.summary.scalar('accuracy', accuracy[1])
+        return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
+
+    elif mode ==  tf.estimator.ModeKeys.EVAL :
+        # Compute accuracy from tf metrics package. It compares thruth values (labels) against
+        # predicted one (predicted_classes)
+        metrics = {'my_accuracy': accuracy}
+        return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics)
+        
+    elif mode == tf.estimator.ModeKeys.PREDICT:
+        predictions = {
+            'class_ids': predicted_classes[:, tf.newaxis],
+            'probabilities': tf.nn.softmax(logits),
+            'logits': logits,
+        }
+        return tf.estimator.EstimatorSpec(mode, predictions=predictions)
+    else :
+        print("\n*** ERROR : my_model_fn() : mode= {} is unknwoned!".format(mode))
+    return None
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#   
+#-------------------------------------------------------------------------------
+def load_dataset(filename) :
+    '''Load dataset from file name given as function parameter.
+    '''
+    (x_train,x_test, y_train, y_test) = p5_util.object_load(filename)
+    if True :
+        y_train=array_label_encode_from_index(y_train)
+        y_test=array_label_encode_from_index(y_test)
+
+
+    w_size = x_train.shape[1]
+    h_size = x_train.shape[2]        
+
+    y_train.shape, y_train.min(), y_train.max()
+    nClasses = max(len(np.unique(y_train)), len(np.unique(y_test)))
+    tuple_dimension = (x_train.shape,x_test.shape,y_train.shape,y_test.shape)
+    print("Dimensions= {}".format(tuple_dimension))
+    print("Number of classes= "+str(nClasses))
+    return x_train, x_test, y_train, y_test, nClasses,tuple_dimension[0][1:]
+#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 # Estimator configuration.
@@ -119,6 +205,21 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         print("\n*** _NNAdaNetBuilder : Classes={}".format(self._nb_class))
         
         
+    #---------------------------------------------------------------------------
+    #   Properties
+    #---------------------------------------------------------------------------
+    def _get_feature_columns(self) :
+       return self._feature_columns
+    def _set_feature_columns(self, feature_columns) :
+        print("\n*** ERROR : assignement is forbidden for this parameter!")
+
+    def _get_nb_class(self) :
+       return self._nb_class
+    def _set_nb_class(self, nb_class) :
+        print("\n*** ERROR : assignement is forbidden for this parameter!")
+
+    feature_columns = property(_get_feature_columns,_set_feature_columns)
+    nb_class = property(_get_nb_class,_set_nb_class)
 
     #----------------------------------------------------------------------------
     #
@@ -270,12 +371,19 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
             , training=is_training)
         
         # Logits Layer
-        logits = tf.layers.dense(inputs=last_layer
-        , units=self._nb_class
+        logits = tf.layers.dense(inputs=last_layer, units=self._nb_class
         ,kernel_initializer=layer_initializer())
         
         return last_layer,logits
    #----------------------------------------------------------------------------
+    #----------------------------------------------------------------------------
+    #
+    #----------------------------------------------------------------------------
+    def build_model_fn(self):
+        
+
+        pass
+    #----------------------------------------------------------------------------
     
     #----------------------------------------------------------------------------
     #
@@ -360,10 +468,10 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         else : 
             num_layers = self._num_layers
 
-        if False :
+        if True :
             if num_layers == 0:
                 # No hidden layers is a linear model.
-                return "linear"
+                return "{}_linear".format(self._nn_type)
             else : 
                 return "{}_layer_{}".format(self._nn_type, num_layers)
         else :                 
