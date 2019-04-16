@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import time
 import numpy as np
 import functools
 import os
@@ -56,7 +57,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
     """Builds a DNN subnetwork for AdaNet."""
 
     def __init__(self, nn_type, nb_class,feature_columns, optimizer, layer_size, num_layers,
-               learn_mixture_weights, dropout, seed):
+               learn_mixture_weights, dropout, seed, is_cnn_batch_norm,cnn_layer_config, initializer):
         """Initializes a `_DNNBuilder`.
 
         Args:
@@ -88,19 +89,30 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         self._seed = seed
         self._nn_type = nn_type
         self._nb_class = nb_class
+        self._start_time = 0
         self._cnn_rate = 0.5
         self._cnn_seed = 10
         self._cnn_cnnlayer = 0
         self._cnn_denselayer = 0
+        
+        # When value is None, then HE normal initializer is used as default. 
+        self._layer_initializer = initializer
+        
         if self._nn_type == 'CNN' :
-            # Number of CNN layers
-            self._cnn_cnnlayer = self._num_layers  
+            # Number of CNN layers  
+            self._cnn_cnnlayer = num_layers
 
             # Number of dense layers      
             self._cnn_denselayer = 1
             
             # Number of units in CNN dense layer.
             self._cnn_layersize = layer_size
+            
+            # Fixed CNN layers configuration 
+            self._cnn_layer_config=cnn_layer_config
+            
+            # Batch normaization activation
+            self._is_cnn_batch_norm = is_cnn_batch_norm
         else : 
             pass
         
@@ -183,6 +195,26 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
+    def _cnn_bacth_norm(self, layer, is_training) :
+        if self._is_cnn_batch_norm is True :                      
+            layer = tf.layers.batch_normalization(layer, training=is_training)
+        return layer
+    #---------------------------------------------------------------------------
+        
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def _get_layer_initializer(self) :
+        if self._layer_initializer == 'xavier' :
+            layer_initializer = tf.contrib.layers.xavier_initializer
+        else : 
+            layer_initializer = tf.keras.initializers.he_normal
+        return layer_initializer
+    #---------------------------------------------------------------------------
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
     def _build_cnn_subnetwork(self, input_layer, features\
     , logits_dimension, is_training) :
     
@@ -191,42 +223,57 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         h = features[features_key].shape[2]
         c = features[features_key].shape[3]
         last_layer = input_layer
-
-        print("*** _build_cnn_subnetwork() : width={} / Heigh={} / Channel={}".format(w, h,c))
-        print("*** _build_cnn_subnetwork() : CNN layer size={}".format(self._cnn_layersize))
+        
+        layer_initializer = self._get_layer_initializer()
+        
+        print("\n*** _build_cnn_subnetwork() : width={} / Heigh={} / Channel={}".format(w, h,c))
+        print("*** _build_cnn_subnetwork() : CNN layer size={} / CNN layer= {}\n".format(self._cnn_layersize, self._cnn_cnnlayer))
         if self._cnn_cnnlayer > 0 : 
             last_layer =  features['images']       
             for layer in range(self._cnn_cnnlayer) :     
-            
+                last_layer = self._cnn_bacth_norm(last_layer, is_training)
                 last_layer = tf.layers.conv2d(last_layer, filters=64,
                                       kernel_size=(3,3) , strides=1,
-                                      padding='same', activation=tf.nn.relu)
-                                      
+                                      padding='same', activation=tf.nn.relu,
+                                      kernel_initializer=layer_initializer())
+                last_layer = self._cnn_bacth_norm(last_layer, is_training)
                 last_layer = tf.layers.conv2d(last_layer, filters=64,
                                       kernel_size=(3,3), strides=1,
-                                      padding='same', activation=tf.nn.relu)
+                                      padding='same', activation=tf.nn.relu,
+                                      kernel_initializer=layer_initializer())
                 
-                pool_size = (2, 2)
-                last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
-                last_layer = tf.layers.dropout(inputs=last_layer, rate=self._dropout)
 
 
-                                  
-            last_layer = tf.layers.conv2d(last_layer, filters=128,
-                                  kernel_size=(3,3), strides=1,
-                                  padding='same', activation=tf.nn.relu)
 
-            pool_size = (2, 2)
-            last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
-            last_layer = tf.layers.dropout(inputs=last_layer, rate=self._dropout)
+            # Process fixed CNN layers configuration 
+            if self._cnn_layer_config is not None :
+                list_cnn_layer_filter = list(self._cnn_layer_config.values())[0]
+                for cnn_layer_filter in list_cnn_layer_filter :
+                    pool_size = (2, 2)
+                    last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
+                    last_layer = self._cnn_bacth_norm(last_layer, is_training)
+                    last_layer = tf.layers.conv2d(last_layer, filters=cnn_layer_filter,
+                                          kernel_size=(3,3), strides=1,
+                                          padding='same', activation=tf.nn.relu,
+                                          kernel_initializer=layer_initializer())
+
         
             last_layer = tf.contrib.layers.flatten(last_layer)
             #print("\n*** *** Last layer shape= {}".format(last_layer))
-            last_layer = tf.layers.dense(inputs=last_layer, units=self._cnn_layersize, activation=tf.nn.relu)
-            last_layer = tf.layers.dropout(inputs=last_layer, rate=self._dropout, training=is_training)
+            last_layer = self._cnn_bacth_norm(last_layer, is_training)
+            last_layer = tf.layers.dense(inputs=last_layer, units=self._cnn_layersize
+            , activation=tf.nn.relu
+            ,kernel_initializer=layer_initializer())
+
+            last_layer = tf.layers.dropout(inputs=last_layer
+            , rate=self._dropout
+            , training=is_training)
         
         # Logits Layer
-        logits = tf.layers.dense(inputs=last_layer, units=self._nb_class)
+        logits = tf.layers.dense(inputs=last_layer
+        , units=self._nb_class
+        ,kernel_initializer=layer_initializer())
+        
         return last_layer,logits
    #----------------------------------------------------------------------------
     
@@ -251,21 +298,24 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
             last_layer, logits \
             = self._build_dnn_subnetwork(input_layer, features\
             , logits_dimension, training)
+            complexity = tf.sqrt(tf.to_float(self._cnn_cnnlayer))
             
         elif self._nn_type == 'CNN' :
             last_layer, logits \
             = self._build_cnn_subnetwork(input_layer, features\
             , logits_dimension, training)
+            complexity = tf.sqrt(tf.to_float(self._num_layers))
+
         else :
             print("\n*** ERROR : NN type={} no yet supported!".format(self._nn_type))
             return None
         
         # Approximate the Rademacher complexity of this subnetwork as the square-
         # root of its depth.
-        complexity = tf.sqrt(tf.to_float(self._num_layers))
         with tf.name_scope(""):
             summary.scalar("complexity", complexity)
             summary.scalar("num_layers", self._num_layers)
+            summary.scalar("cnn_num_layers", self._cnn_cnnlayer)
 
         if False :
             persisted_tensors = {_NUM_LAYERS_KEY: tf.constant(self._num_layers)}
@@ -334,7 +384,9 @@ class MyGenerator(adanet.subnetwork.Generator):
     [Cortes et al. ICML 2017](https://arxiv.org/abs/1607.01097), without the
     connections to hidden layers of networks from previous iterations.
     """
-
+    #---------------------------------------------------------------------------
+    # 
+    #---------------------------------------------------------------------------
     def __init__(self,
                nb_class,
                feature_columns,
@@ -345,7 +397,10 @@ class MyGenerator(adanet.subnetwork.Generator):
                dropout=0.,
                seed=None,
                nn_type='DNN',
-               nb_nn_candidate = 2):
+               nb_nn_candidate = 2,
+               cnn_layer_config=None,
+               is_cnn_batch_norm=False,
+               initializer=None):
         """Initializes a NN `Generator`.
 
         Args:
@@ -399,11 +454,18 @@ class MyGenerator(adanet.subnetwork.Generator):
             layer_size=layer_size,
             learn_mixture_weights=learn_mixture_weights,
             dropout=dropout,
-            seed=seed)
+            seed=seed,
+            cnn_layer_config=cnn_layer_config,
+            is_cnn_batch_norm = is_cnn_batch_norm,
+            initializer = initializer)
   
 
         print("*** INFO : MyGenerator : instantiation DONE!")
+    #---------------------------------------------------------------------------
 
+    #---------------------------------------------------------------------------
+    # 
+    #---------------------------------------------------------------------------
     def generate_candidates(self, previous_ensemble, iteration_number,
                               previous_ensemble_reports, all_reports):
             """See `adanet.subnetwork.Generator`.
@@ -424,7 +486,12 @@ class MyGenerator(adanet.subnetwork.Generator):
                 .persisted_tensors[self._nn_type])
             else : 
                 num_layers = self._initial_num_layers
-
+                self._start_time = time.time()
+            if previous_ensemble:
+                print("\n*** +++ generate_candidates() : Layer= {}\n"\
+                .format(previous_ensemble.weighted_subnetworks[-1].subnetwork.persisted_tensors[self._nn_type]))
+            else :
+                print("\n*** +++ generate_candidates() : Layer= {}\n".format(num_layers))
             if False :
                 list_nn_candidate = [self._nn_builder_fn(num_layers=num_layers+new_layer) \
                                      for new_layer in range(0, self._nb_nn_candidate)]
@@ -432,10 +499,7 @@ class MyGenerator(adanet.subnetwork.Generator):
             else :
                 # Returns a list of instanciated classes that implement 
                 # subnetworks candidates.
-
-
-                print("\n*** generate_candidates : Iteration= {} /Layers={}"\
-                .format(iteration_number, num_layers))
+                # self._cnn_cnnlayer  = num_layers + 1
                 return [
                     self._nn_builder_fn(num_layers=num_layers),
                     self._nn_builder_fn(num_layers=num_layers + 1),]
@@ -449,35 +513,6 @@ def array_label_encode_from_index(y):
     '''
     array_label_encode = np.array([np.where(y[i]==1)[0][0] for i in range(0,len(y),1)])
     return array_label_encode
-#-------------------------------------------------------------------------------
-
-#-------------------------------------------------------------------------------
-# 
-#-------------------------------------------------------------------------------
-def preprocess_image_deprecated( image, label,tuple_dimension= (224,224,3), kind='other', is_standard=False):
-    """Preprocesses an image for an `Estimator`."""
-    
-    list_dimension = [dimension for dimension in tuple_dimension]
-    
-    print("\n*** preprocess_image() : list_dimension={}".format(list_dimension))
-    print("\n*** preprocess_image() : image shape={}".format(image.shape))
-    if is_standard is True :
-        image = image / 255.
-    else :
-        pass
-    
-    # First let's scale the pixel values to be between 0 and 1.
-    if kind == 'other' :
-        image = tf.reshape(image,list_dimension)
-    else :
-        image = tf.cast(image, tf.float32)  #
-        # Next we reshape the image so that we can apply a 2D convolution to it.
-        image = tf.reshape(image, list_dimension)
-
-    
-    # Finally the features need to be supplied as a dictionary.
-    features = {FEATURES_KEY: image}
-    return features, label
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
