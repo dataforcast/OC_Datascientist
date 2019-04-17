@@ -185,7 +185,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         self._start_time = 0
         self._cnn_rate = 0.5
         self._cnn_seed = 10
-        self._cnn_cnnlayer = 0
+        self._cnn_convlayer = 0
         self._cnn_denselayer = 0
         
         # When value is None, then HE normal initializer is used as default. 
@@ -193,10 +193,10 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         
         if self._nn_type == 'CNN' :
             # Number of CNN layers  
-            self._cnn_cnnlayer = num_layers
+            self._cnn_convlayer = num_layers
 
             # Number of dense layers      
-            self._cnn_denselayer = 1
+            self._cnn_denselayer = num_layers
             
             # Number of units in CNN dense layer.
             self._cnn_layersize = layer_size
@@ -256,7 +256,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         print("*** _build_cnn_subnetwork_keras() : Input shape={}".format(last_layer.shape))
         print("*** _build_cnn_subnetwork_keras() : features shape= {}\n".format(features[features_key].shape))
         if True :
-            for layer in range(self._cnn_cnnlayer) : 
+            for layer in range(self._cnn_convlayer) : 
                 images = list(features.values())[0]
                 last_layer = keras.layers.Conv2D(32, (3, 3), input_shape=(w, h, c), padding='same', activation='relu')(images)
                 last_layer = keras.layers.Conv2D(32, (3, 3), padding='same', activation='relu')(last_layer)
@@ -271,7 +271,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         # Ajout de la dernière couche fully-connected qui permet de classifier
         logits_ = keras.layers.Dense(units=self._nb_class , activation='softmax')(last_layer)
         #model.add(Dense(layer_logits))
-        print("*** _build_cnn_subnetwork_keras() : Layers (CNN, Dense)= ({},{}) Done!".format(self._cnn_cnnlayer, self._cnn_denselayer))
+        print("*** _build_cnn_subnetwork_keras() : Layers (CNN, Dense)= ({},{}) Done!".format(self._cnn_convlayer, self._cnn_denselayer))
 
         return last_layer, logits_
    #----------------------------------------------------------------------------
@@ -341,10 +341,10 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         layer_initializer = self._get_layer_initializer()
         
         #print("\n*** _build_cnn_subnetwork() : width={} / Heigh={} / Channel={}".format(w, h,c))
-        #print("*** _build_cnn_subnetwork() : CNN layer size={} / CNN layer= {}\n".format(self._cnn_layersize, self._cnn_cnnlayer))
-        if self._cnn_cnnlayer > 0 : 
+        #print("*** _build_cnn_subnetwork() : CNN layer size={} / CNN layer= {}\n".format(self._cnn_layersize, self._cnn_convlayer))
+        if self._cnn_convlayer > 0 : 
             last_layer =  features['images']       
-            for layer in range(self._cnn_cnnlayer) :     
+            for layer in range(self._cnn_convlayer) :     
                 last_layer = self._cnn_bacth_norm(last_layer, is_training)
                 last_layer = tf.layers.conv2d(last_layer, filters=64,
                                       kernel_size=(3,3) , strides=1,
@@ -355,6 +355,8 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
                                       kernel_size=(3,3), strides=1,
                                       padding='same', activation=tf.nn.relu,
                                       kernel_initializer=layer_initializer())
+                pool_size = (2, 2)
+                last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
                 
 
 
@@ -363,25 +365,42 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
             if self._cnn_layer_config is not None :
                 list_cnn_layer_filter = list(self._cnn_layer_config.values())[0]
                 for cnn_layer_filter in list_cnn_layer_filter :
-                    pool_size = (2, 2)
-                    last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
+                
+                    
                     last_layer = self._cnn_bacth_norm(last_layer, is_training)
                     last_layer = tf.layers.conv2d(last_layer, filters=cnn_layer_filter,
                                           kernel_size=(3,3), strides=1,
                                           padding='same', activation=tf.nn.relu,
                                           kernel_initializer=layer_initializer())
+                    pool_size = (2, 2)
+                    last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
 
         
             last_layer = tf.contrib.layers.flatten(last_layer)
-            #print("\n*** *** Last layer shape= {}".format(last_layer))
-            last_layer = self._cnn_bacth_norm(last_layer, is_training)
-            last_layer = tf.layers.dense(inputs=last_layer, units=self._cnn_layersize
-            , activation=tf.nn.relu
-            ,kernel_initializer=layer_initializer())
+            units=self._cnn_layersize 
+            for _ in range(self._cnn_denselayer) :
+                if int(units/2) > self._nb_class :
+                    units  = int(units/2)
+                    last_layer = self._cnn_bacth_norm(last_layer, is_training)
+                    last_layer = tf.layers.dense(inputs=last_layer, units=units
+                    , activation=tf.nn.relu, kernel_initializer=layer_initializer())
+                    last_layer = tf.layers.dropout(inputs=last_layer
+                    , rate=self._dropout
+                    , training=is_training)
+                else :
+                    break
+                     
+            
+            
+            if False :
+                #print("\n*** *** Last layer shape= {}".format(last_layer))
+                last_layer = self._cnn_bacth_norm(last_layer, is_training)
+                last_layer = tf.layers.dense(inputs=last_layer, units=self._cnn_layersize
+                , activation=tf.nn.relu, kernel_initializer=layer_initializer())
 
-            last_layer = tf.layers.dropout(inputs=last_layer
-            , rate=self._dropout
-            , training=is_training)
+                last_layer = tf.layers.dropout(inputs=last_layer
+                , rate=self._dropout
+                , training=is_training)
         
         # Logits Layer
         logits = tf.layers.dense(inputs=last_layer, units=self._nb_class
@@ -419,7 +438,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
             last_layer, logits \
             = self._build_dnn_subnetwork(input_layer, features\
             , logits_dimension, training)
-            complexity = tf.sqrt(tf.to_float(self._cnn_cnnlayer))
+            complexity = tf.sqrt(tf.to_float(self._cnn_convlayer))
             
         elif self._nn_type == 'CNN' :
             last_layer, logits \
@@ -436,13 +455,13 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         with tf.name_scope(""):
             summary.scalar("complexity", complexity)
             summary.scalar("num_layers", self._num_layers)
-            summary.scalar("cnn_num_layers", self._cnn_cnnlayer)
+            summary.scalar("cnn_num_layers", self._cnn_convlayer)
 
         if False :
             persisted_tensors = {_NUM_LAYERS_KEY: tf.constant(self._num_layers)}
         else :
             if self._nn_type == 'CNN' :
-                persisted_tensors = {self._nn_type: tf.constant(self._cnn_cnnlayer)}
+                persisted_tensors = {self._nn_type: tf.constant(self._cnn_convlayer)}
             else : 
                 persisted_tensors = {self._nn_type: tf.constant(self._num_layers)}
             
@@ -477,7 +496,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         """See `adanet.subnetwork.Builder`."""
         num_layers = 0
         if self._nn_type == 'CNN' :
-            num_layers = self._cnn_cnnlayer
+            num_layers = self._cnn_convlayer
         else : 
             num_layers = self._num_layers
 
@@ -622,7 +641,7 @@ class MyGenerator(adanet.subnetwork.Generator):
             else :
                 # Returns a list of instanciated classes that implement 
                 # subnetworks candidates.
-                # self._cnn_cnnlayer  = num_layers + 1
+                # self._cnn_convlayer  = num_layers + 1
                 return [
                     self._nn_builder_fn(num_layers=num_layers),
                     self._nn_builder_fn(num_layers=num_layers + 1),]
