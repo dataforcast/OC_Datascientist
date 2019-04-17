@@ -66,11 +66,14 @@ def my_model_fn( features, labels, mode, params ):
 
     accuracy = tf.metrics.accuracy(labels=labels, predictions=predicted_classes
     , name='accuracy')
-    print("\n*** INFO : accuracy= {}".format(accuracy))
+    #print("\n*** INFO : accuracy= {}".format(accuracy))
     loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
 
     if mode == tf.estimator.ModeKeys.TRAIN :
-        optimizer = tf.train.RMSPropOptimizer(learning_rate=params['learning_rate'])
+        #optimizer = tf.train.RMSPropOptimizer(learning_rate=params['learning_rate'])
+        optimizer = net_builder.optimizer
+        #global_step = tf.Variable(20, name='global_step', trainable=False)
+        #train_op = optimizer.minimize(loss, global_step=global_step)
         train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
         tf.summary.scalar('accuracy', accuracy[1])
         return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
@@ -78,7 +81,7 @@ def my_model_fn( features, labels, mode, params ):
     elif mode ==  tf.estimator.ModeKeys.EVAL :
         # Compute accuracy from tf metrics package. It compares thruth values (labels) against
         # predicted one (predicted_classes)
-        metrics = {'my_accuracy': accuracy}
+        metrics = {'eval_accuracy': accuracy}
         return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics)
         
     elif mode == tf.estimator.ModeKeys.PREDICT:
@@ -89,7 +92,8 @@ def my_model_fn( features, labels, mode, params ):
         }
         return tf.estimator.EstimatorSpec(mode, predictions=predictions)
     else :
-        print("\n*** ERROR : my_model_fn() : mode= {} is unknwoned!".format(mode))
+        #print("\n*** ERROR : my_model_fn() : mode= {} is unknwoned!".format(mode))
+        pass
     return None
 #-------------------------------------------------------------------------------
 
@@ -111,15 +115,15 @@ def load_dataset(filename) :
     y_train.shape, y_train.min(), y_train.max()
     nClasses = max(len(np.unique(y_train)), len(np.unique(y_test)))
     tuple_dimension = (x_train.shape,x_test.shape,y_train.shape,y_test.shape)
-    print("Dimensions= {}".format(tuple_dimension))
-    print("Number of classes= "+str(nClasses))
+    #print("Dimensions= {}".format(tuple_dimension))
+    #print("Number of classes= "+str(nClasses))
     return x_train, x_test, y_train, y_test, nClasses,tuple_dimension[0][1:]
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 # Estimator configuration.
 #-------------------------------------------------------------------------------
-def make_config(model_name, output_dir=None):
+def make_config(model_name, output_dir=None, is_restored=False):
     '''Reset output directory.
     Returns a TF configuration object for feeding Esmimator.
     '''
@@ -127,11 +131,14 @@ def make_config(model_name, output_dir=None):
         output_dir=LOG_DIR
 
     outdir = os.path.join(output_dir, model_name)
-    shutil.rmtree(outdir, ignore_errors = True)
-        
+    
+    if is_restored is False :
+        shutil.rmtree(outdir, ignore_errors = True)
+    else :
+        pass    
     return tf.estimator.RunConfig(
-        save_checkpoints_steps=100000,
-        save_summary_steps=100000,
+        save_checkpoints_steps=5,
+        save_summary_steps=5,
         tf_random_seed=RANDOM_SEED,
         model_dir=outdir)
 #-------------------------------------------------------------------------------
@@ -202,7 +209,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         else : 
             pass
         
-        print("\n*** _NNAdaNetBuilder : Classes={}".format(self._nb_class))
+        #print("\n*** _NNAdaNetBuilder : Classes={}".format(self._nb_class))
         
         
     #---------------------------------------------------------------------------
@@ -218,8 +225,14 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
     def _set_nb_class(self, nb_class) :
         print("\n*** ERROR : assignement is forbidden for this parameter!")
 
+    def _get_optimizer(self) :
+       return self._optimizer
+    def _set_optimizer(self, optimizer) :
+        print("\n*** ERROR : assignement is forbidden for this parameter!")
+
     feature_columns = property(_get_feature_columns,_set_feature_columns)
     nb_class = property(_get_nb_class,_set_nb_class)
+    optimizer = property(_get_optimizer, _set_optimizer)
 
     #----------------------------------------------------------------------------
     #
@@ -272,7 +285,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
 
         
         for i_ in range(self._num_layers):
-            print("\n**** *** _build_dnn_subnetwork : Layer= {} / Layers= {}".format(i_, self._num_layers))
+            #print("\n**** *** _build_dnn_subnetwork : Layer= {} / Layers= {}".format(i_, self._num_layers))
             last_layer = tf.layers.dense(
                 last_layer,
                 units=self._layer_size,
@@ -327,8 +340,8 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         
         layer_initializer = self._get_layer_initializer()
         
-        print("\n*** _build_cnn_subnetwork() : width={} / Heigh={} / Channel={}".format(w, h,c))
-        print("*** _build_cnn_subnetwork() : CNN layer size={} / CNN layer= {}\n".format(self._cnn_layersize, self._cnn_cnnlayer))
+        #print("\n*** _build_cnn_subnetwork() : width={} / Heigh={} / Channel={}".format(w, h,c))
+        #print("*** _build_cnn_subnetwork() : CNN layer size={} / CNN layer= {}\n".format(self._cnn_layersize, self._cnn_cnnlayer))
         if self._cnn_cnnlayer > 0 : 
             last_layer =  features['images']       
             for layer in range(self._cnn_cnnlayer) :     
@@ -400,7 +413,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
         = tf.feature_column.input_layer(features=features\
                                     , feature_columns=self._feature_columns)
         
-        print("\n\n*** build_subnetwork() : features shape= {}".format(features['images'].shape))
+        #print("\n\n*** build_subnetwork() : features shape= {}".format(features['images'].shape))
         
         if self._nn_type == 'DNN' :
             last_layer, logits \
@@ -596,10 +609,12 @@ class MyGenerator(adanet.subnetwork.Generator):
                 num_layers = self._initial_num_layers
                 self._start_time = time.time()
             if previous_ensemble:
-                print("\n*** +++ generate_candidates() : Layer= {}\n"\
-                .format(previous_ensemble.weighted_subnetworks[-1].subnetwork.persisted_tensors[self._nn_type]))
+                #print("\n*** +++ generate_candidates() : Layer= {}\n"\
+                #.format(previous_ensemble.weighted_subnetworks[-1].subnetwork.persisted_tensors[self._nn_type]))
+                pass
             else :
-                print("\n*** +++ generate_candidates() : Layer= {}\n".format(num_layers))
+                #print("\n*** +++ generate_candidates() : Layer= {}\n".format(num_layers))
+                pass
             if False :
                 list_nn_candidate = [self._nn_builder_fn(num_layers=num_layers+new_layer) \
                                      for new_layer in range(0, self._nb_nn_candidate)]
@@ -623,54 +638,6 @@ def array_label_encode_from_index(y):
     return array_label_encode
 #-------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------
-# 
-#-------------------------------------------------------------------------------
-def input_fn_deprecated(partition, x, y, tuple_dimension=None,training=False, batch_size=1\
-, kind='other'):
-    
-    def input_fn_():
-        print("\n*** input_fn() : Y shape={} ".format(y.shape))
-        try :
-            label_dimension = y.shape[1]
-        except IndexError:
-            label_dimension=1
-        if partition == "train":
-            if kind == 'other' :
-                dataset = tf.data.Dataset.from_generator(
-                generator(x, y), (tf.float32, tf.int32), (tuple_dimension, label_dimension))
-            else :
-                dataset = tf.data.Dataset.from_generator(
-                generator(x, y), (tf.float32, tf.int32), (tuple_dimension, ()))
-        elif partition == "predict":
-            if kind == 'other' :
-                dataset = tf.data.Dataset.from_generator(
-                generator(x[:10], y[:10]), (tf.float32, tf.int32)\
-                , (tuple_dimension, label_dimension))
-            else :
-                dataset = tf.data.Dataset.from_generator(
-                generator(x[:10], y[:10]), (tf.float32, tf.int32)\
-                , (tuple_dimension, ()))
-        else:
-            if kind == 'other' :
-                dataset = tf.data.Dataset.from_generator(
-                generator(x, y), (tf.float32, tf.int32), (tuple_dimension, label_dimension))
-            else :
-                dataset = tf.data.Dataset.from_generator(
-                generator(x, y), (tf.float32, tf.int32), (tuple_dimension, ()))
-
-        # We call repeat after shuffling, rather than before, to prevent separate
-        # epochs from blending together.
-        if training:
-            dataset = dataset.shuffle(10 * batch_size, seed=RANDOM_SEED).repeat()
-
-        dataset = dataset.map(preprocess_image).batch(batch_size)
-        iterator = dataset.make_one_shot_iterator()
-        features, labels = iterator.get_next()
-        print("\n*** input_fn() : labels shape= {} / Y shape={} / Dimension={}".format(labels.shape, y.shape,tuple_dimension))
-        return features, labels
-    return input_fn_
-#-------------------------------------------------------------------------------
 
 
 #-------------------------------------------------------------------------------
@@ -700,7 +667,7 @@ def generator(images, labels):
     '''
     #labels = tf.reshape(labels, [-1,1,1,1], name=None)
     #labels = labels.reshape([-1,1,1,1])
-    print("\n*** generator() : labels shape= {} / label values= {}".format(labels.shape, labels[0]))
+    #print("\n*** generator() : labels shape= {} / label values= {}".format(labels.shape, labels[0]))
     for image, label in zip(images, labels):
       #yield image, label
 
@@ -716,7 +683,7 @@ def generator(images, labels):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def input_fn(partition, x, y, training=False, batch_size=None, tuple_dimension=None):
+def input_fn(partition, x, y, num_epochs, batch_size=None, tuple_dimension=None):
   """Generate an input_fn for the Estimator."""
 
   def _input_fn():
@@ -728,12 +695,15 @@ def input_fn(partition, x, y, training=False, batch_size=None, tuple_dimension=N
     #---------------------------------------------------------------------------
     feature_shape = [224,224,3]
     label_shape = [1]
+    training=False
     if partition == "train":
+        training = True
         #dataset = tf.data.Dataset.from_generator(
         #    generator(x, y), (tf.float32, tf.int32), ((224, 224, 3), (1,)))
           
-      dataset = tf.data.Dataset.from_generator(
-          generator(x, y), (tf.float32, tf.int32), (feature_shape, label_shape))          
+        dataset = tf.data.Dataset.from_generator(
+            generator(x, y), (tf.float32, tf.int32), (feature_shape, label_shape))          
+        dataset = dataset.shuffle(10 * batch_size, seed=RANDOM_SEED).repeat(num_epochs)
     else:
         dataset = tf.data.Dataset.from_generator(
             generator(x, y), (tf.float32, tf.int32), (feature_shape, label_shape))          
@@ -743,7 +713,7 @@ def input_fn(partition, x, y, training=False, batch_size=None, tuple_dimension=N
     # We call repeat after shuffling, rather than before, to prevent separate
     # epochs from blending together.
     if training:
-      dataset = dataset.shuffle(10 * batch_size, seed=RANDOM_SEED).repeat()
+        dataset = dataset.shuffle(10 * batch_size, seed=RANDOM_SEED).repeat(num_epochs)
 
     dataset = dataset.map(preprocess_image).batch(batch_size)
     iterator = dataset.make_one_shot_iterator()
