@@ -70,12 +70,9 @@ def my_model_fn( features, labels, mode, params ):
     loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
 
     if mode == tf.estimator.ModeKeys.TRAIN :
-        #optimizer = tf.train.RMSPropOptimizer(learning_rate=params['learning_rate'])
         optimizer = net_builder.optimizer
-        #global_step = tf.Variable(20, name='global_step', trainable=False)
-        #train_op = optimizer.minimize(loss, global_step=global_step)
         train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
-        tf.summary.scalar('accuracy', accuracy[1])
+        tf.summary.scalar('train_accuracy', accuracy[1])
         return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
 
     elif mode ==  tf.estimator.ModeKeys.EVAL :
@@ -149,68 +146,73 @@ def make_config(model_name, output_dir=None, is_restored=False):
 class _NNAdaNetBuilder(adanet.subnetwork.Builder):
     """Builds a DNN subnetwork for AdaNet."""
 
-    def __init__(self, nn_type, nb_class,feature_columns, optimizer, layer_size, num_layers,
-               learn_mixture_weights, dropout, seed, is_cnn_batch_norm,cnn_layer_config, initializer):
+    def __init__(self, dict_adanet_config, num_layers):
         """Initializes a `_DNNBuilder`.
 
         Args:
-          feature_columns: An iterable containing all the feature columns used by
-            the model. All items in the set should be instances of classes derived
-            from `FeatureColumn`.
-          optimizer: An `Optimizer` instance for training both the subnetwork and
-            the mixture weights.
-          layer_size: The number of nodes to output at each hidden layer.
+          dict_adanet_config : dictionary for configuration of AdaNet algo.
           num_layers: The number of hidden layers.
-          learn_mixture_weights: Whether to solve a learning problem to find the
-            best mixture weights, or use their default value according to the
-            mixture weight type. When `False`, the subnetworks will return a no_op
-            for the mixture weight train op.
-          dropout: The dropout rate, between 0 and 1. E.g. "rate=0.1" would drop out
-            10% of input units.
-          seed: A random seed.
+
 
         Returns:
           An instance of `_DNNBuilder`.
         """
+                
+        self._feature_columns = dict_adanet_config['adanet_feature_columns']
+        self._learn_mixture_weights = dict_adanet_config['adanet_is_learn_mixture_weights']
 
-        self._feature_columns = feature_columns
-        self._optimizer = optimizer
-        self._layer_size = layer_size
+        #---------------------------------------------------
+        # Hyper parameters for NN Builder
+        #---------------------------------------------------
+        dict_nn_layer_config= dict_adanet_config['adanet_nn_layer_config']
+        
+        self._nn_type    = dict_nn_layer_config['nn_type']
+        self._optimizer  = dict_nn_layer_config['nn_optimizer']
+        self._layer_size = dict_nn_layer_config['nn_dense_unit_size']
+        #self._num_layers = dict_nn_layer_config['nn_dense_layer_num']
         self._num_layers = num_layers
-        self._learn_mixture_weights = learn_mixture_weights
-        self._dropout = dropout
-        self._seed = seed
-        self._nn_type = nn_type
-        self._nb_class = nb_class
-        self._start_time = 0
-        self._cnn_rate = 0.5
-        self._cnn_seed = 10
-        self._cnn_convlayer = 0
-        self._cnn_denselayer = 0
+        
+        self._dropout    = dict_nn_layer_config['nn_dropout_rate']
+        self._seed       = dict_nn_layer_config['nn_seed']
+        self._nb_class   = dict_nn_layer_config['nn_logit_dimension']
         
         # When value is None, then HE normal initializer is used as default. 
-        self._layer_initializer = initializer
+        self._layer_initializer_name = dict_nn_layer_config['nn_initializer_name']
+        # Batch normaization activation
+        self._is_nn_batch_norm = dict_nn_layer_config['nn_batch_norm']
         
-        if self._nn_type == 'CNN' :
-            # Number of CNN layers  
-            self._cnn_convlayer = num_layers
+        #---------------------------------------------------
+        # Hyper parameters for CNN network
+        #---------------------------------------------------
+        if self._nn_type == 'CNN' or self._nn_type == 'CNNBase':
+            dict_cnn_layer_config = dict_nn_layer_config['nn_layer_config']
+            self._cnn_seed = self._seed
+
+            self._conv_kernel_size = dict_cnn_layer_config['conv_kernel_size']
+            
+            # Number of CNN CONCOLUTIONAL layers  
+            #self._cnn_convlayer = dict_cnn_layer_config['conv_layer_num']
+            self._cnn_convlayer =num_layers
 
             # Number of dense layers      
-            self._cnn_denselayer = num_layers
+            self._cnn_denselayer =  dict_nn_layer_config['nn_dense_layer_num']
             
             # Number of units in CNN dense layer.
-            self._cnn_layersize = layer_size
+            self._cnn_layersize = self._layer_size
             
             # Fixed CNN layers configuration 
-            self._cnn_layer_config=cnn_layer_config
+            self._dict_cnn_layer_config=dict_cnn_layer_config
             
             # Batch normaization activation
-            self._is_cnn_batch_norm = is_cnn_batch_norm
+            self._is_cnn_batch_norm = self._is_nn_batch_norm
         else : 
             pass
+
+        self._start_time = 0
         
-        #print("\n*** _NNAdaNetBuilder : Classes={}".format(self._nb_class))
+        print("\n*** _NNAdaNetBuilder : NN Type={}".format(self._nn_type))
         
+
         
     #---------------------------------------------------------------------------
     #   Properties
@@ -233,48 +235,6 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
     feature_columns = property(_get_feature_columns,_set_feature_columns)
     nb_class = property(_get_nb_class,_set_nb_class)
     optimizer = property(_get_optimizer, _set_optimizer)
-
-    #----------------------------------------------------------------------------
-    #
-    #----------------------------------------------------------------------------
-    def _build_cnn_subnetwork_keras(self, input_layer, features\
-        , logits_dimension, is_training) :
-    
-        kernel_initializer = tf.keras.initializers.he_normal(seed=self._seed)
-
-
-        features_key = list(features.keys())[0]
-        w = features[features_key].shape[1]
-        h = features[features_key].shape[2]
-        c = features[features_key].shape[3]
-        last_layer = input_layer
-        
-        print("\n*** _build_cnn_subnetwork_keras() : logits_dimension= {}".format(logits_dimension))
-        print("*** _build_cnn_subnetwork_keras() : features= {}".format(list(features.keys())))
-        print("*** _build_cnn_subnetwork_keras() : width={} / Heigh={} / Channel={}".format(w, h,c))
-        print("*** _build_cnn_subnetwork_keras() : Features keys={}".format(features_key))
-        print("*** _build_cnn_subnetwork_keras() : Input shape={}".format(last_layer.shape))
-        print("*** _build_cnn_subnetwork_keras() : features shape= {}\n".format(features[features_key].shape))
-        if True :
-            for layer in range(self._cnn_convlayer) : 
-                images = list(features.values())[0]
-                last_layer = keras.layers.Conv2D(32, (3, 3), input_shape=(w, h, c), padding='same', activation='relu')(images)
-                last_layer = keras.layers.Conv2D(32, (3, 3), padding='same', activation='relu')(last_layer)
-                last_layer = keras.layers.Dropout(self._cnn_rate, seed = self._cnn_seed)(last_layer)
-                last_layer = keras.layers.MaxPooling2D(pool_size=(2,2), strides=(2,2))(last_layer)  
-                                  
-                last_layer = keras.layers.Flatten()(last_layer)        
-            
-                #for layer in range(self._cnn_denselayer) : 
-                last_layer = keras.layers.Dense(100, activation='relu')(last_layer)
-
-        # Ajout de la dernière couche fully-connected qui permet de classifier
-        logits_ = keras.layers.Dense(units=self._nb_class , activation='softmax')(last_layer)
-        #model.add(Dense(layer_logits))
-        print("*** _build_cnn_subnetwork_keras() : Layers (CNN, Dense)= ({},{}) Done!".format(self._cnn_convlayer, self._cnn_denselayer))
-
-        return last_layer, logits_
-   #----------------------------------------------------------------------------
 
 
     #----------------------------------------------------------------------------
@@ -319,7 +279,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
     #
     #---------------------------------------------------------------------------
     def _get_layer_initializer(self) :
-        if self._layer_initializer == 'xavier' :
+        if self._layer_initializer_name == 'xavier' :
             layer_initializer = tf.contrib.layers.xavier_initializer
         else : 
             layer_initializer = tf.keras.initializers.he_normal
@@ -329,9 +289,94 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
+    def _get_conv_activation_fn(self, conv_activation_name) :
+        conv_activation_fn = None
+        if conv_activation_name == 'relu' :
+            conv_activation_fn =tf.nn.relu
+        else : 
+            print("\n*** ERROR : activation function name= {} Unknown!".format(conv_activation_name))
+        return conv_activation_fn
+    #---------------------------------------------------------------------------
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def _build_cnn_baseline_subnetwork(self, input_layer, features
+    , logits_dimension, is_training) :
+    
+        features_key = list(features.keys())[0]
+        w = features[features_key].shape[1]
+        h = features[features_key].shape[2]
+        c = features[features_key].shape[3]
+        last_layer = input_layer
+
+        tuple_conv_kernel_size = self._dict_cnn_layer_config['conv_kernel_size']
+        conv_filters           = self._dict_cnn_layer_config['conv_filters']
+        conv_strides           = self._dict_cnn_layer_config['conv_strides']
+        conv_padding_name      = self._dict_cnn_layer_config['conv_padding_name']
+        conv_activation_name   = self._dict_cnn_layer_config['conv_activation_name']
+        
+        layer_initializer = self._get_layer_initializer()
+        conv_activation_fn = self._get_conv_activation_fn(conv_activation_name)
+        
+        #-----------------------------------------------------------------------                
+        # Convolutional Layers
+        #-----------------------------------------------------------------------                
+        if self._cnn_convlayer > 0 : 
+            last_layer =  features['images']       
+            for layer in range(self._cnn_convlayer) :     
+                last_layer = self._cnn_bacth_norm(last_layer, is_training)
+                last_layer = tf.layers.conv2d(last_layer
+                                        , filters=conv_filters
+                                        , kernel_size=tuple_conv_kernel_size
+                                        , strides=conv_strides
+                                        , padding=conv_padding_name
+                                        , activation=conv_activation_fn
+                                        , kernel_initializer=layer_initializer())
+                pool_size = (2, 2)
+                last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
+
+
+        #-----------------------------------------------------------------------                
+        # Dense Layer(s)
+        #-----------------------------------------------------------------------
+        last_layer = tf.contrib.layers.flatten(last_layer)      
+        
+                  
+        for layer in range(self._cnn_denselayer) :     
+            last_layer = self._cnn_bacth_norm(last_layer, is_training)
+            last_layer = tf.layers.dense( inputs=last_layer
+                                        , units=self._cnn_layersize 
+                                        , activation=conv_activation_fn
+                                        , kernel_initializer=layer_initializer())
+            
+            last_layer = tf.layers.dropout(   inputs=last_layer
+                                            , rate=self._dropout
+                                            , training=is_training)
+
+        #-----------------------------------------------------------------------                
+        # Logits Layer
+        #-----------------------------------------------------------------------                
+        logits = tf.layers.dense( inputs=last_layer
+                                , units=self._nb_class
+                                , kernel_initializer=layer_initializer())
+
+        return last_layer,logits
+    #---------------------------------------------------------------------------
+        
+
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
     def _build_cnn_subnetwork(self, input_layer, features\
     , logits_dimension, is_training) :
     
+        if self._nn_type == 'CNNBase' :
+            return self._build_cnn_baseline_subnetwork(input_layer, features\
+                                            , logits_dimension, is_training)
+        else :
+            pass
+            
         features_key = list(features.keys())[0]
         w = features[features_key].shape[1]
         h = features[features_key].shape[2]
@@ -358,6 +403,14 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
                 pool_size = (2, 2)
                 last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
                 
+            last_layer = tf.contrib.layers.flatten(last_layer)
+            last_layer = self._cnn_bacth_norm(last_layer, is_training)
+            
+            last_layer = tf.layers.dense(inputs=last_layer
+            , units=self._cnn_layersize
+            , activation=tf.nn.relu, kernel_initializer=layer_initializer())
+            last_layer = tf.layers.dropout(inputs=last_layer
+            , rate=self._dropout, training=is_training)
 
 
 
@@ -377,18 +430,16 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
 
         
             last_layer = tf.contrib.layers.flatten(last_layer)
-            units=self._cnn_layersize 
+
             for _ in range(self._cnn_denselayer) :
-                if int(units/2) > self._nb_class :
-                    units  = int(units/2)
-                    last_layer = self._cnn_bacth_norm(last_layer, is_training)
-                    last_layer = tf.layers.dense(inputs=last_layer, units=units
-                    , activation=tf.nn.relu, kernel_initializer=layer_initializer())
-                    last_layer = tf.layers.dropout(inputs=last_layer
-                    , rate=self._dropout
-                    , training=is_training)
-                else :
-                    break
+                last_layer = self._cnn_bacth_norm(last_layer, is_training)
+                
+                last_layer = tf.layers.dense(inputs=last_layer
+                , units=self._cnn_layersize
+                , activation=tf.nn.relu, kernel_initializer=layer_initializer())
+                
+                last_layer = tf.layers.dropout(inputs=last_layer
+                , rate=self._dropout, training=is_training)
                      
             
             
@@ -411,15 +462,6 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
     #----------------------------------------------------------------------------
     #
     #----------------------------------------------------------------------------
-    def build_model_fn(self):
-        
-
-        pass
-    #----------------------------------------------------------------------------
-    
-    #----------------------------------------------------------------------------
-    #
-    #----------------------------------------------------------------------------
     def build_subnetwork(self,
                        features,
                        logits_dimension,
@@ -433,19 +475,27 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
                                     , feature_columns=self._feature_columns)
         
         #print("\n\n*** build_subnetwork() : features shape= {}".format(features['images'].shape))
+        print("\n\n*** build_subnetwork() : NN type= {}".format(self._nn_type))
         
         if self._nn_type == 'DNN' :
             last_layer, logits \
             = self._build_dnn_subnetwork(input_layer, features\
             , logits_dimension, training)
-            complexity = tf.sqrt(tf.to_float(self._cnn_convlayer))
+            complexity = tf.sqrt(tf.to_float(self._num_layers))
             
         elif self._nn_type == 'CNN' :
             last_layer, logits \
             = self._build_cnn_subnetwork(input_layer, features\
             , logits_dimension, training)
-            complexity = tf.sqrt(tf.to_float(self._num_layers))
+            complexity = tf.sqrt(tf.to_float(self._cnn_convlayer))
 
+        elif self._nn_type == 'CNNBase' :
+            last_layer, logits \
+            = self._build_cnn_baseline_subnetwork(input_layer, features\
+            , logits_dimension, training)
+            complexity = tf.sqrt(tf.to_float(self._cnn_convlayer))
+
+            
         else :
             print("\n*** ERROR : NN type={} no yet supported!".format(self._nn_type))
             return None
@@ -495,7 +545,7 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
     def name(self):
         """See `adanet.subnetwork.Builder`."""
         num_layers = 0
-        if self._nn_type == 'CNN' :
+        if self._nn_type == 'CNN' or self._nn_type == 'CNNBase':
             num_layers = self._cnn_convlayer
         else : 
             num_layers = self._num_layers
@@ -510,12 +560,132 @@ class _NNAdaNetBuilder(adanet.subnetwork.Builder):
             return "{}_layer_{}".format(self._nn_type, num_layers)
         #return f'cnn_{self._n_convs}'
 #-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+class MyGenerator(adanet.subnetwork.Generator):
+    """Generates a two NN subnetworks at each iteration.
+
+    The first NN has an identical shape to the most recently added subnetwork
+    in `previous_ensemble`. The second has the same shape plus one more dense
+    layer on top. This is similar to the adaptive network presented in Figure 2 of
+    [Cortes et al. ICML 2017](https://arxiv.org/abs/1607.01097), without the
+    connections to hidden layers of networks from previous iterations.
+    """
+    #---------------------------------------------------------------------------
+    # 
+    #---------------------------------------------------------------------------
+    def __init__(self, dict_adanet_config):
+        """Initializes a NN `Generator`.
+
+        Args:
+          nn_type : type of neural network; may be DNN, CNN, RNN, mixte of them. 
+          feature_columns: An iterable containing all the feature columns used by
+            DNN models. All items in the set should be instances of classes derived
+            from `FeatureColumn`.
+          optimizer: An `Optimizer` instance for training both the subnetwork and
+            the mixture weights.
+          layer_size: Number of nodes in each hidden layer of the subnetwork
+            candidates. Note that this parameter is ignored in a DNN with no hidden
+            layers.
+          initial_num_layers: Minimum number of layers for each DNN subnetwork. At
+            iteration 0, the subnetworks will be `initial_num_layers` deep.
+            Subnetworks at subsequent iterations will be at least as deep.
+          learn_mixture_weights: Whether to solve a learning problem to find the
+            best mixture weights, or use their default value according to the
+            mixture weight type. When `False`, the subnetworks will return a no_op
+            for the mixture weight train op.
+          dropout: The dropout rate, between 0 and 1. E.g. "rate=0.1" would drop out
+            10% of input units.
+          seed: A random seed.
+          nb_nn_candidate : number of NN candidates generated for each iteration.
+        Returns:
+          An instance of `Generator`.
+
+        Raises:
+          ValueError: If feature_columns is empty.
+          ValueError: If layer_size < 1.
+          ValueError: If initial_num_layers < 0.
+        """
+        feature_columns = dict_adanet_config['adanet_feature_columns']
+        layer_size = dict_adanet_config['adanet_nn_layer_config']['nn_dense_unit_size']
+        #layer_size = dict_adanet_config['adanet_layer_size']
+        initial_num_layers = dict_adanet_config['adanet_initial_num_layers']
+        dict_nn_layer_config = dict_adanet_config['adanet_nn_layer_config']
+        
+        if not feature_columns:
+          raise ValueError("feature_columns must not be empty")
+
+        if layer_size < 1:
+          raise ValueError("layer_size must be >= 1")
+
+        if initial_num_layers < 0:
+          raise ValueError("initial_num_layers must be >= 0")
+        
+        nn_type      = dict_nn_layer_config['nn_type']
+        nn_candidate = dict_adanet_config['adanet_nn_candidate']
+        
+        self._initial_num_layers = initial_num_layers
+        self._nn_type = nn_type
+        self._nb_nn_candidate = nn_candidate 
+        self._dict_adanet_config = dict_adanet_config.copy()
+        self._nn_builder_fn = functools.partial(_NNAdaNetBuilder,dict_adanet_config)
+  
+
+        print("*** INFO : MyGenerator : instantiation DONE!")
+    #---------------------------------------------------------------------------
+
+    #---------------------------------------------------------------------------
+    # 
+    #---------------------------------------------------------------------------
+    def generate_candidates(self, previous_ensemble, iteration_number,
+                              previous_ensemble_reports, all_reports):
+            """See `adanet.subnetwork.Generator`.
+
+            Generates 2 NN, the second one having one layer more then the fisrt one
+            and the first NN having the same number of layers then the previous NN.
+            """
+            #-------------------------------------------------------------------
+            # Candidates are instantiated
+            # First one has 0 layer.
+            # Number of layers is incremented from perevious subnetwork ensemble, 
+            # if exists.
+            # Oherwise, number of layers is the number of initial layer.
+            #-------------------------------------------------------------------
+            print("\n*** +++ generate_candidates() : Initial Layer(s)= {}\n".format(self._initial_num_layers))
+            print("\n*** +++ generate_candidates() : previous_ensemble= {}\n".format(previous_ensemble))
+            if previous_ensemble:
+                num_layers = tf.contrib.util.constant_value(
+                previous_ensemble.weighted_subnetworks[-1].subnetwork
+                .persisted_tensors[self._nn_type])
+            else : 
+                num_layers = self._initial_num_layers
+                self._start_time = time.time()
+                print("\n*** +++ generate_candidates() : Layer(s) (1)= {}\n".format(num_layers))
+            
+            if False :
+                list_nn_candidate = [self._nn_builder_fn(num_layers=num_layers+new_layer) \
+                                     for new_layer in range(0, self._nb_nn_candidate)]
+                return list_nn_candidate
+            else :
+                print("\n*** +++ generate_candidates() : Layer(s) (2)= {}\n".format(num_layers))
+                # Returns a list of instanciated classes that implement 
+                # subnetworks candidates.
+                # self._cnn_convlayer  = num_layers + 1
+                dict_adanet_config = self._dict_adanet_config.copy()
+                dict_adanet_config['adanet_num_layers']= num_layers
+                dict_adanet_config_p = dict_adanet_config.copy()
+                dict_adanet_config_p['adanet_num_layers']= num_layers+1
+                return [
+                    self._nn_builder_fn(num_layers=num_layers),
+                    self._nn_builder_fn(num_layers=num_layers + 1),]
+#-------------------------------------------------------------------------------    
 
 
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-class MyGenerator(adanet.subnetwork.Generator):
+class MyGenerator_deprecated(adanet.subnetwork.Generator):
     """Generates a two NN subnetworks at each iteration.
 
     The first NN has an identical shape to the most recently added subnetwork
@@ -775,3 +945,4 @@ def get_tf_head(feature_key, tuple_dimension, nClasses) :
 #-------------------------------------------------------------------------------
 
   
+
