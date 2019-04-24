@@ -1,8 +1,11 @@
+'''This is a global configuration file for parameters involved into ADANET 
+networks.
+'''
 import tensorflow as tf
 import p8_util
 
 TRAIN_STEPS = 50
-BATCH_SIZE = 200  #@param {type:"integer"}
+BATCH_SIZE = 200  
 MAX_STEPS = 50
 NUM_EPOCHS = 20
 
