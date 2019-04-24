@@ -194,7 +194,26 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             print("\n*** ERROR : activation function name= {} Unknown!".format(conv_activation_name))
         return conv_activation_fn
     #---------------------------------------------------------------------------
-
+    
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def nn_layertype_alternate(self) :
+        conv_layer = 0
+        dense_layer = 0
+        if self._cnn_convlayer == 0 : 
+            conv_layer = self._cnn_convlayer
+            dense_layer = self._cnn_denselayer
+        else :
+            if self._cnn_convlayer %2 == 0 : 
+                conv_layer = self._cnn_convlayer
+                dense_layer = 0
+            else :
+                conv_layer = 0
+                dense_layer = self._cnn_denselayer
+        return conv_layer, dense_layer
+    #---------------------------------------------------------------------------
+        
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
@@ -215,6 +234,12 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         
         layer_initializer = self._get_layer_initializer()
         conv_activation_fn = self._get_conv_activation_fn(conv_activation_name)
+        
+        #-----------------------------------------------------------------------                
+        # Build alternatively conv and dense layers 
+        #----------------------------------------------------------------------- 
+        cnn_conv_layer  = 0   
+        conv_layer, dense_layer = self.nn_layertype_alternate()        
         
         #-----------------------------------------------------------------------                
         # Convolutional Layers
@@ -306,6 +331,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             last_layer = tf.layers.dense(inputs=last_layer
             , units=self._cnn_layersize
             , activation=tf.nn.relu, kernel_initializer=layer_initializer())
+            
             last_layer = tf.layers.dropout(inputs=last_layer
             , rate=self._dropout, training=is_training)
 
@@ -373,25 +399,18 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         
         #print("\n\n*** build_subnetwork() : features shape= {}".format(features['images'].shape))
         print("\n\n*** build_subnetwork() : NN type= {}".format(self._nn_type))
-        
+
         if self._nn_type == 'DNN' :
             last_layer, logits \
             = self._build_dnn_subnetwork(input_layer, features\
             , logits_dimension, training)
             complexity = tf.sqrt(tf.to_float(self._num_layers))
             
-        elif self._nn_type == 'CNN' :
+        elif self._nn_type == 'CNN' or self._nn_type == 'CNNBase' :
             last_layer, logits \
             = self._build_cnn_subnetwork(input_layer, features\
             , logits_dimension, training)
             complexity = tf.sqrt(tf.to_float(self._cnn_convlayer))
-
-        elif self._nn_type == 'CNNBase' :
-            last_layer, logits \
-            = self._build_cnn_baseline_subnetwork(input_layer, features\
-            , logits_dimension, training)
-            complexity = tf.sqrt(tf.to_float(self._cnn_convlayer))
-
             
         else :
             print("\n*** ERROR : NN type={} no yet supported!".format(self._nn_type))
@@ -400,7 +419,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         # Approximate the Rademacher complexity of this subnetwork as the square-
         # root of its depth.
         with tf.name_scope(""):
-            summary.scalar("complexity", complexity)
+            if complexity is not None :
+                summary.scalar("Complexity", complexity)
             summary.scalar("num_layers", self._num_layers)
             summary.scalar("cnn_num_layers", self._cnn_convlayer)
 
@@ -416,7 +436,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             last_layer=last_layer,
             logits=logits,
             complexity=complexity,
-            persisted_tensors=persisted_tensors)
+            shared=persisted_tensors)
+            #persisted_tensors=persisted_tensors)
 
     def build_subnetwork_train_op(self, subnetwork, loss, var_list, labels,
                                 iteration_step, summary, previous_ensemble):

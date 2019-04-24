@@ -4,10 +4,17 @@ networks.
 import tensorflow as tf
 import p8_util
 
-TRAIN_STEPS = 50
-BATCH_SIZE = 200  
-MAX_STEPS = 50
-NUM_EPOCHS = 20
+#-------------------------------------------------------------------------------
+# They are 414 data 
+# Batch size is 138
+# Then there is 414/138 = 3 steps for covering all data.
+# Then 1  EPOCH contains 3 steps.
+# If NUM EPOCH is 20, then data will be processed 20 times, each time within 3 steps.
+#-------------------------------------------------------------------------------
+TRAIN_STEPS = 9
+BATCH_SIZE = 138
+NUM_EPOCHS = 1
+MAX_STEPS = NUM_EPOCHS*TRAIN_STEPS
 
 
 
@@ -17,18 +24,21 @@ LEARNING_RATE = 1.e-4
 #NN_TYPE = 'CNN'
 NN_TYPE = 'CNNBase'
 nb_class = 3
-DENSE_UNIT_SIZE = 20
-NN_NUM_LAYERS   = 3
+DENSE_UNIT_SIZE = 10
 
-CONV_NUM_LAYERS  = NN_NUM_LAYERS 
-DENSE_NUM_LAYERS = 2
+CONV_NUM_LAYERS  = 2
+DENSE_NUM_LAYERS = 1
+IS_BATCH_NORM = True
 
 DROPOUT_RATE = 0.0
-CONV_KERNEL_SIZE=(5,5)
+CONV_KERNEL_SIZE=(3,3)
 CONV_FILTERS = 32
 CONV_STRIDES =1
 CONV_PADDING_NAME ='same'
 CONV_ACTIVATION_NAME = 'relu'
+
+NN_NUM_LAYERS   = DENSE_NUM_LAYERS+CONV_NUM_LAYERS
+
 
 SEED=p8_util.RANDOM_SEED
 INITIALIZER_NAME = 'xavier'
@@ -39,10 +49,18 @@ OPTIMIZER=tf.train.RMSPropOptimizer(learning_rate=LEARNING_RATE)
 ADANET_INITIAL_NUM_LAYERS = 0
 ADANET_NN_CANDIDATE = 2
 ADANET_LAMBDA = 0.02
-ADANET_TRAIN_STEPS_PER_CANDIDATE = MAX_STEPS  #@param {type:"integer"}
-ADANET_ITERATIONS = 2  #@param {type:"integer"}
-ADANET_MAX_ITERATION_STEPS=ADANET_TRAIN_STEPS_PER_CANDIDATE//ADANET_ITERATIONS
+ADANET_TRAIN_STEPS_PER_CANDIDATE = TRAIN_STEPS  #@param {type:"integer"}
+ADANET_ITERATIONS = 3  #@param {type:"integer"}
 
+#-------------------------------------------------------------------------------
+# Every ADANET_TRAIN_STEPS_PER_CANDIDATE then a new candidate will be generated
+# Max number of ADANET iterations is 30//3 = 3
+# Then AdaNet will build 3 subnetwoks :
+# Step 1 : 1 Dense layer (Linear)
+# Step 2 : 1 Conv layer + 1 Dense layer 
+# Step 3 : 2 Conv layers + 1 dense layer
+#-------------------------------------------------------------------------------
+ADANET_MAX_ITERATION_STEPS=MAX_STEPS//ADANET_ITERATIONS
 
 #optimizer = tf.keras.optimizers.SGD(lr=LEARNING_RATE)
 #optimizer = tf.train.AdagradOptimizer(learning_rate=LEARNING_RATE)
@@ -55,7 +73,7 @@ is_learn_mixture_weights = False
 #---------------------------------------------------
 # Hyper parameters for CNN network
 #---------------------------------------------------
-dict_cnn_layer_config={ 'feature_map_size':[128,]
+dict_cnn_layer_config={ 'feature_map_size':[64,]
                       ,'conv_kernel_size':CONV_KERNEL_SIZE
                       ,'conv_layer_num':CONV_NUM_LAYERS
                       ,'conv_filters' : CONV_FILTERS
@@ -69,7 +87,7 @@ dict_cnn_layer_config={ 'feature_map_size':[128,]
 #---------------------------------------------------
 dict_nn_layer_config = {  'nn_type':NN_TYPE
                         , 'nn_dropout_rate': DROPOUT_RATE
-                        , 'nn_batch_norm' : False
+                        , 'nn_batch_norm' : IS_BATCH_NORM
                         , 'nn_dense_layer_num' : DENSE_NUM_LAYERS
                         , 'nn_dense_unit_size':DENSE_UNIT_SIZE
                         , 'nn_logit_dimension':nb_class
