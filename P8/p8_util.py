@@ -54,6 +54,8 @@ def my_model_fn( features, labels, mode, params ):
     # Get from parameters object that is used form Adanet to build NN sub-networks.
     #-----------------------------------------------------------------------------
     net_builder = params['net_builder']
+    nn_type = params['nn_type']
+    
     feature_columns = net_builder.feature_columns
     logits_dimension = net_builder.nb_class
     input_layer = tf.feature_column.input_layer(features=features, feature_columns=feature_columns)
@@ -74,13 +76,17 @@ def my_model_fn( features, labels, mode, params ):
     if mode == tf.estimator.ModeKeys.TRAIN :
         optimizer = net_builder.optimizer
         train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
-        tf.summary.scalar('train_accuracy', accuracy[1])
+        #tf.summary.scalar('train_accuracy', accuracy[1])
+        tf.summary.scalar(nn_type+'_Train_accuracy', accuracy[1])
+        tf.summary.scalar(nn_type+'_Train_loss', loss)
         return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
 
     elif mode ==  tf.estimator.ModeKeys.EVAL :
         # Compute accuracy from tf metrics package. It compares thruth values (labels) against
         # predicted one (predicted_classes)
-        metrics = {'eval_accuracy': accuracy}
+        tf.summary.scalar(nn_type+'_Eval_accuracy', accuracy[1])
+        tf.summary.scalar(nn_type+'_Eval_loss', loss)
+        metrics = {nn_type+'_Eval_accuracy': accuracy}
         return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics)
         
     elif mode == tf.estimator.ModeKeys.PREDICT:

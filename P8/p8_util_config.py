@@ -11,33 +11,51 @@ import p8_util
 # Then 1  EPOCH contains 3 steps.
 # If NUM EPOCH is 20, then data will be processed 20 times, each time within 3 steps.
 #-------------------------------------------------------------------------------
-TRAIN_STEPS = 9
-BATCH_SIZE = 138
-NUM_EPOCHS = 1
-MAX_STEPS = NUM_EPOCHS*TRAIN_STEPS
+NUM_EPOCHS = 6
+TRAIN_STEPS = 1000
+BATCH_SIZE = 138//4
+MAX_STEPS = TRAIN_STEPS
 
 
 
 
 
 LEARNING_RATE = 1.e-4
-#NN_TYPE = 'CNN'
-NN_TYPE = 'CNNBase'
+NN_TYPE = 'CNN'
+#NN_TYPE = 'CNNBase'
+#NN_TYPE = 'DNN'
 nb_class = 3
 DENSE_UNIT_SIZE = 10
 
-CONV_NUM_LAYERS  = 2
-DENSE_NUM_LAYERS = 1
-IS_BATCH_NORM = True
+#-------------------------------------------------------------------------------
+# When None, then dense layer will growth with number of layers 
+# provided from NNGenerator
+# Otherwise, CNN is built at each Adanet iteration with same number of dense 
+#layers.
+#-------------------------------------------------------------------------------
+#DENSE_NUM_LAYERS = 1
+DENSE_NUM_LAYERS = None
+#-------------------------------------------------------------------------------
 
+IS_BATCH_NORM = True
 DROPOUT_RATE = 0.0
-CONV_KERNEL_SIZE=(3,3)
+
+#-------------------------------------------------------------------------------
+# When CONV_NUM_LAYERS value is None, then conv. layers will growth with number 
+# of layers provided from NNGenerator.
+# Otherwise, CNN is built at each Adanet iteration with same number of conv. layers.
+#-------------------------------------------------------------------------------
+#CONV_NUM_LAYERS  = None
+CONV_NUM_LAYERS  = 3
+#-------------------------------------------------------------------------------
+
+CONV_KERNEL_SIZE=(5,5)
 CONV_FILTERS = 32
 CONV_STRIDES =1
 CONV_PADDING_NAME ='same'
 CONV_ACTIVATION_NAME = 'relu'
 
-NN_NUM_LAYERS   = DENSE_NUM_LAYERS+CONV_NUM_LAYERS
+#NN_NUM_LAYERS   = DENSE_NUM_LAYERS+CONV_NUM_LAYERS
 
 
 SEED=p8_util.RANDOM_SEED
@@ -48,9 +66,9 @@ OPTIMIZER=tf.train.RMSPropOptimizer(learning_rate=LEARNING_RATE)
 
 ADANET_INITIAL_NUM_LAYERS = 0
 ADANET_NN_CANDIDATE = 2
-ADANET_LAMBDA = 0.02
+ADANET_LAMBDA = 0.005
 ADANET_TRAIN_STEPS_PER_CANDIDATE = TRAIN_STEPS  #@param {type:"integer"}
-ADANET_ITERATIONS = 3  #@param {type:"integer"}
+ADANET_ITERATIONS = 5  #@param {type:"integer"}
 
 #-------------------------------------------------------------------------------
 # Every ADANET_TRAIN_STEPS_PER_CANDIDATE then a new candidate will be generated
@@ -60,7 +78,7 @@ ADANET_ITERATIONS = 3  #@param {type:"integer"}
 # Step 2 : 1 Conv layer + 1 Dense layer 
 # Step 3 : 2 Conv layers + 1 dense layer
 #-------------------------------------------------------------------------------
-ADANET_MAX_ITERATION_STEPS=MAX_STEPS//ADANET_ITERATIONS
+ADANET_MAX_ITERATION_STEPS=TRAIN_STEPS//ADANET_ITERATIONS
 
 #optimizer = tf.keras.optimizers.SGD(lr=LEARNING_RATE)
 #optimizer = tf.train.AdagradOptimizer(learning_rate=LEARNING_RATE)

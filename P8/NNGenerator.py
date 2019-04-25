@@ -102,14 +102,9 @@ class NNGenerator(adanet.subnetwork.Generator):
             #print("\n*** +++ generate_candidates() : Initial Layer(s)= {}\n".format(self._initial_num_layers))
             #print("\n*** +++ generate_candidates() : previous_ensemble= {}\n".format(previous_ensemble))
             if previous_ensemble:
-                if False :
-                    num_layers = tf.contrib.util.constant_value(
-                    previous_ensemble.weighted_subnetworks[-1].subnetwork
-                    .persisted_tensors[self._nn_type])
-                else : 
-                    num_layers = tf.contrib.util.constant_value(
-                    previous_ensemble.weighted_subnetworks[-1].subnetwork
-                    .shared[self._nn_type])
+                num_layers = tf.contrib.util.constant_value(
+                previous_ensemble.weighted_subnetworks[-1].subnetwork
+                .shared[self._nn_type])
                 
             else : 
                 num_layers = self._initial_num_layers
@@ -121,14 +116,9 @@ class NNGenerator(adanet.subnetwork.Generator):
                                      for new_layer in range(0, self._nb_nn_candidate)]
                 return list_nn_candidate
             else :
-                #print("\n*** +++ generate_candidates() : Layer(s) (2)= {}\n".format(num_layers))
                 # Returns a list of instanciated classes that implement 
                 # subnetworks candidates.
-                # self._cnn_convlayer  = num_layers + 1
-                dict_adanet_config = self._dict_adanet_config.copy()
-                dict_adanet_config['adanet_num_layers']= num_layers
-                dict_adanet_config_p = dict_adanet_config.copy()
-                dict_adanet_config_p['adanet_num_layers']= num_layers+1
+                print("\n*** NNGenerator : layers= ({},{})".format(num_layers, num_layers+1))
                 return [
                     self._nn_builder_fn(num_layers=num_layers),
                     self._nn_builder_fn(num_layers=num_layers + 1),]
