@@ -12,7 +12,7 @@ import p8_util
 # If NUM EPOCH is 20, then data will be processed 20 times, each time within 3 steps.
 #-------------------------------------------------------------------------------
 NUM_EPOCHS = 6
-TRAIN_STEPS = 1000
+TRAIN_STEPS = 200
 BATCH_SIZE = 138//4
 MAX_STEPS = TRAIN_STEPS
 
@@ -20,7 +20,7 @@ MAX_STEPS = TRAIN_STEPS
 
 
 
-LEARNING_RATE = 1.e-4
+LEARNING_RATE = 5.e-4
 NN_TYPE = 'CNN'
 #NN_TYPE = 'CNNBase'
 #NN_TYPE = 'DNN'
@@ -46,7 +46,7 @@ DROPOUT_RATE = 0.0
 # Otherwise, CNN is built at each Adanet iteration with same number of conv. layers.
 #-------------------------------------------------------------------------------
 #CONV_NUM_LAYERS  = None
-CONV_NUM_LAYERS  = 3
+CONV_NUM_LAYERS  = 0
 #-------------------------------------------------------------------------------
 
 CONV_KERNEL_SIZE=(5,5)
@@ -64,11 +64,11 @@ INITIALIZER_NAME = 'xavier'
 
 OPTIMIZER=tf.train.RMSPropOptimizer(learning_rate=LEARNING_RATE)
 
-ADANET_INITIAL_NUM_LAYERS = 0
+ADANET_INITIAL_NUM_LAYERS = 1
 ADANET_NN_CANDIDATE = 2
-ADANET_LAMBDA = 0.005
+ADANET_LAMBDA = 0.05
 ADANET_TRAIN_STEPS_PER_CANDIDATE = TRAIN_STEPS  #@param {type:"integer"}
-ADANET_ITERATIONS = 5  #@param {type:"integer"}
+ADANET_ITERATIONS = 20  #@param {type:"integer"}
 
 #-------------------------------------------------------------------------------
 # Every ADANET_TRAIN_STEPS_PER_CANDIDATE then a new candidate will be generated

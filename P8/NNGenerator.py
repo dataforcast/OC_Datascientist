@@ -109,7 +109,6 @@ class NNGenerator(adanet.subnetwork.Generator):
             else : 
                 num_layers = self._initial_num_layers
                 self._start_time = time.time()
-                #print("\n*** +++ generate_candidates() : Layer(s) (1)= {}\n".format(num_layers))
             
             if False :
                 list_nn_candidate = [self._nn_builder_fn(num_layers=num_layers+new_layer) \

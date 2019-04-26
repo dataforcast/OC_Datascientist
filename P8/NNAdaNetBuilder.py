@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 import adanet
 
@@ -471,8 +472,13 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             if self._nn_type == 'CNN' or self._nn_type == 'CNNBase':
                 summary.scalar("Conv_layers", tf.constant(self._cnn_convlayer))
                 summary.scalar("Dense_layers", tf.constant(self._num_layers))
-                        
-
+        if type(self._num_layers) is np.ndarray:                 
+            print("\n*** persisted_tensors= {},{},{},{} ".format(self._nn_type, type(self._num_layers), self._num_layers.shape, self.name))
+            self._num_layers = int(self.name.split('_')[0])
+            persisted_tensors = {self._nn_type: tf.constant(self._num_layers)}
+        
+        #print("\n*** persisted_tensors= {},{},{}".format(self._nn_type, self._num_layers, type(self._num_layers)))
+        #print("\n*** Iteration step= {}".format(iteration_step))
         return adanet.Subnetwork(
             last_layer=last_layer,
             logits=logits,

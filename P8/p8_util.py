@@ -142,8 +142,8 @@ def make_config(model_name, output_dir=None, is_restored=False):
     else :
         pass    
     return tf.estimator.RunConfig(
-        save_checkpoints_steps=5,
-        save_summary_steps=5,
+        save_checkpoints_steps=10,
+        save_summary_steps=10,
         tf_random_seed=RANDOM_SEED,
         model_dir=outdir)
 #-------------------------------------------------------------------------------
