@@ -1,5 +1,7 @@
 import numpy as np
 import tensorflow as tf
+from tensorflow.contrib import rnn
+
 import adanet
 
 #-------------------------------------------------------------------------------
@@ -93,6 +95,9 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             
             # Batch normaization activation
             self._is_cnn_batch_norm = self._is_nn_batch_norm
+        elif self._nn_type == 'RNN' :
+            dict_rnn_layer_config = dict_nn_layer_config['nn_layer_config']
+            self._dict_rnn_layer_config = dict_rnn_layer_config
         else : 
             pass
 
@@ -142,6 +147,15 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         print("Padding              : ............................ {}".format(self._dict_cnn_layer_config['conv_padding_name']))
         print("Activation function  : ............................ {}".format(self._dict_cnn_layer_config['conv_activation_name']))
 
+    #----------------------------------------------------------------------------
+    #
+    #----------------------------------------------------------------------------
+    def show_rnn(self) :
+        print('\n') 
+        print("Hidden units         : ............................ {}".format(self._dict_rnn_layer_config['rnn_hidden_units']))
+        print("Stacked cells        : ............................ {}".format(self._dict_rnn_layer_config['rnn_layer_num']))
+        print("Time steps           : ............................ {}".format(self._dict_rnn_layer_config['rnn_timesteps']))
+        print("Activation function  : ............................ {}".format(self._dict_cnn_layer_config['rnn_activation_name']))
 
     
     #----------------------------------------------------------------------------
@@ -159,6 +173,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         print("Batch normalization  : ............................ {}".format(self._is_nn_batch_norm))
         if self._nn_type == 'CNNBase' or self._nn_type == 'CNN' :
             self.show_cnn()
+        elif self._nn_type == 'RNN' or self._nn_type == 'GRU'  or self._nn_type == 'LSTM':
+            self.show_rnn()
     #----------------------------------------------------------------------------
         
     #----------------------------------------------------------------------------
@@ -205,7 +221,10 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     def _get_layer_initializer(self) :
         if self._layer_initializer_name == 'xavier' :
             layer_initializer = tf.contrib.layers.xavier_initializer
+        elif self._layer_initializer_name == 'truncated_normal' :
+            layer_initializer = tf.truncated_normal_initializer(stddev=0.01)
         else : 
+            print("\*** WARN : default initializer defined : HE NORMAL")
             layer_initializer = tf.keras.initializers.he_normal
         return layer_initializer
     #---------------------------------------------------------------------------
@@ -266,7 +285,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         # Build alternatively conv and dense layers 
         #----------------------------------------------------------------------- 
         cnn_conv_layer  = 0   
-        conv_layer, dense_layer = self.nn_layertype_alternate()        
+        #conv_layer, dense_layer = self.nn_layertype_alternate()        
         
         #-----------------------------------------------------------------------                
         # Convolutional Layers
@@ -315,6 +334,54 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         return last_layer,logits
     #---------------------------------------------------------------------------
         
+    #---------------------------------------------------------------------------
+    #
+    #---------------------------------------------------------------------------
+    def _build_rnn_subnetwork(self, input_layer, features\
+    , logits_dimension, is_training, nn_type='RNN') :
+    
+        last_layer = input_layer
+        logits = None        
+
+        layer_initializer = self._get_layer_initializer()
+        num_hidden_units = self._dict_rnn_layer_config['rnn_hidden_units']
+        
+        # They are weights output 
+        shape=[num_hidden_units, logits_dimension]
+        weight = tf.get_variable('W', dtype=tf.float32, shape=shape\
+        , initializer=layer_initializer)
+        
+        # They are bias output 
+        bias = tf.get_variable('b',
+                   dtype=tf.float32,
+                   initializer=tf.constant(0., shape=[logits_dimension], dtype=tf.float32))
+        
+        timesteps = self._dict_rnn_layer_config['rnn_timesteps']
+        
+        #print(last_layer.shape, type(last_layer))
+        last_layer = tf.reshape(last_layer, [-1,224,224*3])   
+        #print(last_layer.shape, type(last_layer))
+        list_layer = tf.unstack(last_layer, 224, 1)
+        #print(len(last_layer), type(last_layer))
+        
+        # Define a rnn cell with tensorflow
+        if 'RNN' == nn_type :
+            rnn_cell = tf.keras.layers.SimpleRNNCell(num_hidden_units)
+        elif 'GRU' == nn_type :
+            rnn_cell = tf.keras.layers.GRUCell(num_hidden)
+        else :
+            print("\n*** ERROR : Recurrent Network type= {} NOT YET SUPPORTED!".format(nn_type))
+            return None, None
+
+        # Get cell output
+        # If no initial_state is provided, dtype must be specified
+        # If no initial cell state is provided, they will be initialized to zero
+        output, last_layer = rnn.static_rnn(rnn_cell, list_layer, dtype=tf.float32)
+        
+        logits =tf.matmul(output[-1], weight) + bias
+        # Linear activation, using rnn inner loop last output
+        return last_layer,logits
+    #---------------------------------------------------------------------------
 
     #---------------------------------------------------------------------------
     #
@@ -425,7 +492,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                                     , feature_columns=self._feature_columns)
         
         #print("\n\n*** build_subnetwork() : features shape= {}".format(features['images'].shape))
-        print("\n\n*** build_subnetwork() : NN type= {}".format(self._nn_type))
+        print("\n\n*** build_subnetwork() : NN type= {} / Input layer shape= {}".format(self._nn_type, input_layer.shape))
 
         if self._nn_type == 'DNN' :
             last_layer, logits \
@@ -474,7 +541,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                 summary.scalar("Dense_layers", tf.constant(self._num_layers))
         if type(self._num_layers) is np.ndarray:                 
             print("\n*** persisted_tensors= {},{},{},{} ".format(self._nn_type, type(self._num_layers), self._num_layers.shape, self.name))
-            self._num_layers = int(self.name.split('_')[0])
+            self._num_layers = int(self.name.split('_')[2])
             persisted_tensors = {self._nn_type: tf.constant(self._num_layers)}
         
         #print("\n*** persisted_tensors= {},{},{}".format(self._nn_type, self._num_layers, type(self._num_layers)))

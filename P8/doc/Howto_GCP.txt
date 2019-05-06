@@ -35,26 +35,47 @@ Si le repertoire de montage n'existe aps :
 
 Montage du bucket sur le point d'acces : mount-bucket-p8-adanet
     gcsfuse bucket-p8-adanet ./mount-bucket-p8-adanet
+    
+Lien utilisé par le notebook pour acceder aux données du bucket
+---------------------------------------------------------------
+    mkdir notebooks;
+    ln -s ../mount-bucket-p8-adanet/ data;
 
-
+Librairies IA
+-------------
 
 Jupyter Notebook
 ----------------
 
 
 Pour installer l'environnment virtuel Python 3
-    sudo apt-get install python3-distutils
+    sudo apt-get install python3-distutils virtualenv
     virtualenv --python python3 env
-
+        
+        
 Pour lancer l'environnement virutel Python 3 :    
     source env/bin/activate
+    sudo pip install numpy sklearn tensorflow keras matplotlib pandas nltk
+    sudo apt install jupyter-core
 
-Installer le noyau python 3 : 
-    conda create -n ipykernel_py3 python=3 ipykernel
+Pour installer jupyter notebook
+    Voir le site :    
+        https://jupyter.readthedocs.io/en/latest/install.html
+
+Activer l'environnement virtuel python 3 avec le kernel jupyter 3.0: 
+    source env/bin/activate ipykernel_py3
+    
+    Installer adanet (pas de commande sudo prealable):
+        pip install adanet
+#Installer le noyau python 3 : 
+#    conda create -n ipykernel_py3 python=3 ipykernel
         
-Lancer le noyau python 3 : 
-    conda activate ipykernel_py3
+#Lancer le noyau python 3 : 
+#    conda activate ipykernel_py3
 
+
+# Lancement de l'environnment virtuel :
+source env/bin/activate;
 
 Un fois l'environnement virtuel lancé :
     jupyter notebook --ip=0.0.0.0 --port=5555 --no-browser
@@ -77,3 +98,44 @@ Pour purger les ressources disque datalab et detruire datalab :
 conda create -n ipykernel_py3 python=3 ipykernel
 source activate ipykernel_py3
 python -m ipykernel install --user
+
+
+
+
+Tensorboard
+-----------
+Dans la console de GCP, activer une regle de FW permettant l'ouverture du port 6006 : 
+cd notebooks;
+tensorboard --logdir=./tmp/adanet --port=6006;
+
+Dans le navigatgeur : 
+http://gcp:6006
+
+BIG QUERY
+---------
+L'API correspondante doit être activée. C'est le cas pour de nouveaux projets créés.
+
+Installation du package adequate :
+    pip install --upgrade google-cloud-bigquery[pandas]
+
+Definir un nom de projet
+Le nom de projet n'est pas exactement celui du projet GCP.
+Il est construit a partir du nom GCP.
+Pour indentifier ce nom, aller a la page : 
+    https://bigquery.cloud.google.com/table/bigquery-public-data:hacker_news.stories?tab=details
+        Sous le champ texte 'Filter by ID or label', le nom du projet GCP apparaît.
+        En passant le pointeur sur ce nom, le nom complet du projet apparaît, ici : 
+            p8-adanet-237013
+                
+
+Authentification
+Il est necessaire de s'authentifier aupres de l'API google cloud.
+Pour ce faire, definir un compte de service a parir des instructions du 
+paragraphe "Configurer un environnement Jupyter local" depuis 
+https://cloud.google.com/bigquery/docs/visualize-jupyter?hl=fr
+
+Une fois fait, lancer dans une fenêtre du notebook jupyter : 
+%load_ext google.cloud.bigquery
+
+
+
