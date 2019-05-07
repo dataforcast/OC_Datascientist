@@ -13,7 +13,7 @@ import p8_util
 # If NUM EPOCH is 20, then data will be processed 20 times, each time within 3 steps.
 #-------------------------------------------------------------------------------
 NUM_EPOCHS = 6
-TRAIN_STEPS = 600
+TRAIN_STEPS = 200
 BATCH_SIZE = 138//4
 MAX_STEPS = TRAIN_STEPS
 
@@ -73,11 +73,11 @@ OPTIMIZER=tf.train.RMSPropOptimizer(learning_rate=LEARNING_RATE)
 #-------------------------------------------------------------------------------
 # RNN Network
 #-------------------------------------------------------------------------------
-RNN_ACTIVATION_NAME = 'relu'
+RNN_ACTIVATION_NAME = None
 RNN_HIDDEN_UNITS = 128 
 RNN_NUM_LAYERS = 1
 RNN_TIMESTEPS = 224 
-if NN_TYPE == 'RNN' :
+if NN_TYPE == 'RNN' or NN_TYPE == 'GRU' or NN_TYPE == 'LSTM':
     OPTIMIZER=tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
     INITIALIZER_NAME = 'truncated_normal'
 
@@ -120,7 +120,6 @@ is_learn_mixture_weights = False
 #---------------------------------------------------
 dict_rnn_layer_config={ 'rnn_layer_num':RNN_NUM_LAYERS
                        ,'rnn_hidden_units' : RNN_HIDDEN_UNITS
-                       ,'rnn_activation_name' : RNN_ACTIVATION_NAME
                        ,'rnn_timesteps' : RNN_TIMESTEPS
                     }
 
@@ -150,7 +149,7 @@ dict_nn_layer_config = {  'nn_type':NN_TYPE
                         , 'nn_initializer_name' : INITIALIZER_NAME
                         , 'nn_layer_config':dict_cnn_layer_config
                        }
-if NN_TYPE == 'RNN' :
+if NN_TYPE == 'RNN' or NN_TYPE == 'GRU' or NN_TYPE=='LSTM':
     dict_nn_layer_config['nn_layer_config'] = dict_rnn_layer_config
 
 #---------------------------------------------------

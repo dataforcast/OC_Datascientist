@@ -95,9 +95,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             
             # Batch normaization activation
             self._is_cnn_batch_norm = self._is_nn_batch_norm
-        elif self._nn_type == 'RNN' :
-            dict_rnn_layer_config = dict_nn_layer_config['nn_layer_config']
-            self._dict_rnn_layer_config = dict_rnn_layer_config
+        elif self._nn_type == 'RNN' or self._nn_type == 'GRU' or self._nn_type == 'LSTM':
+            self._dict_rnn_layer_config = dict_nn_layer_config['nn_layer_config'].copy()
         else : 
             pass
 
@@ -155,8 +154,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         print("Hidden units         : ............................ {}".format(self._dict_rnn_layer_config['rnn_hidden_units']))
         print("Stacked cells        : ............................ {}".format(self._dict_rnn_layer_config['rnn_layer_num']))
         print("Time steps           : ............................ {}".format(self._dict_rnn_layer_config['rnn_timesteps']))
-        print("Activation function  : ............................ {}".format(self._dict_cnn_layer_config['rnn_activation_name']))
-
+    #----------------------------------------------------------------------------
     
     #----------------------------------------------------------------------------
     #
@@ -368,7 +366,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         if 'RNN' == nn_type :
             rnn_cell = tf.keras.layers.SimpleRNNCell(num_hidden_units)
         elif 'GRU' == nn_type :
-            rnn_cell = tf.keras.layers.GRUCell(num_hidden)
+            rnn_cell = tf.keras.layers.GRUCell(num_hidden_units)
         else :
             print("\n*** ERROR : Recurrent Network type= {} NOT YET SUPPORTED!".format(nn_type))
             return None, None
