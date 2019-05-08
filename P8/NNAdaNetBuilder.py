@@ -95,7 +95,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             
             # Batch normaization activation
             self._is_cnn_batch_norm = self._is_nn_batch_norm
-        elif self._nn_type == 'RNN' or self._nn_type == 'GRU' or self._nn_type == 'LSTM':
+        elif self._nn_type == 'RNN' or self._nn_type == 'GRU' \
+            or self._nn_type == 'LSTM' or self._nn_type == 'SGRU':
             self._dict_rnn_layer_config = dict_nn_layer_config['nn_layer_config'].copy()
         else : 
             pass
@@ -171,7 +172,9 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         print("Batch normalization  : ............................ {}".format(self._is_nn_batch_norm))
         if self._nn_type == 'CNNBase' or self._nn_type == 'CNN' :
             self.show_cnn()
-        elif self._nn_type == 'RNN' or self._nn_type == 'GRU'  or self._nn_type == 'LSTM':
+        elif self._nn_type == 'RNN' or self._nn_type == 'GRU' \
+            or self._nn_type == 'LSTM' \
+            or self._nn_type == 'SGRU':
             self.show_rnn()
     #----------------------------------------------------------------------------
         
@@ -367,6 +370,19 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             rnn_cell = tf.keras.layers.SimpleRNNCell(num_hidden_units)
         elif 'GRU' == nn_type :
             rnn_cell = tf.keras.layers.GRUCell(num_hidden_units)
+        elif 'SGRU' == nn_type :
+            stacked_cell_number = self._dict_rnn_layer_config['rnn_layer_num']
+            
+            #-------------------------------------------------------------------
+            # All cells to be stacked have same number of units
+            #-------------------------------------------------------------------
+            list_stacked_cell = [num_hidden_units for _ in range(0,stacked_cell_number)]
+            
+            #-------------------------------------------------------------------
+            # Cells are stacked
+            #-------------------------------------------------------------------
+            list_rnn_cell = [tf.contrib.rnn.GRUCell(num_units=n) for n in list_stacked_cell]            
+            rnn_cell = tf.contrib.rnn.MultiRNNCell(list_rnn_cell)
         else :
             print("\n*** ERROR : Recurrent Network type= {} NOT YET SUPPORTED!".format(nn_type))
             return None, None
@@ -375,7 +391,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         # If no initial_state is provided, dtype must be specified
         # If no initial cell state is provided, they will be initialized to zero
         output, last_layer = rnn.static_rnn(rnn_cell, list_layer, dtype=tf.float32)
-        
+        print("\n*** _build_rnn_subnetwork() : output[-1]= {} / Weight= {}"\
+        .format(output[-1], weight))
         logits =tf.matmul(output[-1], weight) + bias
         # Linear activation, using rnn inner loop last output
         return last_layer,logits

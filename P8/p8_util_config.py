@@ -24,6 +24,7 @@ NN_TYPE = 'RNN'
 NN_TYPE = 'CNNBase'
 NN_TYPE = 'RNN'
 NN_TYPE = 'GRU'
+NN_TYPE = 'SGRU'
 NB_CLASS = 3
 DENSE_UNIT_SIZE = 10
 
@@ -75,9 +76,9 @@ OPTIMIZER=tf.train.RMSPropOptimizer(learning_rate=LEARNING_RATE)
 #-------------------------------------------------------------------------------
 RNN_ACTIVATION_NAME = None
 RNN_HIDDEN_UNITS = 128 
-RNN_NUM_LAYERS = 1
+RNN_NUM_LAYERS = 2
 RNN_TIMESTEPS = 224 
-if NN_TYPE == 'RNN' or NN_TYPE == 'GRU' or NN_TYPE == 'LSTM':
+if NN_TYPE == 'RNN' or NN_TYPE == 'GRU' or NN_TYPE == 'LSTM' or NN_TYPE == 'SGRU':
     OPTIMIZER=tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
     INITIALIZER_NAME = 'truncated_normal'
 
@@ -149,7 +150,7 @@ dict_nn_layer_config = {  'nn_type':NN_TYPE
                         , 'nn_initializer_name' : INITIALIZER_NAME
                         , 'nn_layer_config':dict_cnn_layer_config
                        }
-if NN_TYPE == 'RNN' or NN_TYPE == 'GRU' or NN_TYPE=='LSTM':
+if NN_TYPE == 'RNN' or NN_TYPE == 'GRU' or NN_TYPE=='LSTM' or NN_TYPE=='SGRU':
     dict_nn_layer_config['nn_layer_config'] = dict_rnn_layer_config
 
 #---------------------------------------------------
