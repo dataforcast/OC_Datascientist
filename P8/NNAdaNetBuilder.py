@@ -95,8 +95,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             
             # Batch normaization activation
             self._is_cnn_batch_norm = self._is_nn_batch_norm
-        elif self._nn_type == 'RNN' or self._nn_type == 'GRU' \
-            or self._nn_type == 'LSTM' or self._nn_type == 'SGRU':
+        elif self._nn_type == 'RNN' :
             self._dict_rnn_layer_config = dict_nn_layer_config['nn_layer_config'].copy()
         else : 
             pass
@@ -152,6 +151,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     #----------------------------------------------------------------------------
     def show_rnn(self) :
         print('\n') 
+        print("Cell type            : ............................ {}".format(self._dict_rnn_layer_config['rnn_cell_type']))
         print("Hidden units         : ............................ {}".format(self._dict_rnn_layer_config['rnn_hidden_units']))
         print("Stacked cells        : ............................ {}".format(self._dict_rnn_layer_config['rnn_layer_num']))
         print("Time steps           : ............................ {}".format(self._dict_rnn_layer_config['rnn_timesteps']))
@@ -172,9 +172,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         print("Batch normalization  : ............................ {}".format(self._is_nn_batch_norm))
         if self._nn_type == 'CNNBase' or self._nn_type == 'CNN' :
             self.show_cnn()
-        elif self._nn_type == 'RNN' or self._nn_type == 'GRU' \
-            or self._nn_type == 'LSTM' \
-            or self._nn_type == 'SGRU':
+        elif self._nn_type == 'RNN':
             self.show_rnn()
     #----------------------------------------------------------------------------
         
@@ -339,7 +337,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     #
     #---------------------------------------------------------------------------
     def _build_rnn_subnetwork(self, input_layer, features\
-    , logits_dimension, is_training, nn_type='RNN') :
+    , logits_dimension, is_training,rnn_cell_type='RNN') :
     
         last_layer = input_layer
         logits = None        
@@ -366,11 +364,11 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         #print(len(last_layer), type(last_layer))
         
         # Define a rnn cell with tensorflow
-        if 'RNN' == nn_type :
+        if 'RNN' == rnn_cell_type :
             rnn_cell = tf.keras.layers.SimpleRNNCell(num_hidden_units)
-        elif 'GRU' == nn_type :
+        elif 'GRU' == rnn_cell_type :
             rnn_cell = tf.keras.layers.GRUCell(num_hidden_units)
-        elif 'SGRU' == nn_type :
+        elif 'SGRU' == rnn_cell_type :
             stacked_cell_number = self._dict_rnn_layer_config['rnn_layer_num']
             
             #-------------------------------------------------------------------
@@ -384,15 +382,16 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             list_rnn_cell = [tf.contrib.rnn.GRUCell(num_units=n) for n in list_stacked_cell]            
             rnn_cell = tf.contrib.rnn.MultiRNNCell(list_rnn_cell)
         else :
-            print("\n*** ERROR : Recurrent Network type= {} NOT YET SUPPORTED!".format(nn_type))
+            print("\n*** ERROR : Recurrent Network type= {} NOT YET SUPPORTED!"\
+            .format(rnn_cell_type))
             return None, None
 
         # Get cell output
         # If no initial_state is provided, dtype must be specified
         # If no initial cell state is provided, they will be initialized to zero
         output, last_layer = rnn.static_rnn(rnn_cell, list_layer, dtype=tf.float32)
-        print("\n*** _build_rnn_subnetwork() : output[-1]= {} / Weight= {}"\
-        .format(output[-1], weight))
+        #print("\n*** _build_rnn_subnetwork() : output[-1]= {} / Weight= {}"\
+        #.format(output[-1], weight))
         logits =tf.matmul(output[-1], weight) + bias
         # Linear activation, using rnn inner loop last output
         return last_layer,logits

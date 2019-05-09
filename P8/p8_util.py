@@ -97,87 +97,130 @@ def my_model_fn( features, labels, mode, params ):
     input_layer = tf.feature_column.input_layer(features=features, feature_columns=feature_columns)
     is_training = False
 
-    print("\n*** my_model_fn() : input_layer shape= {} / Labels shape= {}"\
-    .format(input_layer.shape, labels.shape))
+    with tf.name_scope(nn_type):
+        print("\n*** my_model_fn() : input_layer shape= {} / Labels shape= {}"\
+        .format(input_layer.shape, labels.shape))
 
-    if mode == tf.estimator.ModeKeys.TRAIN :
-        is_training = True
+        if mode == tf.estimator.ModeKeys.TRAIN :
+            is_training = True
 
-    if nn_type == 'CNN' or  nn_type == 'CNNBase' :
-        _, logits = net_builder._build_cnn_subnetwork(input_layer, features\
-                                                               , logits_dimension, is_training)
-    elif nn_type == 'RNN' or nn_type == 'GRU' or nn_type == 'SGRU': 
-        _, logits = net_builder._build_rnn_subnetwork(input_layer, features\
-                                                    , logits_dimension\
-                                                    , is_training\
-                                                    , nn_type=nn_type)
+        #-----------------------------------------------------------------------
+        # Predictions are computed for a batch
+        #-----------------------------------------------------------------------
+        if nn_type == 'CNN' or  nn_type == 'CNNBase' :
+            _, logits = net_builder._build_cnn_subnetwork(input_layer, features\
+                                                        , logits_dimension\
+                                                        , is_training)
+        elif nn_type == 'RNN' : 
+            rnn_cell_type = params['rnn_cell_type']
+            _, logits = net_builder._build_rnn_subnetwork(input_layer, features\
+                                                        , logits_dimension\
+                                                        , is_training\
+                                                        , rnn_cell_type = rnn_cell_type)
 
-    # Returns the index from logits for which logits has the maximum value.
-    
-    print("\n*** my_model_fn() : logits shape= {} / labels shape= {}"\
-    .format(logits.shape, labels.shape))
-
-    is_accuracy_with_tf = True
-    if is_accuracy_with_tf :
-        accuracy = tf.metrics.accuracy(labels=tf.argmax(labels,1)\
-                                    , predictions=tf.argmax(logits,1)\
-                                    , name='accuracy')
-    else :
-        # predicted_classes is a vector of indexes containing largest value in 
-        # output_logitstimesteps, num_inputtimesteps, num_inputtimesteps, 
-        # num_inputtimesteps, num_input
-        predicted_classes = tf.argmax(logits, 1)
+        # Returns the index from logits for which logits has the maximum value.
         
-        print("\n*** my_model_fn() : predicted_classes= {}".format(predicted_classes))
-        print("\n*** my_model_fn() : predicted_classes shape= {}".format(predicted_classes.shape))
+        print("\n*** my_model_fn() : logits shape= {} / labels shape= {}"\
+        .format(logits.shape, labels.shape))
 
-        # y_true is a vector of indexes containing largest value in y
-        y_true = tf.argmax(labels, 1)
+        #-----------------------------------------------------------------------
+        # Accuracy is computed
+        #-----------------------------------------------------------------------
+        is_accuracy_with_tf = True
+        
+        if False :
+            if is_accuracy_with_tf :
+                accuracy_op = tf.metrics.accuracy(labels=tf.argmax(labels,1)\
+                                            , predictions=tf.argmax(logits,1)\
+                                            , name='accuracy')
+            else :
+                # predicted_classes is a vector of indexes containing largest value in 
+                # output_logitstimesteps, num_inputtimesteps, num_inputtimesteps, 
+                # num_inputtimesteps, num_input
+                predicted_classes = tf.argmax(logits, 1)
+                
+                print("\n*** my_model_fn() : predicted_classes= {}".format(predicted_classes))
+                print("\n*** my_model_fn() : predicted_classes shape= {}".format(predicted_classes.shape))
 
-        # A new node is inserted into graph : correct_prediction
-        # Following will result as an array of boolean values; True if indexes matches, False otherwise.
-        correct_prediction = tf.equal(predicted_classes, y_true, name='correct_pred')
+                # y_true is a vector of indexes containing largest value in y
+                y_true = tf.argmax(labels, 1)
 
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='train_accuracy')                                       
-    #print("\n*** INFO : accuracy= {}".format(accuracy))
+                # A new node is inserted into graph : correct_prediction
+                # Following will result as an array of boolean values; True if indexes matches, False otherwise.
+                correct_prediction = tf.equal(predicted_classes, y_true, name='correct_pred')
 
-    if False :
-        loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
-    else :
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=labels))
+                accuracy_op = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='train_accuracy')                                       
 
-    if mode == tf.estimator.ModeKeys.TRAIN :
-        optimizer = net_builder.optimizer
-        train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
-        #tf.summary.scalar('train_accuracy', accuracy[1])
-        if is_accuracy_with_tf :
-            tf.summary.scalar(nn_type+'_Train_accuracy', accuracy[1])
-        else : 
-            tf.summary.scalar(nn_type+'_Train_accuracy', accuracy)
-        tf.summary.scalar(nn_type+'_Train_loss', loss)
-        return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
 
-    elif mode ==  tf.estimator.ModeKeys.EVAL :
-        # Compute accuracy from tf metrics package. It compares thruth values (labels) against
-        # predicted one (predicted_classes)
-        if is_accuracy_with_tf :
-            tf.summary.scalar(nn_type+'_Eval_accuracy', accuracy[1])
+        #-----------------------------------------------------------------------
+        # Loss is computed
+        #-----------------------------------------------------------------------
+        with tf.name_scope('Loss'):
+            if False :
+                loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
+            else :
+                loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=labels))
+            tf.summary.scalar('Loss', loss)
+
+        if mode == tf.estimator.ModeKeys.TRAIN :
+            with tf.name_scope('Train'):
+                #---------------------------------------------------------------
+                # Gradient descent is computed 
+                #---------------------------------------------------------------
+                optimizer = net_builder.optimizer
+                train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
+                if False :
+                    #tf.summary.scalar('train_accuracy', accuracy[1])
+                    if is_accuracy_with_tf :
+                        accuracy = train_op[1]
+                    else : 
+                        accuracy = train_op
+                    tf.summary.scalar('Accuracy', accuracy)
+            return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
+
+        elif mode ==  tf.estimator.ModeKeys.EVAL :
+            with tf.name_scope('Eval'):
+                # Compute accuracy from tf metrics package. It compares true values (labels) against
+                # predicted one (predicted_classes)
+                accuracy_op = tf.metrics.accuracy(labels=tf.argmax(labels,1)\
+                            , predictions=tf.argmax(logits,1)\
+                            , name='eval_accuracy')
+
+                if is_accuracy_with_tf :
+                    accuracy = accuracy_op[1]
+                else :  
+                    tf.summary.scalar(nn_type+'_Eval_accuracy', accuracy)
+
+                predicted_classes = tf.argmax(logits, 1)
+                
+
+                # y_true is a vector of indexes containing largest value in y
+                y_true = tf.argmax(labels, 1)
+                
+                if True :
+                    acc, acc_op = tf.metrics.accuracy(y_true, predicted_classes)
+                else :
+
+                    # A new node is inserted into graph : correct_prediction
+                    # Following will result as an array of boolean values; True if indexes matches, False otherwise.
+                    correct_prediction = tf.equal(predicted_classes, y_true, name='correct_pred')
+
+                    accuracy_op = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='eval_accuracy')                                       
+                metrics = {nn_type+'_Eval_accuracy': (acc, acc_op)}
+
+                
+            return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics)
+            
+        elif mode == tf.estimator.ModeKeys.PREDICT:
+            predictions = {
+                'class_ids': predicted_classes[:, tf.newaxis],
+                'probabilities': tf.nn.softmax(logits),
+                'logits': logits,
+            }
+            return tf.estimator.EstimatorSpec(mode, predictions=predictions)
         else :
-            tf.summary.scalar(nn_type+'_Eval_accuracy', accuracy)
-        tf.summary.scalar(nn_type+'_Eval_loss', loss)
-        metrics = {nn_type+'_Eval_accuracy': accuracy}
-        return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics)
-        
-    elif mode == tf.estimator.ModeKeys.PREDICT:
-        predictions = {
-            'class_ids': predicted_classes[:, tf.newaxis],
-            'probabilities': tf.nn.softmax(logits),
-            'logits': logits,
-        }
-        return tf.estimator.EstimatorSpec(mode, predictions=predictions)
-    else :
-        #print("\n*** ERROR : my_model_fn() : mode= {} is unknwoned!".format(mode))
-        pass
+            #print("\n*** ERROR : my_model_fn() : mode= {} is unknwoned!".format(mode))
+            pass
     return None
 #-------------------------------------------------------------------------------
 
@@ -213,6 +256,20 @@ def load_dataset(filename, dataset_type='P7') :
 
     if dataset_type == 'P7' :
         (x_train,x_test, y_train, y_test) = p5_util.object_load(filename)
+        
+        number = x_train.shape[0]
+        w = x_train.shape[1]
+        h = x_train.shape[2]
+        c = x_train.shape[3]
+        print(x_train.shape, x_test.shape, y_train.shape, y_test.shape)
+        x_train = x_train.reshape(x_train.shape[0],x_train.shape[1],-1)
+        x_test  = x_test.reshape(x_test.shape[0],x_test.shape[1],-1)
+        print(x_train.shape, x_test.shape, y_train.shape, y_test.shape)
+
+        x_train = np.transpose(x_train, [0,2,1])
+        x_test = np.transpose(x_test, [0,2,1])
+        print(x_train.shape, x_test.shape, y_train.shape, y_test.shape)
+        
         if False :
             #print("\n*** y_train= {} / y_test= {}".format(y_train.shape, y_test.shape))
             y_train=array_label_encode_from_index(y_train)
@@ -341,10 +398,7 @@ def generator(images, labels):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def input_fn(partition, x, y, num_epochs, batch_size=None\
-    , tuple_dimension=None\
-    , feature_shape = [224,224,3]\
-    ):
+def input_fn(partition, x, y, num_epochs, batch_size=None, feature_shape = [224,224,3]):
   """Generate an input_fn for the Estimator."""
 
   def _input_fn():
