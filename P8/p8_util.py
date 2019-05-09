@@ -52,7 +52,6 @@ def get_tf_head(feature_key, tuple_dimension, nClasses, nn_type='CNN') :
     else :
         channel = 1
 
-    #hidden_units=[w_size*h_size*channel, 512, nClasses]
     my_feature_columns = [tf.feature_column.numeric_column(FEATURES_KEY\
                                                     , shape=[w_size, h_size, channel])]
 

@@ -366,6 +366,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         # Define a rnn cell with tensorflow
         if 'RNN' == rnn_cell_type :
             rnn_cell = tf.keras.layers.SimpleRNNCell(num_hidden_units)
+        elif 'LSTM' == rnn_cell_type :
+            rnn_cell = tf.contrib.rnn.BasicLSTMCell(num_hidden_units)
         elif 'GRU' == rnn_cell_type :
             rnn_cell = tf.keras.layers.GRUCell(num_hidden_units)
         elif 'SGRU' == rnn_cell_type :
@@ -380,6 +382,32 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             # Cells are stacked
             #-------------------------------------------------------------------
             list_rnn_cell = [tf.contrib.rnn.GRUCell(num_units=n) for n in list_stacked_cell]            
+            rnn_cell = tf.contrib.rnn.MultiRNNCell(list_rnn_cell)
+        elif 'SLSTM' == rnn_cell_type :
+            stacked_cell_number = self._dict_rnn_layer_config['rnn_layer_num']
+            
+            #-------------------------------------------------------------------
+            # All cells to be stacked have same number of units
+            #-------------------------------------------------------------------
+            list_stacked_cell = [num_hidden_units for _ in range(0,stacked_cell_number)]
+            
+            #-------------------------------------------------------------------
+            # Cells are stacked
+            #-------------------------------------------------------------------
+            list_rnn_cell = [tf.contrib.rnn.LSTMCell(num_units=n) for n in list_stacked_cell]            
+            rnn_cell = tf.contrib.rnn.MultiRNNCell(list_rnn_cell)
+        elif 'SRNN' == rnn_cell_type :
+            stacked_cell_number = self._dict_rnn_layer_config['rnn_layer_num']
+            
+            #-------------------------------------------------------------------
+            # All cells to be stacked have same number of units
+            #-------------------------------------------------------------------
+            list_stacked_cell = [num_hidden_units for _ in range(0,stacked_cell_number)]
+            
+            #-------------------------------------------------------------------
+            # Cells are stacked
+            #-------------------------------------------------------------------
+            list_rnn_cell = [tf.keras.layers.SimpleRNNCell(num_units=n) for n in list_stacked_cell]            
             rnn_cell = tf.contrib.rnn.MultiRNNCell(list_rnn_cell)
         else :
             print("\n*** ERROR : Recurrent Network type= {} NOT YET SUPPORTED!"\
@@ -505,9 +533,13 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         = tf.feature_column.input_layer(features=features\
                                     , feature_columns=self._feature_columns)
         
-        #print("\n\n*** build_subnetwork() : features shape= {}".format(features['images'].shape))
-        print("\n\n*** build_subnetwork() : NN type= {} / Input layer shape= {}".format(self._nn_type, input_layer.shape))
+        print("\n\n*** build_subnetwork() : NN type= {} / Input layer shape= {}"\
+        .format(self._nn_type, input_layer.shape))
 
+        #-----------------------------------------------------------------------
+        # Default complexity value
+        #-----------------------------------------------------------------------
+        complexity = tf.sqrt(tf.to_float(self._num_layers))
         if self._nn_type == 'DNN' :
             last_layer, logits \
             = self._build_dnn_subnetwork(input_layer, features\
@@ -520,11 +552,18 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             , logits_dimension, training)
 
             #-------------------------------------------------------------------
-            # TBD : checking complexity considering Con layers and dense layers.
-            #-------------------------------------------------------------------
             # Approximate the Rademacher complexity of this subnetwork as the square-
-            # root of its depth.
+            # root of its depth; depth includes Conv layers as well as dense layers.
+            #-------------------------------------------------------------------
             complexity = tf.sqrt(tf.to_float(self._cnn_convlayer+self._cnn_denselayer))
+        elif self._nn_type == 'RNN' :
+            rnn_cell_type = self._dict_rnn_layer_config['rnn_cell_type']
+            last_layer, logits = self._build_rnn_subnetwork(  input_layer\
+                                                            , features\
+                                                            , logits_dimension\
+                                                            , training\
+                                                            , rnn_cell_type = rnn_cell_type)
+            print("\n***build_subnetwork() / RNN : logits shape= {}".format(logits.shape))
             
         else :
             print("\n*** ERROR : NN type={} no yet supported!".format(self._nn_type))
@@ -603,7 +642,15 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                 # No hidden layers is a linear model.
                 return "{}_linear".format(self._nn_type)
             else : 
-                return "{}_layer_{}".format(self._nn_type, num_layers)
+                if 'RNN' == self._nn_type :
+                    rnn_cell_type = self._dict_rnn_layer_config['rnn_cell_type']
+                    if rnn_cell_type == self._nn_type :
+                        nn_type = self._nn_type
+                    else :    
+                        nn_type = self._nn_type+'_'+str(rnn_cell_type)
+                else :
+                    nn_type = self._nn_type
+                return "{}_layer_{}".format(nn_type, num_layers)
         else :                 
             return "{}_layer_{}".format(self._nn_type, num_layers)
         #return f'cnn_{self._n_convs}'

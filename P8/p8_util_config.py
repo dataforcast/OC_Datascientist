@@ -29,6 +29,11 @@ RNN_CELL_TYPE =  'LSTM'
 RNN_CELL_TYPE = 'SLSTM'
 RNN_CELL_TYPE =  'GRU'
 RNN_CELL_TYPE = 'SGRU'
+
+
+NN_TYPE = 'RNN'
+RNN_CELL_TYPE = 'SGRU'
+
 DENSE_UNIT_SIZE = 10
 
 #-------------------------------------------------------------------------------
@@ -93,7 +98,10 @@ ADANET_NN_CANDIDATE = 2
 ADANET_LAMBDA = 0.005
 ADANET_TRAIN_STEPS_PER_CANDIDATE = TRAIN_STEPS  #@param {type:"integer"}
 ADANET_ITERATIONS = 10  #@param {type:"integer"}
-
+ADANET_IS_LEARN_MIXTURE_WEIGHTS = True
+if NN_TYPE == 'RNN' :
+    ADANET_INITIAL_NUM_LAYERS = 1
+    ADANET_IS_LEARN_MIXTURE_WEIGHTS = False
 #-------------------------------------------------------------------------------
 # Every ADANET_TRAIN_STEPS_PER_CANDIDATE then a new candidate will be generated
 # Max number of ADANET iterations is 30//3 = 3
@@ -163,7 +171,7 @@ if NN_TYPE == 'RNN' :
 dict_adanet_config = {  'adanet_feature_columns': feature_columns
                       , 'adanet_tf_head' : tf_head
                       , 'adanet_lambda' : ADANET_LAMBDA
-                      , 'adanet_is_learn_mixture_weights': True
+                      , 'adanet_is_learn_mixture_weights': ADANET_IS_LEARN_MIXTURE_WEIGHTS
                       , 'adanet_initial_num_layers': ADANET_INITIAL_NUM_LAYERS
                       , 'adanet_num_layers': None
                       , 'adanet_nn_candidate' : ADANET_NN_CANDIDATE
