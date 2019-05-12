@@ -1,8 +1,11 @@
+import os
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib import rnn
 
 import adanet
+
+import p8_util
 
 #-------------------------------------------------------------------------------
 # Estimator configuration.
@@ -22,9 +25,11 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
           An instance of `NNAdaNetBuilder`.
         """
                 
-        self._feature_columns = dict_adanet_config['adanet_feature_columns']
+        self._feature_shape =None# dict_adanet_config['adanet_feature_columns']
         self._learn_mixture_weights = dict_adanet_config['adanet_is_learn_mixture_weights']
-
+        self._adanet_lambda = dict_adanet_config['adanet_lambda']
+        self._output_dir = dict_adanet_config['adanet_output_dir']
+        self._classifier_config = None
         #---------------------------------------------------
         # Hyper parameters for NN Builder
         #---------------------------------------------------
@@ -97,6 +102,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             self._is_cnn_batch_norm = self._is_nn_batch_norm
         elif self._nn_type == 'RNN' :
             self._dict_rnn_layer_config = dict_nn_layer_config['nn_layer_config'].copy()
+        elif self._nn_type == 'DNN' :
+            self._dict_dnn_layer_config = dict_nn_layer_config['nn_layer_config'].copy()
         else : 
             pass
 
@@ -109,10 +116,24 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     #---------------------------------------------------------------------------
     #   Properties
     #---------------------------------------------------------------------------
+    def _get_feature_shape(self) :
+       return self._feature_shape
+       
+    def _set_feature_shape(self, feature_shape) :
+    
+        self._feature_shape = feature_shape
+        nb_class = self._nb_class
+        nn_type = self._nn_type
+        
+        feature_columns, loss_reduction, tf_head \
+        = p8_util.get_tf_head(feature_shape, nb_class, nn_type=nn_type, feature_shape=feature_shape)
+
+        self._feature_columns = feature_columns
+        
     def _get_feature_columns(self) :
        return self._feature_columns
     def _set_feature_columns(self, feature_columns) :
-        print("\n*** ERROR : assignement is forbidden for this parameter!")
+       print('\n*** ERROR :  \`feature_columns\` is not assignable!')
 
     def _get_nb_class(self) :
        return self._nb_class
@@ -124,14 +145,47 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     def _set_optimizer(self, optimizer) :
         print("\n*** ERROR : assignement is forbidden for this parameter!")
 
-    feature_columns = property(_get_feature_columns,_set_feature_columns)
+    def _get_output_dir(self) :
+       return self._output_dir
+    def _set_output_dir(self, output_dir) :
+        
+        #self._output_dir= output_dir+str('/')+str(self._nn_type)
+        self._output_dir = os.path.join(output_dir, self._nn_type)
+        if 'RNN' == self._nn_type :
+            dict_nn_layer_config= self._dict_rnn_layer_config
+            rnn_cell_type = dict_nn_layer_config['rnn_cell_type']
+            model_name = rnn_cell_type
+        else : 
+            model_name = self._nn_type
+        self._classifier_config = p8_util.make_config(model_name\
+                                        , output_dir=self._output_dir\
+                                        , is_restored=False)
+        
+        self._output_dir_log = os.path.join(self._output_dir, model_name)
+
+    def _get_classifier_config(self) :
+       return self._classifier_config
+    def _set_classifier_config(self, set_classifier_config) :
+        print("\n*** ERROR : assignement is forbidden for this parameter!")
+
+    def _get_output_dir_log(self) :
+       return self._output_dir_log
+    def _set_output_dir_log(self, output_dir_log) :
+        print("\n*** ERROR : assignement is forbidden for this parameter!")
+
+
+    output_dir_log = property(_get_output_dir_log,_set_output_dir_log)
+    output_dir = property(_get_output_dir,_set_output_dir)
+    classifier_config = property(_get_classifier_config,_set_classifier_config)
+    feature_shape = property(_get_feature_shape,_set_feature_shape)
     nb_class = property(_get_nb_class,_set_nb_class)
     optimizer = property(_get_optimizer, _set_optimizer)
+    feature_columns = property(_get_feature_columns, _set_feature_columns)
 
     #----------------------------------------------------------------------------
     #
     #----------------------------------------------------------------------------
-    def show_cnn(self) :
+    def _show_cnn(self) :
         print('\n')
         print("CNN seed             : ............................ {}".format(self._cnn_seed))
         print("Conv. Kernel size    : ............................ {}".format(self._conv_kernel_size))
@@ -149,12 +203,21 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     #----------------------------------------------------------------------------
     #
     #----------------------------------------------------------------------------
-    def show_rnn(self) :
+    def _show_rnn(self) :
         print('\n') 
         print("Cell type            : ............................ {}".format(self._dict_rnn_layer_config['rnn_cell_type']))
         print("Hidden units         : ............................ {}".format(self._dict_rnn_layer_config['rnn_hidden_units']))
         print("Stacked cells        : ............................ {}".format(self._dict_rnn_layer_config['rnn_layer_num']))
         print("Time steps           : ............................ {}".format(self._dict_rnn_layer_config['rnn_timesteps']))
+    #----------------------------------------------------------------------------
+
+    #----------------------------------------------------------------------------
+    #
+    #----------------------------------------------------------------------------
+    def _show_dnn(self) :
+        print('\n') 
+        print("Number of layers     : ............................ {}".format(self._dict_dnn_layer_config['dnn_layer_num']))
+        print("Hidden units         : ............................ {}".format(self._dict_dnn_layer_config['dnn_hidden_units']))
     #----------------------------------------------------------------------------
     
     #----------------------------------------------------------------------------
@@ -162,18 +225,26 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     #----------------------------------------------------------------------------
     def show(self) :
         print("\n")
+        print("Adanet outputdir     : ............................ {}".format(self._output_dir))
+        print("Adanet output log    : ............................ {}".format(self._output_dir_log))
         print("NN type              : ............................ {}".format(self._nn_type))
+        print("Features shape       : ............................ {}".format(self._feature_shape))
         print("Units in dense layer : ............................ {}".format(self._layer_size))
         print("Number of layers     : ............................ {}".format(self._num_layers))
         print("Dropout rate         : ............................ {}".format(self._dropout))
         print("Seed value           : ............................ {}".format(self._seed))
         print("Nb of classes (logit): ............................ {}".format(self._nb_class))
+        print("Adanet regularization: ............................ {}".format(self._adanet_lambda))
         print("Weights initializer  : ............................ {}".format(self._layer_initializer_name))
         print("Batch normalization  : ............................ {}".format(self._is_nn_batch_norm))
         if self._nn_type == 'CNNBase' or self._nn_type == 'CNN' :
-            self.show_cnn()
+            self._show_cnn()
         elif self._nn_type == 'RNN':
-            self.show_rnn()
+            self._show_rnn()
+        elif self._nn_type == 'DNN':
+            self._show_dnn()
+        else :
+            pass
     #----------------------------------------------------------------------------
         
     #----------------------------------------------------------------------------
@@ -182,8 +253,9 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     def _build_dnn_subnetwork(self, input_layer, features, logits_dimension, is_training) :
         last_layer = input_layer
 
-        
-        for i_ in range(self._num_layers):
+        dnn_layer_num = self._dict_dnn_layer_config['dnn_layer_num']
+        print("**** *** _build_dnn_subnetwork : Layers= {}\n".format(dnn_layer_num))
+        for i_ in range(dnn_layer_num):
             #print("\n**** *** _build_dnn_subnetwork : Layer= {} / Layers= {}".format(i_, self._num_layers))
             last_layer = tf.layers.dense(
                 last_layer,
@@ -194,11 +266,12 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             last_layer = tf.layers.dropout(
                 last_layer, rate=self._dropout, seed=self._seed, training=is_training)
         
-        print("**** *** _build_dnn_subnetwork : Layers= {}\n".format(self._num_layers))
         logits = tf.layers.dense(
             last_layer,
             units=logits_dimension,
             kernel_initializer=tf.glorot_uniform_initializer(seed=self._seed))
+            
+        
         
         
         
@@ -264,12 +337,11 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     #---------------------------------------------------------------------------
     def _build_cnn_baseline_subnetwork(self, input_layer, features
     , logits_dimension, is_training) :
-    
-        features_key = list(features.keys())[0]
-        w = features[features_key].shape[1]
-        h = features[features_key].shape[2]
-        c = features[features_key].shape[3]
+        
         last_layer = input_layer
+        
+        print("\n*** _build_cnn_baseline_subnetwork() : last_layer= {}".format(last_layer))
+        print("\n*** _build_cnn_baseline_subnetwork() : features[images]= {}".format(features['images']))
 
         tuple_conv_kernel_size = self._dict_cnn_layer_config['conv_kernel_size']
         conv_filters           = self._dict_cnn_layer_config['conv_filters']
@@ -290,7 +362,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         # Convolutional Layers
         #-----------------------------------------------------------------------                
         if self._cnn_convlayer > 0 : 
-            last_layer =  features['images']       
+            last_layer =  features['images']
+            last_layer = list(features.values())[0]
             for layer in range(self._cnn_convlayer) :     
                 last_layer = self._cnn_bacth_norm(last_layer, is_training)
                 last_layer = tf.layers.conv2d(last_layer
@@ -356,7 +429,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                    initializer=tf.constant(0., shape=[logits_dimension], dtype=tf.float32))
         
         timesteps = self._dict_rnn_layer_config['rnn_timesteps']
-        
+
+
         #print(last_layer.shape, type(last_layer))
         last_layer = tf.reshape(last_layer, [-1,224,224*3])   
         #print(last_layer.shape, type(last_layer))
@@ -422,6 +496,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         #.format(output[-1], weight))
         logits =tf.matmul(output[-1], weight) + bias
         # Linear activation, using rnn inner loop last output
+        last_layer = tf.layers.dense(logits, units=logits_dimension,
+            kernel_initializer=tf.glorot_uniform_initializer(seed=self._seed))
         return last_layer,logits
     #---------------------------------------------------------------------------
 
@@ -529,6 +605,11 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                        summary,
                        previous_ensemble=None):
         """See `adanet.subnetwork.Builder`."""
+        
+        #features = self._feature_columns
+        print("\n\n*** build_subnetwork() : features= {}".format(features))
+        print("\n\n*** build_subnetwork() : self._feature_columns= {}".format(self._feature_columns))
+        
         input_layer \
         = tf.feature_column.input_layer(features=features\
                                     , feature_columns=self._feature_columns)
@@ -592,13 +673,14 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             if self._nn_type == 'CNN' or self._nn_type == 'CNNBase':
                 summary.scalar("Conv_layers", tf.constant(self._cnn_convlayer))
                 summary.scalar("Dense_layers", tf.constant(self._num_layers))
-        if type(self._num_layers) is np.ndarray:                 
-            print("\n*** persisted_tensors= {},{},{},{} ".format(self._nn_type, type(self._num_layers), self._num_layers.shape, self.name))
-            self._num_layers = int(self.name.split('_')[2])
-            persisted_tensors = {self._nn_type: tf.constant(self._num_layers)}
+        if False :
+            if type(self._num_layers) is np.ndarray:                 
+                print("\n*** persisted_tensors= {},{},{},{} ".format(self._nn_type, type(self._num_layers), self._num_layers.shape, self.name))
+                self._num_layers = int(self.name.split('_')[2])
+                persisted_tensors = {self._nn_type: tf.constant(self._num_layers)}
         
         #print("\n*** persisted_tensors= {},{},{}".format(self._nn_type, self._num_layers, type(self._num_layers)))
-        #print("\n*** Iteration step= {}".format(iteration_step))
+        print("\n*** build_subnetwork() : last_layer= {}".format(last_layer))
         return adanet.Subnetwork(
             last_layer=last_layer,
             logits=logits,

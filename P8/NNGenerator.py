@@ -3,6 +3,8 @@ import tensorflow as tf
 import adanet
 
 import functools
+
+import p8_util_config
 import NNAdaNetBuilder
 from NNAdaNetBuilder import NNAdaNetBuilder
 
@@ -53,9 +55,12 @@ class NNGenerator(adanet.subnetwork.Generator):
           ValueError: If layer_size < 1.
           ValueError: If initial_num_layers < 0.
         """
+        
         feature_columns = dict_adanet_config['adanet_feature_columns']
+        
+        print("\n*** NNGenerator() : feature_columns= {}".format(feature_columns))
+        
         layer_size = dict_adanet_config['adanet_nn_layer_config']['nn_dense_unit_size']
-        #layer_size = dict_adanet_config['adanet_layer_size']
         initial_num_layers = dict_adanet_config['adanet_initial_num_layers']
         dict_nn_layer_config = dict_adanet_config['adanet_nn_layer_config']
         
@@ -118,8 +123,18 @@ class NNGenerator(adanet.subnetwork.Generator):
                 # Returns a list of instanciated classes that implement 
                 # subnetworks candidates.
                 print("\n*** NNGenerator : layers= ({},{})".format(num_layers, num_layers+1))
-                return [
-                    self._nn_builder_fn(num_layers=num_layers),
-                    self._nn_builder_fn(num_layers=num_layers + 1),]
+                if False :
+                    return [
+                        self._nn_builder_fn(num_layers=num_layers),
+                        self._nn_builder_fn(num_layers=num_layers + 1),]
+                else :
+                    adanet_feature_shape = p8_util_config.dict_adanet_config['adanet_feature_shape']
+                    nn1 = self._nn_builder_fn(num_layers=num_layers)
+                    nn1.feature_shape = adanet_feature_shape
+                    
+                    nn2 = self._nn_builder_fn(num_layers=num_layers + 1)
+                    nn2.feature_shape = adanet_feature_shape
+                    return [nn1, nn2]
+                
 #-------------------------------------------------------------------------------    
 
