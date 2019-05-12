@@ -55,6 +55,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         #---------------------------------------------------
         if self._nn_type == 'CNN' or self._nn_type == 'CNNBase':
             dict_cnn_layer_config = dict_nn_layer_config['nn_layer_config']
+            dict_cnn_layer_config['conv_layer_num'] = num_layers
             self._cnn_seed = self._seed
 
             self._conv_kernel_size = dict_cnn_layer_config['conv_kernel_size']
@@ -79,6 +80,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                 #---------------------------------------------------------------
                 self._cnn_convlayer = dict_cnn_layer_config['conv_layer_num']            
 
+            self._cnn_convlayer = dict_cnn_layer_config['conv_layer_num']            
             # Number of dense layers      
             if dict_nn_layer_config['nn_dense_layer_num'] is None :            
                 #---------------------------------------------------------------
@@ -101,8 +103,10 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             # Batch normaization activation
             self._is_cnn_batch_norm = self._is_nn_batch_norm
         elif self._nn_type == 'RNN' :
+            dict_nn_layer_config['nn_layer_config']['rnn_layer_num'] = num_layers
             self._dict_rnn_layer_config = dict_nn_layer_config['nn_layer_config'].copy()
         elif self._nn_type == 'DNN' :
+            dict_nn_layer_config['nn_layer_config']['dnn_layer_num'] = num_layers
             self._dict_dnn_layer_config = dict_nn_layer_config['nn_layer_config'].copy()
         else : 
             pass
@@ -149,7 +153,6 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
        return self._output_dir
     def _set_output_dir(self, output_dir) :
         
-        #self._output_dir= output_dir+str('/')+str(self._nn_type)
         self._output_dir = os.path.join(output_dir, self._nn_type)
         if 'RNN' == self._nn_type :
             dict_nn_layer_config= self._dict_rnn_layer_config
@@ -157,11 +160,11 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             model_name = rnn_cell_type
         else : 
             model_name = self._nn_type
-        self._classifier_config = p8_util.make_config(model_name\
+        self._classifier_config , self._output_dir_log= p8_util.make_config(model_name\
                                         , output_dir=self._output_dir\
                                         , is_restored=False)
         
-        self._output_dir_log = os.path.join(self._output_dir, model_name)
+        #self._output_dir_log = os.path.join(self._output_dir, model_name)
 
     def _get_classifier_config(self) :
        return self._classifier_config
@@ -194,7 +197,6 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         print("Units in conv. layers: ............................ {}".format(self._cnn_layersize))
         print("CNN bacth norm.      : ............................ {}".format(self._is_cnn_batch_norm))
         print("Features map size    : ............................ {}".format(self._dict_cnn_layer_config['feature_map_size']))
-        #print("Conv layers          : ............................ {}".format(self._dict_cnn_layer_config['conv_layer_num']))
         print("Conv filters         : ............................ {}".format(self._dict_cnn_layer_config['conv_filters']))
         print("Strides              : ............................ {}".format(self._dict_cnn_layer_config['conv_strides']))
         print("Padding              : ............................ {}".format(self._dict_cnn_layer_config['conv_padding_name']))
@@ -237,6 +239,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         print("Adanet regularization: ............................ {}".format(self._adanet_lambda))
         print("Weights initializer  : ............................ {}".format(self._layer_initializer_name))
         print("Batch normalization  : ............................ {}".format(self._is_nn_batch_norm))
+        print("Learn mixture weights: ............................ {}".format(self._learn_mixture_weights))
         if self._nn_type == 'CNNBase' or self._nn_type == 'CNN' :
             self._show_cnn()
         elif self._nn_type == 'RNN':

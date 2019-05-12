@@ -17,7 +17,7 @@ IS_LABEL_ENCODED = True # Labels are re-encoded from one shot encoding to
 # If NUM EPOCH is 20, then data will be processed 20 times, each time within 3 steps.
 #-------------------------------------------------------------------------------
 NUM_EPOCHS = 6
-TRAIN_STEPS = 50
+TRAIN_STEPS = 5
 BATCH_SIZE = 138//4
 MAX_STEPS = TRAIN_STEPS
 
@@ -35,7 +35,7 @@ RNN_CELL_TYPE =  'GRU'
 RNN_CELL_TYPE = 'SGRU'
 
 
-NN_TYPE = 'DNN'
+NN_TYPE = 'RNN'
 RNN_CELL_TYPE = 'SGRU'
 
 DENSE_UNIT_SIZE = 128
@@ -44,7 +44,7 @@ DENSE_UNIT_SIZE = 128
 # When None, then dense layer will growth with number of layers 
 # provided from NNGenerator
 # Otherwise, CNN is built at each Adanet iteration with same number of dense 
-#layers.
+# layers.
 #-------------------------------------------------------------------------------
 DENSE_NUM_LAYERS = 1
 #DENSE_NUM_LAYERS = None
@@ -60,8 +60,8 @@ DROPOUT_RATE = 0.0
 # layers.
 # For CNN baseline, value has to be >0 and NN type fixed to CNNBase.
 #-------------------------------------------------------------------------------
-#CONV_NUM_LAYERS  = None
-CONV_NUM_LAYERS  = 2
+CONV_NUM_LAYERS  = None
+#CONV_NUM_LAYERS  = 2
 #-------------------------------------------------------------------------------
 
 CONV_KERNEL_SIZE=(5,5)
@@ -147,6 +147,7 @@ dict_rnn_layer_config={ 'rnn_layer_num':RNN_NUM_LAYERS
                        ,'rnn_timesteps' : RNN_TIMESTEPS
                        ,'rnn_cell_type' : RNN_CELL_TYPE
                     }
+
 
 #---------------------------------------------------
 # Hyper parameters for CNN network

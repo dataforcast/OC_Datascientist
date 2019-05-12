@@ -42,6 +42,54 @@ FEATURES_KEY = 'images'
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
+def create_nn_builder(param_feature_shape, output_dir, layer_num=None):
+    '''Creates an NNAdaNetBuilder object from configuration defined into file 
+    p8_util_config.
+    This allows to show 
+    Input :
+        * param_feature_shape : shape of the features. This parameter is unknowned 
+        from configuration prior to dataset read.
+        * output_dir : Directory where logs are dumped.
+        * layer_num : number of layers used to build (deep) neural network. When 
+        None value, then value from confugration file is used to create 
+        NNAdaNetBuilder object. 
+        Otherwise, dictionaries from configuration file are updated with this value.
+        
+    Output :
+        * Object of type NNAdaNetBuilder
+    
+    '''
+    if layer_num is None :
+        if p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'CNN' :
+            layer_num = p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['conv_layer_num']
+        elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'RNN' :
+            layer_num = p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['rnn_layer_num']
+        elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'DNN' :
+            layer_num = p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['dnn_layer_num']
+    else :
+        pass
+
+    print("\n Number of convolutional layers= {}".format(layer_num))
+    oNNAdaNetBuilder = NNAdaNetBuilder.NNAdaNetBuilder(p8_util_config.dict_adanet_config, num_layers=layer_num)
+    oNNAdaNetBuilder.feature_shape = param_feature_shape
+    oNNAdaNetBuilder.output_dir = output_dir
+
+    #---------------------------------------------------------------------------
+    # Dictionaries from configuration file are updated with this number of layers.
+    #---------------------------------------------------------------------------
+    if p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'CNN' :
+        p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['conv_layer_num'] = layer_num
+    elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'RNN' :
+        p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['rnn_layer_num']=layer_num
+    elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'DNN' :
+        p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['dnn_layer_num']=layer_num
+
+    print("\nMax steps= {} / Number of EPOCH={}".format(p8_util_config.MAX_STEPS,p8_util_config.NUM_EPOCHS))
+    return oNNAdaNetBuilder
+        
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
 def get_tf_head(tuple_dimension, nClasses, nn_type='CNN', feature_shape=None) :
     #FEATURES_KEY = feature_key
     list_dimension = [dimension for dimension in tuple_dimension]
@@ -166,12 +214,11 @@ def my_model_fn( features, labels, mode, params ):
         #-----------------------------------------------------------------------
         # Loss is computed
         #-----------------------------------------------------------------------
+        if p8_util_config.IS_LABEL_ENCODED is True:
+            labels = tf.one_hot(labels, depth=3)
+            
         with tf.name_scope('Loss'):
-            if p8_util_config.IS_LABEL_ENCODED :
-                print(labels.shape, logits)
-                loss = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits))
-            else :
-                loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=labels))
+            loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=labels))
             tf.summary.scalar('Loss', loss)
 
         if mode == tf.estimator.ModeKeys.TRAIN :
@@ -181,8 +228,13 @@ def my_model_fn( features, labels, mode, params ):
                 #---------------------------------------------------------------
                 optimizer = net_builder.optimizer
                 train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
-                
-                
+                tf_label_arg_max = tf.argmax(labels,1)
+                accuracy, accuracy_op = tf.metrics.accuracy(labels=tf_label_arg_max\
+                            , predictions=tf.argmax(logits,1)\
+                            , name=nn_type+'Train_accuracy')
+                            
+                tf.summary.scalar(nn_type+'Train_Accuracy', accuracy)
+                #print("\n*** my_model_fn() : Accuracy= {}".format(accuracy_op, accuracy))
                 if False :
                     #tf.summary.scalar('train_accuracy', accuracy[1])
                     if is_accuracy_with_tf :
@@ -190,37 +242,41 @@ def my_model_fn( features, labels, mode, params ):
                     else : 
                         accuracy = train_op
                     tf.summary.scalar('Accuracy', accuracy)
+                
             return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
 
         elif mode ==  tf.estimator.ModeKeys.EVAL :
             with tf.name_scope('Eval'):
                 # Compute accuracy from tf metrics package. It compares true values (labels) against
                 # predicted one (predicted_classes)
-                accuracy_op = tf.metrics.accuracy(labels=tf.argmax(labels,1)\
+                accuracy, accuracy_op = tf.metrics.accuracy(labels=tf.argmax(labels,1)\
                             , predictions=tf.argmax(logits,1)\
-                            , name='eval_accuracy')
+                            , name=nn_type+'Eval_accuracy')
+                tf.summary.scalar(nn_type+'_Eval_accuracy', accuracy)
+                if False :
+                    if is_accuracy_with_tf :
+                        accuracy = accuracy_op[1]
+                    else :  
+                        tf.summary.scalar(nn_type+'_Eval_accuracy', accuracy)
 
-                if is_accuracy_with_tf :
-                    accuracy = accuracy_op[1]
-                else :  
-                    tf.summary.scalar(nn_type+'_Eval_accuracy', accuracy)
+                    predicted_classes = tf.argmax(logits, 1)
+                    
 
-                predicted_classes = tf.argmax(logits, 1)
-                
+                    # y_true is a vector of indexes containing largest value in y
+                    y_true = tf.argmax(labels, 1)
 
-                # y_true is a vector of indexes containing largest value in y
-                y_true = tf.argmax(labels, 1)
-                
-                if True :
-                    acc, acc_op = tf.metrics.accuracy(y_true, predicted_classes)
-                else :
+                    
+                    
+                    if True :
+                        acc, acc_op = tf.metrics.accuracy(y_true, predicted_classes)
+                    else :
 
-                    # A new node is inserted into graph : correct_prediction
-                    # Following will result as an array of boolean values; True if indexes matches, False otherwise.
-                    correct_prediction = tf.equal(predicted_classes, y_true, name='correct_pred')
+                        # A new node is inserted into graph : correct_prediction
+                        # Following will result as an array of boolean values; True if indexes matches, False otherwise.
+                        correct_prediction = tf.equal(predicted_classes, y_true, name='correct_pred')
 
-                    accuracy_op = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='eval_accuracy')                                       
-                metrics = {nn_type+'_Eval_accuracy': (acc, acc_op)}
+                        accuracy_op = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='eval_accuracy')                                       
+                metrics = {nn_type+'_Eval_accuracy': (accuracy, accuracy_op)}
 
                 
             return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics)
@@ -511,7 +567,6 @@ def input_fn(partition, x, y, input_fn_param):
     .format(feature_shape, label_shape))
     
     training=False
-    is_label_encoded = p8_util_config.IS_LABEL_ENCODED
     
     if False :
         dataset = tf.data.Dataset.from_generator(
@@ -564,7 +619,7 @@ def input_fn_deprecated(partition, x, y, num_epochs, batch_size=None, feature_sh
     .format(feature_shape, label_shape))
     
     training=False
-    is_label_encoded = p8_util_config.IS_LABEL_ENCODED
+
     if partition == "train":
         training = True
         dataset = tf.data.Dataset.from_generator(

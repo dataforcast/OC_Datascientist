@@ -80,8 +80,7 @@ class NNGenerator(adanet.subnetwork.Generator):
         self._nn_type = nn_type
         self._nb_nn_candidate = nn_candidate 
         self._dict_adanet_config = dict_adanet_config.copy()
-        self._nn_builder_fn = functools.partial(NNAdaNetBuilder\
-        ,dict_adanet_config)
+        self._nn_builder_fn = functools.partial(NNAdaNetBuilder, dict_adanet_config)
   
 
         print("*** INFO : MyGenerator : instantiation DONE!")
