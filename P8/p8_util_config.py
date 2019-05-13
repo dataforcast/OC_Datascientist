@@ -37,7 +37,7 @@ RNN_CELL_TYPE =  'GRU'
 RNN_CELL_TYPE = 'SGRU'
 
 
-NN_TYPE = 'CNN'
+NN_TYPE = 'RNN'
 RNN_CELL_TYPE = 'SGRU'
 
 DNN_HIDDEN_UNITS=128
@@ -98,7 +98,7 @@ if NN_TYPE == 'CNN' or NN_TYPE == 'CNNBase':
 # RNN Network
 #-------------------------------------------------------------------------------
 RNN_ACTIVATION_NAME = None
-RNN_HIDDEN_UNITS = 128//4
+RNN_HIDDEN_UNITS = 128//8
 RNN_NUM_LAYERS = 2
 RNN_TIMESTEPS = 224 
 if NN_TYPE == 'RNN' :
