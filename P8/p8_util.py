@@ -38,6 +38,8 @@ LOG_DIR = './tmp/models'
 
 _NUM_LAYERS_KEY = "num_layers"
 FEATURES_KEY = 'images'
+
+IS_DEBUG = p8_util_config.IS_DEBUG
     
 #-------------------------------------------------------------------------------
 #
@@ -84,7 +86,8 @@ def create_nn_builder(param_feature_shape, output_dir, layer_num=None):
     elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'DNN' :
         p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['dnn_layer_num']=layer_num
 
-    print("\nMax steps= {} / Number of EPOCH={}".format(p8_util_config.MAX_STEPS,p8_util_config.NUM_EPOCHS))
+    if IS_DEBUG is True :
+        print("\nMax steps= {} / Number of EPOCH={}".format(p8_util_config.MAX_STEPS,p8_util_config.NUM_EPOCHS))
     return oNNAdaNetBuilder
         
 #-------------------------------------------------------------------------------
@@ -104,10 +107,13 @@ def get_tf_head(tuple_dimension, nClasses, nn_type='CNN', feature_shape=None) :
         feature_shape = [w_size, h_size, channel]
     else :
         pass
-    print("\n*** get_tf_head() : feature shape= {}".format(feature_shape))
+
+    if IS_DEBUG is True :
+        print("\n*** get_tf_head() : feature shape= {}".format(feature_shape))
     my_feature_columns = [tf.feature_column.numeric_column(FEATURES_KEY\
                                                 , shape=feature_shape)]
-    print("\n*** get_tf_head() : feature columns= {}".format(my_feature_columns))
+    if IS_DEBUG is True :
+        print("\n*** get_tf_head() : feature columns= {}".format(my_feature_columns))
     # Some `Estimators` use feature columns for understanding their input features.
     # We will average the losses in each mini-batch when computing gradients.
     if nn_type == 'RNN' :
@@ -125,7 +131,7 @@ def get_tf_head(tuple_dimension, nClasses, nn_type='CNN', feature_shape=None) :
 #-------------------------------------------------------------------------------
 #   
 #-------------------------------------------------------------------------------
-def my_model_fn( features, labels, mode, params ): 
+def custom_model_fn( features, labels, mode, params ): 
     '''This function implements training, evaluation and prediction.
     It also implements the predictor model.
     It is designed in the context of a customized Estimator.
@@ -151,8 +157,9 @@ def my_model_fn( features, labels, mode, params ):
     is_training = False
 
     with tf.name_scope(nn_type):
-        print("\n*** my_model_fn() : input_layer shape= {} / Labels shape= {}"\
-        .format(input_layer.shape, labels.shape))
+        if IS_DEBUG is True :
+                print("\n*** custom_model_fn() : input_layer shape= {} / Labels shape= {}"\
+                .format(input_layer.shape, labels.shape))
 
         if mode == tf.estimator.ModeKeys.TRAIN :
             is_training = True
@@ -179,38 +186,12 @@ def my_model_fn( features, labels, mode, params ):
             return None
         # Returns the index from logits for which logits has the maximum value.
         
-        print("\n*** my_model_fn() : logits shape= {} / labels shape= {}"\
-        .format(logits.shape, labels.shape))
-
-        #-----------------------------------------------------------------------
-        # Accuracy is computed
-        #-----------------------------------------------------------------------
-        is_accuracy_with_tf = True
-        
-        if False :
-            if is_accuracy_with_tf :
-                accuracy_op = tf.metrics.accuracy(labels=tf.argmax(labels,1)\
-                                            , predictions=tf.argmax(logits,1)\
-                                            , name='accuracy')
-            else :
-                # predicted_classes is a vector of indexes containing largest value in 
-                # output_logitstimesteps, num_inputtimesteps, num_inputtimesteps, 
-                # num_inputtimesteps, num_input
-                predicted_classes = tf.argmax(logits, 1)
                 
-                print("\n*** my_model_fn() : predicted_classes= {}".format(predicted_classes))
-                print("\n*** my_model_fn() : predicted_classes shape= {}".format(predicted_classes.shape))
+        if IS_DEBUG is True :
+            print("\n*** custom_model_fn() : logits shape= {} / labels shape= {}"\
+            .format(logits.shape, labels.shape))
 
-                # y_true is a vector of indexes containing largest value in y
-                y_true = tf.argmax(labels, 1)
-
-                # A new node is inserted into graph : correct_prediction
-                # Following will result as an array of boolean values; True if indexes matches, False otherwise.
-                correct_prediction = tf.equal(predicted_classes, y_true, name='correct_pred')
-
-                accuracy_op = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='train_accuracy')                                       
-
-
+        
         #-----------------------------------------------------------------------
         # Loss is computed
         #-----------------------------------------------------------------------
@@ -228,22 +209,17 @@ def my_model_fn( features, labels, mode, params ):
                 #---------------------------------------------------------------
                 optimizer = net_builder.optimizer
                 train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
+                
+                #---------------------------------------------------------------
+                # Accuracy is computed
+                #---------------------------------------------------------------
                 tf_label_arg_max = tf.argmax(labels,1)
                 accuracy, accuracy_op = tf.metrics.accuracy(labels=tf_label_arg_max\
                             , predictions=tf.argmax(logits,1)\
                             , name=nn_type+'Train_accuracy')
                             
                 tf.summary.scalar(nn_type+'Train_Accuracy', accuracy)
-                #print("\n*** my_model_fn() : Accuracy= {}".format(accuracy_op, accuracy))
-                if False :
-                    #tf.summary.scalar('train_accuracy', accuracy[1])
-                    if is_accuracy_with_tf :
-                        accuracy = train_op[1]
-                    else : 
-                        accuracy = train_op
-                    tf.summary.scalar('Accuracy', accuracy)
-                
-            return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
+                return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
 
         elif mode ==  tf.estimator.ModeKeys.EVAL :
             with tf.name_scope('Eval'):
@@ -253,33 +229,10 @@ def my_model_fn( features, labels, mode, params ):
                             , predictions=tf.argmax(logits,1)\
                             , name=nn_type+'Eval_accuracy')
                 tf.summary.scalar(nn_type+'_Eval_accuracy', accuracy)
-                if False :
-                    if is_accuracy_with_tf :
-                        accuracy = accuracy_op[1]
-                    else :  
-                        tf.summary.scalar(nn_type+'_Eval_accuracy', accuracy)
-
-                    predicted_classes = tf.argmax(logits, 1)
-                    
-
-                    # y_true is a vector of indexes containing largest value in y
-                    y_true = tf.argmax(labels, 1)
-
-                    
-                    
-                    if True :
-                        acc, acc_op = tf.metrics.accuracy(y_true, predicted_classes)
-                    else :
-
-                        # A new node is inserted into graph : correct_prediction
-                        # Following will result as an array of boolean values; True if indexes matches, False otherwise.
-                        correct_prediction = tf.equal(predicted_classes, y_true, name='correct_pred')
-
-                        accuracy_op = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name='eval_accuracy')                                       
                 metrics = {nn_type+'_Eval_accuracy': (accuracy, accuracy_op)}
 
                 
-            return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics)
+                return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics)
             
         elif mode == tf.estimator.ModeKeys.PREDICT:
             predictions = {
@@ -289,7 +242,7 @@ def my_model_fn( features, labels, mode, params ):
             }
             return tf.estimator.EstimatorSpec(mode, predictions=predictions)
         else :
-            #print("\n*** ERROR : my_model_fn() : mode= {} is unknwoned!".format(mode))
+            print("\n*** ERROR : custom_model_fn() : mode= {} is unknwoned!".format(mode))
             pass
     return None
 #-------------------------------------------------------------------------------
@@ -391,10 +344,8 @@ def load_dataset(filename, dataset_type='P7', is_label_encoded=False) :
         print(x_train.shape, x_test.shape, y_train.shape, y_test.shape)
         
         if is_label_encoded :
-            #print("\n*** y_train= {} / y_test= {}".format(y_train.shape, y_test.shape))
             y_train=array_label_encode_from_index(y_train)
             y_test=array_label_encode_from_index(y_test)
-            #print("\n*** y_train= {}".format(y_train.shape))
             nClasses = max(len(np.unique(y_train)), len(np.unique(y_test)))
         else :
             nClasses = y_train.shape[1]
@@ -435,7 +386,8 @@ def make_config(model_name, output_dir=None, is_restored=False):
 
     outdir = os.path.join(output_dir, model_name)
     
-    print("\n*** make_config() : output dir= {}".format(outdir))
+    if IS_DEBUG is True :
+        print("\n*** make_config() : output dir= {}".format(outdir))
     
     if is_restored is False :
         shutil.rmtree(outdir, ignore_errors = True)
@@ -477,23 +429,24 @@ def array_label_encode_binary(y):
 # 
 #-------------------------------------------------------------------------------
 def preprocess_color_image(image, label):
-  """Preprocesses an image for an `Estimator`."""
-  print("\n*** preprocess_color_image() : label shape= {}".format(label.shape))
-  features = {FEATURES_KEY: image}
-  return features, label
+    """Preprocesses an image for an `Estimator`."""
+    if IS_DEBUG is True :
+        print("\n*** preprocess_color_image() : label shape= {}".format(label.shape))
+    
+    features = {FEATURES_KEY: image}
+    return features, label
 
 def preprocess_image(image, label):
-  """Preprocesses an image for an `Estimator`."""
-  # First let's scale the pixel values to be between 0 and 1.
+    """Preprocesses an image for an `Estimator`."""
+      
+    if IS_DEBUG is True :
+        print("\n*** preprocess_image() : image shape= {}".format(image.shape))
 
-  #image = image / 255.
-  # Next we reshape the image so that we can apply a 2D convolution to it.
-  print("\n*** preprocess_image() : image shape= {}".format(image.shape))
-  #image = tf.reshape(image, [224, 224, 3])
-  # Finally the features need to be supplied as a dictionary.
-  features = {FEATURES_KEY: image}
-  print("\n*** preprocess_image() : features= {} / label shape= {}".format(features, label.shape))
-  return features, label
+    features = {FEATURES_KEY: image}
+    
+    if IS_DEBUG is True :
+        print("\n*** preprocess_image() : features= {} / label shape= {}".format(features, label.shape))
+    return features, label
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -505,7 +458,9 @@ def generator(images, labels):
   def _gen():
     for image, label in zip(images, labels):
       yield image, label
-    print("\n*** generator() : labels shape= {} / label values= {}".format(labels.shape, labels[10]))
+
+    if IS_DEBUG is True :
+        print("\n*** generator() : labels shape= {} / label values= {}".format(labels.shape, labels[10]))
 
   return _gen
   
@@ -519,9 +474,6 @@ def generator_deprecated(images, labels):
     is_label_encoded = p8_util_config.IS_LABEL_ENCODED
     
     
-    #random_index = random.randint(0,len(labels))
-    #print("\n*** generator() : labels shape= {} / label values= {}".format(labels.shape, labels[random_index]))
-
     for image, label in zip(images, labels):
       #yield image, label
 
@@ -562,9 +514,10 @@ def input_fn(partition, x, y, input_fn_param):
     # Otherwise an error value may be raized such as 
     # ValueError: `generator` yielded an element of shape () where an element of shape (1,) was expected.
     #---------------------------------------------------------------------------
-
-    print("\n*** input_fn() : feature_shape= {} / label_shape= {}"\
-    .format(feature_shape, label_shape))
+    
+    if IS_DEBUG is True :
+        print("\n*** input_fn() : feature_shape= {} / label_shape= {}"\
+        .format(feature_shape, label_shape))
     
     training=False
     
@@ -580,7 +533,8 @@ def input_fn(partition, x, y, input_fn_param):
         training = True
         dataset = dataset.shuffle(10 * batch_size, seed=RANDOM_SEED).repeat(num_epochs)
     else:
-        print("\n*** input_fn : TEST / feature_shape= {}".format(feature_shape))
+        if IS_DEBUG is True :
+            print("\n*** input_fn : TEST / feature_shape= {}".format(feature_shape))
 
     # We call repeat after shuffling, rather than before, to prevent separate
     # epochs from blending together.
@@ -591,7 +545,8 @@ def input_fn(partition, x, y, input_fn_param):
     
     iterator = dataset.make_one_shot_iterator()
 
-    print("\n***_input_fn() : Label shape ={}".format(label_shape))
+    if IS_DEBUG is True :
+        print("\n***_input_fn() : Label shape ={}".format(label_shape))
 
     features, labels = iterator.get_next()
     
@@ -644,7 +599,6 @@ def input_fn_deprecated(partition, x, y, num_epochs, batch_size=None, feature_sh
 
     features, labels = iterator.get_next()
     
-    #print("\n***_input_fn() : Label={}".format(labels))
     return features, labels
 
   return _input_fn    

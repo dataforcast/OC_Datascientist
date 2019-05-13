@@ -60,15 +60,15 @@ class NNGenerator(adanet.subnetwork.Generator):
         
         print("\n*** NNGenerator() : feature_columns= {}".format(feature_columns))
         
-        layer_size = dict_adanet_config['adanet_nn_layer_config']['nn_dense_unit_size']
         initial_num_layers = dict_adanet_config['adanet_initial_num_layers']
         dict_nn_layer_config = dict_adanet_config['adanet_nn_layer_config']
         
         if not feature_columns:
           raise ValueError("feature_columns must not be empty")
-
-        if layer_size < 1:
-          raise ValueError("layer_size must be >= 1")
+        if False :
+            layer_size = dict_adanet_config['adanet_nn_layer_config']['nn_dense_unit_size']
+            if layer_size < 1:
+              raise ValueError("layer_size must be >= 1")
 
         if initial_num_layers < 0:
           raise ValueError("initial_num_layers must be >= 0")

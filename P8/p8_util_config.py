@@ -3,6 +3,8 @@ networks.
 '''
 import tensorflow as tf
 
+IS_DEBUG = False
+
 #-------------------------------------------------------------------------------
 # Dataset configuration
 #-------------------------------------------------------------------------------
@@ -17,7 +19,7 @@ IS_LABEL_ENCODED = True # Labels are re-encoded from one shot encoding to
 # If NUM EPOCH is 20, then data will be processed 20 times, each time within 3 steps.
 #-------------------------------------------------------------------------------
 NUM_EPOCHS = 6
-TRAIN_STEPS = 5
+TRAIN_STEPS = 4
 BATCH_SIZE = 138//4
 MAX_STEPS = TRAIN_STEPS
 
@@ -35,23 +37,23 @@ RNN_CELL_TYPE =  'GRU'
 RNN_CELL_TYPE = 'SGRU'
 
 
-NN_TYPE = 'RNN'
+NN_TYPE = 'DNN'
 RNN_CELL_TYPE = 'SGRU'
 
-DENSE_UNIT_SIZE = 128
-
+DNN_HIDDEN_UNITS=128
+DNN_NUM_LAYERS = 2
 #-------------------------------------------------------------------------------
 # When None, then dense layer will growth with number of layers 
 # provided from NNGenerator
 # Otherwise, CNN is built at each Adanet iteration with same number of dense 
 # layers.
 #-------------------------------------------------------------------------------
-DENSE_NUM_LAYERS = 1
-#DENSE_NUM_LAYERS = None
+CNN_DENSE_LAYER_NUM = 1
+#CNN_DENSE_LAYER_NUM = None
 #-------------------------------------------------------------------------------
 
 IS_BATCH_NORM = True
-DROPOUT_RATE = 0.0
+DROPOUT_RATE = 0.0 
 
 #-------------------------------------------------------------------------------
 # When CONV_NUM_LAYERS value is None, then conv. layers will growth with number 
@@ -60,16 +62,16 @@ DROPOUT_RATE = 0.0
 # layers.
 # For CNN baseline, value has to be >0 and NN type fixed to CNNBase.
 #-------------------------------------------------------------------------------
-CONV_NUM_LAYERS  = None
+CNN_LAYER_NUM  = None
 #CONV_NUM_LAYERS  = 2
 #-------------------------------------------------------------------------------
 
-CONV_KERNEL_SIZE=(5,5)
-CONV_FILTERS = 32
-CONV_STRIDES =1
-CONV_PADDING_NAME ='same'
-CONV_ACTIVATION_NAME = 'relu'
-
+CNN_KERNEL_SIZE=(5,5)
+CNN_FILTERS = 32
+CNN_STRIDES =1
+CNN_PADDING_NAME ='same'
+CNN_ACTIVATION_NAME = 'relu'
+CNN_DENSE_UNIT_SIZE = 128
 #NN_NUM_LAYERS   = DENSE_NUM_LAYERS+CONV_NUM_LAYERS
 
 
@@ -96,7 +98,7 @@ if NN_TYPE == 'CNN' or NN_TYPE == 'CNNBase':
 # RNN Network
 #-------------------------------------------------------------------------------
 RNN_ACTIVATION_NAME = None
-RNN_HIDDEN_UNITS = 128 
+RNN_HIDDEN_UNITS = 128//4
 RNN_NUM_LAYERS = 2
 RNN_TIMESTEPS = 224 
 if NN_TYPE == 'RNN' :
@@ -110,9 +112,9 @@ ADANET_FEATURE_SHAPE = None
 ADANET_OUTPUT_DIR='./tmp/adanet'
 ADANET_INITIAL_NUM_LAYERS = 0
 ADANET_NN_CANDIDATE = 2
-ADANET_LAMBDA = 0.0#0.005
+ADANET_LAMBDA = 1.E-3#0.005
 ADANET_TRAIN_STEPS_PER_CANDIDATE = TRAIN_STEPS  #@param {type:"integer"}
-ADANET_ITERATIONS = 10  #@param {type:"integer"}
+ADANET_ITERATIONS = 2  #@param {type:"integer"}
 ADANET_IS_LEARN_MIXTURE_WEIGHTS = True
 if NN_TYPE == 'RNN' :
     ADANET_INITIAL_NUM_LAYERS = 1
@@ -153,18 +155,20 @@ dict_rnn_layer_config={ 'rnn_layer_num':RNN_NUM_LAYERS
 # Hyper parameters for CNN network
 #---------------------------------------------------
 dict_cnn_layer_config={ 'feature_map_size':[64,]
-                      ,'conv_kernel_size':CONV_KERNEL_SIZE
-                      ,'conv_layer_num':CONV_NUM_LAYERS
-                      ,'conv_filters' : CONV_FILTERS
-                      ,'conv_strides' :  CONV_STRIDES
-                      ,'conv_padding_name' : CONV_PADDING_NAME
-                      ,'conv_activation_name' : CONV_ACTIVATION_NAME
+                      ,'cnn_kernel_size':CNN_KERNEL_SIZE
+                      ,'cnn_layer_num':CNN_LAYER_NUM
+                      ,'cnn_filters' : CNN_FILTERS
+                      ,'cnn_strides' :  CNN_STRIDES
+                      ,'cnn_padding_name' : CNN_PADDING_NAME
+                      ,'cnn_activation_name' : CNN_ACTIVATION_NAME
+                      ,'cnn_dense_layer_num' : CNN_DENSE_LAYER_NUM
+                      ,'cnn_dense_unit_size' : CNN_DENSE_UNIT_SIZE
                       }
 #---------------------------------------------------
 # Hyper parameters for DNN network
 #---------------------------------------------------
-dict_dnn_layer_config={ 'dnn_layer_num':DENSE_NUM_LAYERS
-                       ,'dnn_hidden_units' : DENSE_UNIT_SIZE
+dict_dnn_layer_config={ 'dnn_layer_num':DNN_NUM_LAYERS
+                       ,'dnn_hidden_units' : DNN_HIDDEN_UNITS
                     }
 
 #---------------------------------------------------
@@ -173,8 +177,8 @@ dict_dnn_layer_config={ 'dnn_layer_num':DENSE_NUM_LAYERS
 dict_nn_layer_config = {  'nn_type':NN_TYPE
                         , 'nn_dropout_rate': DROPOUT_RATE
                         , 'nn_batch_norm' : IS_BATCH_NORM
-                        , 'nn_dense_layer_num' : DENSE_NUM_LAYERS
-                        , 'nn_dense_unit_size':DENSE_UNIT_SIZE
+                        #, 'nn_dense_layer_num' : DENSE_NUM_LAYERS
+                        #, 'nn_dense_unit_size':DENSE_UNIT_SIZE
                         , 'nn_logit_dimension':NB_CLASS
                         , 'nn_optimizer':OPTIMIZER
                         , 'nn_seed' : SEED

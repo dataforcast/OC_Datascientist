@@ -6,6 +6,9 @@ from tensorflow.contrib import rnn
 import adanet
 
 import p8_util
+import p8_util_config
+
+IS_DEBUG = p8_util_config.IS_DEBUG
 
 #-------------------------------------------------------------------------------
 # Estimator configuration.
@@ -37,7 +40,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         
         self._nn_type    = dict_nn_layer_config['nn_type']
         self._optimizer  = dict_nn_layer_config['nn_optimizer']
-        self._layer_size = dict_nn_layer_config['nn_dense_unit_size']
+        #self._layer_size = dict_nn_layer_config['nn_dense_unit_size']
         self._num_layers = num_layers
         
         self._dropout    = dict_nn_layer_config['nn_dropout_rate']
@@ -55,10 +58,10 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         #---------------------------------------------------
         if self._nn_type == 'CNN' or self._nn_type == 'CNNBase':
             dict_cnn_layer_config = dict_nn_layer_config['nn_layer_config']
-            dict_cnn_layer_config['conv_layer_num'] = num_layers
+            dict_cnn_layer_config['cnn_layer_num'] = num_layers
             self._cnn_seed = self._seed
 
-            self._conv_kernel_size = dict_cnn_layer_config['conv_kernel_size']
+            self._cnn_kernel_size = dict_cnn_layer_config['cnn_kernel_size']
             
             #-------------------------------------------------------------------  
             # Number of CNN CONVOLUTIONAL layers
@@ -68,7 +71,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             # is extracted from a CNN dictionary and provided while invoking 
             # constructor.
             #-------------------------------------------------------------------
-            if dict_cnn_layer_config['conv_layer_num'] is None :
+            if dict_cnn_layer_config['cnn_layer_num'] is None :
                 #---------------------------------------------------------------
                 # Conv layers will growth along with CNN candidates created from 
                 # NNGenerator
@@ -78,24 +81,24 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                 #---------------------------------------------------------------
                 # Conv layers size is fixed
                 #---------------------------------------------------------------
-                self._cnn_convlayer = dict_cnn_layer_config['conv_layer_num']            
+                self._cnn_convlayer = dict_cnn_layer_config['cnn_layer_num']            
 
-            self._cnn_convlayer = dict_cnn_layer_config['conv_layer_num']            
+            self._cnn_convlayer = dict_cnn_layer_config['cnn_layer_num']            
             # Number of dense layers      
-            if dict_nn_layer_config['nn_dense_layer_num'] is None :            
+            if dict_cnn_layer_config['cnn_dense_layer_num'] is None :            
                 #---------------------------------------------------------------
                 # Dense layers will growth along with candidates created from 
                 # NNGenerator
                 #---------------------------------------------------------------
-                self._cnn_denselayer =  num_layers
+                self._cnn_dense_layer_num =  num_layers
             else :
                 #---------------------------------------------------------------
                 # Dense layers size is fixed
                 #---------------------------------------------------------------
-                self._cnn_denselayer = dict_nn_layer_config['nn_dense_layer_num']            
+                self._cnn_dense_layer_num = dict_cnn_layer_config['cnn_dense_layer_num']            
             
             # Number of units in CNN dense layer.
-            self._cnn_layersize = self._layer_size
+            self._cnn_dense_unit_size = dict_cnn_layer_config['cnn_dense_unit_size']
             
             # Fixed CNN layers configuration 
             self._dict_cnn_layer_config=dict_cnn_layer_config
@@ -191,16 +194,16 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     def _show_cnn(self) :
         print('\n')
         print("CNN seed             : ............................ {}".format(self._cnn_seed))
-        print("Conv. Kernel size    : ............................ {}".format(self._conv_kernel_size))
+        print("Conv. Kernel size    : ............................ {}".format(self._cnn_kernel_size))
         print("Conv. layers         : ............................ {}".format(self._cnn_convlayer))
-        print("Dense layers         : ............................ {}".format(self._cnn_denselayer))
-        print("Units in conv. layers: ............................ {}".format(self._cnn_layersize))
+        print("Dense layers         : ............................ {}".format(self._cnn_dense_layer_num))
+        print("Units in dense layers: ............................ {}".format(self._cnn_dense_unit_size))
         print("CNN bacth norm.      : ............................ {}".format(self._is_cnn_batch_norm))
         print("Features map size    : ............................ {}".format(self._dict_cnn_layer_config['feature_map_size']))
-        print("Conv filters         : ............................ {}".format(self._dict_cnn_layer_config['conv_filters']))
-        print("Strides              : ............................ {}".format(self._dict_cnn_layer_config['conv_strides']))
-        print("Padding              : ............................ {}".format(self._dict_cnn_layer_config['conv_padding_name']))
-        print("Activation function  : ............................ {}".format(self._dict_cnn_layer_config['conv_activation_name']))
+        print("Conv filters         : ............................ {}".format(self._dict_cnn_layer_config['cnn_filters']))
+        print("Strides              : ............................ {}".format(self._dict_cnn_layer_config['cnn_strides']))
+        print("Padding              : ............................ {}".format(self._dict_cnn_layer_config['cnn_padding_name']))
+        print("Activation function  : ............................ {}".format(self._dict_cnn_layer_config['cnn_activation_name']))
 
     #----------------------------------------------------------------------------
     #
@@ -231,7 +234,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         print("Adanet output log    : ............................ {}".format(self._output_dir_log))
         print("NN type              : ............................ {}".format(self._nn_type))
         print("Features shape       : ............................ {}".format(self._feature_shape))
-        print("Units in dense layer : ............................ {}".format(self._layer_size))
+        #print("Units in dense layer : ............................ {}".format(self._layer_size))
         print("Number of layers     : ............................ {}".format(self._num_layers))
         print("Dropout rate         : ............................ {}".format(self._dropout))
         print("Seed value           : ............................ {}".format(self._seed))
@@ -257,12 +260,14 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         last_layer = input_layer
 
         dnn_layer_num = self._dict_dnn_layer_config['dnn_layer_num']
-        print("**** *** _build_dnn_subnetwork : Layers= {}\n".format(dnn_layer_num))
+    
+        if IS_DEBUG is True :
+            print("**** *** _build_dnn_subnetwork : Layers= {}\n".format(dnn_layer_num))
         for i_ in range(dnn_layer_num):
             #print("\n**** *** _build_dnn_subnetwork : Layer= {} / Layers= {}".format(i_, self._num_layers))
             last_layer = tf.layers.dense(
                 last_layer,
-                units=self._layer_size,
+                units=self._dict_dnn_layer_config['dnn_hidden_units'],
                 activation=tf.nn.relu,
                 kernel_initializer=tf.glorot_uniform_initializer(seed=self._seed))
             
@@ -307,12 +312,12 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     #---------------------------------------------------------------------------
     #
     #---------------------------------------------------------------------------
-    def _get_conv_activation_fn(self, conv_activation_name) :
+    def _get_conv_activation_fn(self, cnn_activation_name) :
         conv_activation_fn = None
-        if conv_activation_name == 'relu' :
+        if cnn_activation_name == 'relu' :
             conv_activation_fn =tf.nn.relu
         else : 
-            print("\n*** ERROR : activation function name= {} Unknown!".format(conv_activation_name))
+            print("\n*** ERROR : activation function name= {} Unknown!".format(cnn_activation_name))
         return conv_activation_fn
     #---------------------------------------------------------------------------
     
@@ -324,14 +329,14 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         dense_layer = 0
         if self._cnn_convlayer == 0 : 
             conv_layer = self._cnn_convlayer
-            dense_layer = self._cnn_denselayer
+            dense_layer = self._cnn_dense_layer_num
         else :
             if self._cnn_convlayer %2 == 0 : 
                 conv_layer = self._cnn_convlayer
                 dense_layer = 0
             else :
                 conv_layer = 0
-                dense_layer = self._cnn_denselayer
+                dense_layer = self._cnn_dense_layer_num
         return conv_layer, dense_layer
     #---------------------------------------------------------------------------
         
@@ -346,14 +351,14 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         print("\n*** _build_cnn_baseline_subnetwork() : last_layer= {}".format(last_layer))
         print("\n*** _build_cnn_baseline_subnetwork() : features[images]= {}".format(features['images']))
 
-        tuple_conv_kernel_size = self._dict_cnn_layer_config['conv_kernel_size']
-        conv_filters           = self._dict_cnn_layer_config['conv_filters']
-        conv_strides           = self._dict_cnn_layer_config['conv_strides']
-        conv_padding_name      = self._dict_cnn_layer_config['conv_padding_name']
-        conv_activation_name   = self._dict_cnn_layer_config['conv_activation_name']
+        tuple_cnn_kernel_size = self._dict_cnn_layer_config['cnn_kernel_size']
+        cnn_filters           = self._dict_cnn_layer_config['cnn_filters']
+        cnn_strides           = self._dict_cnn_layer_config['cnn_strides']
+        cnn_padding_name      = self._dict_cnn_layer_config['cnn_padding_name']
+        cnn_activation_name   = self._dict_cnn_layer_config['cnn_activation_name']
         
         layer_initializer = self._get_layer_initializer()
-        conv_activation_fn = self._get_conv_activation_fn(conv_activation_name)
+        conv_activation_fn = self._get_conv_activation_fn(cnn_activation_name)
         
         #-----------------------------------------------------------------------                
         # Build alternatively conv and dense layers 
@@ -370,10 +375,10 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             for layer in range(self._cnn_convlayer) :     
                 last_layer = self._cnn_bacth_norm(last_layer, is_training)
                 last_layer = tf.layers.conv2d(last_layer
-                                        , filters=conv_filters
-                                        , kernel_size=tuple_conv_kernel_size
-                                        , strides=conv_strides
-                                        , padding=conv_padding_name
+                                        , filters=cnn_filters
+                                        , kernel_size=tuple_cnn_kernel_size
+                                        , strides=cnn_strides
+                                        , padding=cnn_padding_name
                                         , activation=conv_activation_fn
                                         , kernel_initializer=layer_initializer())
                 pool_size = (2, 2)
@@ -388,10 +393,10 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         #-----------------------------------------------------------------------                
         # Dense Layer(s)
         #-----------------------------------------------------------------------
-        for layer in range(self._cnn_denselayer) :     
+        for layer in range(self._cnn_dense_layer_num) :     
             last_layer = self._cnn_bacth_norm(last_layer, is_training)
             last_layer = tf.layers.dense( inputs=last_layer
-                                        , units=self._cnn_layersize 
+                                        , units=self._cnn_dense_unit_size 
                                         , activation=conv_activation_fn
                                         , kernel_initializer=layer_initializer())
             
@@ -544,7 +549,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             last_layer = self._cnn_bacth_norm(last_layer, is_training)
             
             last_layer = tf.layers.dense(inputs=last_layer
-            , units=self._cnn_layersize
+            , units=self._cnn_dense_unit_size
             , activation=tf.nn.relu, kernel_initializer=layer_initializer())
             
             last_layer = tf.layers.dropout(inputs=last_layer
@@ -569,11 +574,11 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         
             last_layer = tf.contrib.layers.flatten(last_layer)
 
-            for _ in range(self._cnn_denselayer) :
+            for _ in range(self._cnn_dense_layer_num) :
                 last_layer = self._cnn_bacth_norm(last_layer, is_training)
                 
                 last_layer = tf.layers.dense(inputs=last_layer
-                , units=self._cnn_layersize
+                , units=self._cnn_dense_unit_size
                 , activation=tf.nn.relu, kernel_initializer=layer_initializer())
                 
                 last_layer = tf.layers.dropout(inputs=last_layer
@@ -584,7 +589,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             if False :
                 #print("\n*** *** Last layer shape= {}".format(last_layer))
                 last_layer = self._cnn_bacth_norm(last_layer, is_training)
-                last_layer = tf.layers.dense(inputs=last_layer, units=self._cnn_layersize
+                last_layer = tf.layers.dense(inputs=last_layer, units=self._cnn_dense_unit_size
                 , activation=tf.nn.relu, kernel_initializer=layer_initializer())
 
                 last_layer = tf.layers.dropout(inputs=last_layer
@@ -639,7 +644,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             # Approximate the Rademacher complexity of this subnetwork as the square-
             # root of its depth; depth includes Conv layers as well as dense layers.
             #-------------------------------------------------------------------
-            complexity = tf.sqrt(tf.to_float(self._cnn_convlayer+self._cnn_denselayer))
+            complexity = tf.sqrt(tf.to_float(self._cnn_convlayer+self._cnn_dense_layer_num))
         elif self._nn_type == 'RNN' :
             rnn_cell_type = self._dict_rnn_layer_config['rnn_cell_type']
             last_layer, logits = self._build_rnn_subnetwork(  input_layer\
@@ -655,7 +660,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         
 
         if self._nn_type == 'CNN' or self._nn_type == 'CNNBase':
-            if self._dict_cnn_layer_config['conv_layer_num'] is None :
+            if self._dict_cnn_layer_config['cnn_layer_num'] is None :
                 #---------------------------------------------------------------
                 # Number of conv layers will growth with NNGenerator.
                 #---------------------------------------------------------------
@@ -664,7 +669,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                 #---------------------------------------------------------------
                 # Number of dense layers will growth with NNGenerator.
                 #---------------------------------------------------------------
-                persisted_tensors = {self._nn_type: tf.constant(self._cnn_denselayer)}
+                persisted_tensors = {self._nn_type: tf.constant(self._cnn_dense_layer_num)}
                 
         else : 
             persisted_tensors = {self._nn_type: tf.constant(self._num_layers)}
@@ -715,7 +720,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         """See `adanet.subnetwork.Builder`."""
         num_layers = 0
         if self._nn_type == 'CNN' or self._nn_type == 'CNNBase':
-            if self._dict_cnn_layer_config['conv_layer_num'] is None :
+            if self._dict_cnn_layer_config['cnn_layer_num'] is None :
                 num_layers = self._cnn_convlayer
             else :
                 num_layers = self._num_layers
