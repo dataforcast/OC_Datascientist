@@ -515,7 +515,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     def _build_cnn_subnetwork(self, input_layer, features\
     , logits_dimension, is_training) :
     
-        if self._nn_type == 'CNNBase' :
+        if self._nn_type == 'CNNBase' or self._nn_type == 'CNN':
             return self._build_cnn_baseline_subnetwork(input_layer, features\
                                             , logits_dimension, is_training)
         else :
@@ -557,9 +557,9 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
 
 
 
-            # Process fixed CNN layers configuration 
-            if self._cnn_layer_config is not None :
-                list_cnn_layer_filter = list(self._cnn_layer_config.values())[0]
+            # Process fixed CNN CONV. layers configuration 
+            if self._dict_cnn_layer_config['cnn_layer_num'] is not None :
+                list_cnn_layer_filter = self._dict_cnn_layer_config['feature_map_size']
                 for cnn_layer_filter in list_cnn_layer_filter :
                 
                     

@@ -63,7 +63,7 @@ def create_nn_builder(param_feature_shape, output_dir, layer_num=None):
     '''
     if layer_num is None :
         if p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'CNN' :
-            layer_num = p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['conv_layer_num']
+            layer_num = p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['cnn_layer_num']
         elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'RNN' :
             layer_num = p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['rnn_layer_num']
         elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'DNN' :
@@ -80,7 +80,7 @@ def create_nn_builder(param_feature_shape, output_dir, layer_num=None):
     # Dictionaries from configuration file are updated with this number of layers.
     #---------------------------------------------------------------------------
     if p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'CNN' :
-        p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['conv_layer_num'] = layer_num
+        p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['cnn_layer_num'] = layer_num
     elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'RNN' :
         p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['rnn_layer_num']=layer_num
     elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'DNN' :
