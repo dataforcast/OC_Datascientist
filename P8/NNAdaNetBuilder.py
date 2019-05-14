@@ -16,7 +16,7 @@ IS_DEBUG = p8_util_config.IS_DEBUG
 class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     '''Builds a NN subnetwork for AdaNet.'''
 
-    def __init__(self, dict_adanet_config, num_layers):
+    def __init__(self, dict_adanet_config, num_layers, summary=None):
         """Initializes a `_DNNBuilder`.
 
         Args:
@@ -27,7 +27,9 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         Returns:
           An instance of `NNAdaNetBuilder`.
         """
-                
+        self._dict_adanet_config = dict_adanet_config.copy()
+        self._summary = summary
+        self._last_layer = None
         self._feature_shape =None# dict_adanet_config['adanet_feature_columns']
         self._learn_mixture_weights = dict_adanet_config['adanet_is_learn_mixture_weights']
         self._adanet_lambda = dict_adanet_config['adanet_lambda']
@@ -83,7 +85,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                 #---------------------------------------------------------------
                 self._cnn_convlayer = dict_cnn_layer_config['cnn_layer_num']            
 
-            self._cnn_convlayer = dict_cnn_layer_config['cnn_layer_num']            
+            #self._cnn_convlayer = dict_cnn_layer_config['cnn_layer_num']            
             # Number of dense layers      
             if dict_cnn_layer_config['cnn_dense_layer_num'] is None :            
                 #---------------------------------------------------------------
@@ -116,7 +118,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
 
         self._start_time = 0
         
-        print("\n*** NNAdaNetBuilder : NN Type={}".format(self._nn_type))
+        if IS_DEBUG is True :        
+            print("\n*** NNAdaNetBuilder : NN Type={}".format(self._nn_type))
         
 
         
@@ -140,7 +143,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     def _get_feature_columns(self) :
        return self._feature_columns
     def _set_feature_columns(self, feature_columns) :
-       print('\n*** ERROR :  \`feature_columns\` is not assignable!')
+        print('\n*** ERROR :  \`feature_columns\` is not assignable!')
 
     def _get_nb_class(self) :
        return self._nb_class
@@ -229,9 +232,11 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     #
     #----------------------------------------------------------------------------
     def show(self) :
+        adanet_max_iteration_steps =  p8_util_config.ADANET_MAX_ITERATION_STEPS
         print("\n")
         print("Adanet outputdir     : ............................ {}".format(self._output_dir))
         print("Adanet output log    : ............................ {}".format(self._output_dir_log))
+        print("Adanet iterations    : ............................ {}".format(adanet_max_iteration_steps))
         print("NN type              : ............................ {}".format(self._nn_type))
         print("Features shape       : ............................ {}".format(self._feature_shape))
         #print("Units in dense layer : ............................ {}".format(self._layer_size))
@@ -257,6 +262,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
     #
     #----------------------------------------------------------------------------
     def _build_dnn_subnetwork(self, input_layer, features, logits_dimension, is_training) :
+    
         last_layer = input_layer
 
         dnn_layer_num = self._dict_dnn_layer_config['dnn_layer_num']
@@ -270,9 +276,14 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                 units=self._dict_dnn_layer_config['dnn_hidden_units'],
                 activation=tf.nn.relu,
                 kernel_initializer=tf.glorot_uniform_initializer(seed=self._seed))
-            
-            last_layer = tf.layers.dropout(
-                last_layer, rate=self._dropout, seed=self._seed, training=is_training)
+            if self._dropout > 0. :
+                last_layer = tf.layers.dropout(
+                    last_layer, rate=self._dropout, seed=self._seed, training=is_training)
+        
+        
+        self._last_layer = last_layer
+        if IS_DEBUG is True :
+            print("\n*** _build_dnn_subnetwork : last layer= {}".format(self._last_layer))
         
         logits = tf.layers.dense(
             last_layer,
@@ -348,8 +359,9 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         
         last_layer = input_layer
         
-        print("\n*** _build_cnn_baseline_subnetwork() : last_layer= {}".format(last_layer))
-        print("\n*** _build_cnn_baseline_subnetwork() : features[images]= {}".format(features['images']))
+        if IS_DEBUG is True :
+            print("\n*** _build_cnn_baseline_subnetwork() : last_layer= {}".format(last_layer))
+            print("\n*** _build_cnn_baseline_subnetwork() : features[images]= {}".format(features['images']))
 
         tuple_cnn_kernel_size = self._dict_cnn_layer_config['cnn_kernel_size']
         cnn_filters           = self._dict_cnn_layer_config['cnn_filters']
@@ -399,10 +411,10 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                                         , units=self._cnn_dense_unit_size 
                                         , activation=conv_activation_fn
                                         , kernel_initializer=layer_initializer())
-            
-            last_layer = tf.layers.dropout(   inputs=last_layer
-                                            , rate=self._dropout
-                                            , training=is_training)
+            if self._dropout > 0. :            
+                last_layer = tf.layers.dropout(   inputs=last_layer
+                                                , rate=self._dropout
+                                                , training=is_training)
 
         #-----------------------------------------------------------------------                
         # Logits Layer
@@ -500,11 +512,13 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         # If no initial_state is provided, dtype must be specified
         # If no initial cell state is provided, they will be initialized to zero
         output, last_layer = rnn.static_rnn(rnn_cell, list_layer, dtype=tf.float32)
-        #print("\n*** _build_rnn_subnetwork() : output[-1]= {} / Weight= {}"\
-        #.format(output[-1], weight))
+        if IS_DEBUG is True :
+            print("\n*** _build_rnn_subnetwork() : output[-1]= {} / Weight= {}"\
+            .format(output[-1], weight))
         logits =tf.matmul(output[-1], weight) + bias
+
         # Linear activation, using rnn inner loop last output
-        last_layer = tf.layers.dense(logits, units=logits_dimension,
+        last_layer = tf.layers.dense(logits, units=num_hidden_units,
             kernel_initializer=tf.glorot_uniform_initializer(seed=self._seed))
         return last_layer,logits
     #---------------------------------------------------------------------------
@@ -552,8 +566,9 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             , units=self._cnn_dense_unit_size
             , activation=tf.nn.relu, kernel_initializer=layer_initializer())
             
-            last_layer = tf.layers.dropout(inputs=last_layer
-            , rate=self._dropout, training=is_training)
+            if self._dropout > 0. :
+                last_layer = tf.layers.dropout(inputs=last_layer
+                , rate=self._dropout, training=is_training)
 
 
 
@@ -581,20 +596,10 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                 , units=self._cnn_dense_unit_size
                 , activation=tf.nn.relu, kernel_initializer=layer_initializer())
                 
-                last_layer = tf.layers.dropout(inputs=last_layer
-                , rate=self._dropout, training=is_training)
+                if self._dropout > 0. :
+                    last_layer = tf.layers.dropout(inputs=last_layer
+                    , rate=self._dropout, training=is_training)
                      
-            
-            
-            if False :
-                #print("\n*** *** Last layer shape= {}".format(last_layer))
-                last_layer = self._cnn_bacth_norm(last_layer, is_training)
-                last_layer = tf.layers.dense(inputs=last_layer, units=self._cnn_dense_unit_size
-                , activation=tf.nn.relu, kernel_initializer=layer_initializer())
-
-                last_layer = tf.layers.dropout(inputs=last_layer
-                , rate=self._dropout
-                , training=is_training)
         
         # Logits Layer
         logits = tf.layers.dense(inputs=last_layer, units=self._nb_class
@@ -615,15 +620,17 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         """See `adanet.subnetwork.Builder`."""
         
         #features = self._feature_columns
-        print("\n\n*** build_subnetwork() : features= {}".format(features))
-        print("\n\n*** build_subnetwork() : self._feature_columns= {}".format(self._feature_columns))
+        if IS_DEBUG is True :
+            print("\n\n*** build_subnetwork() : features= {}".format(features))
+            print("\n\n*** build_subnetwork() : self._feature_columns= {}".format(self._feature_columns))
         
         input_layer \
         = tf.feature_column.input_layer(features=features\
                                     , feature_columns=self._feature_columns)
         
-        print("\n\n*** build_subnetwork() : NN type= {} / Input layer shape= {}"\
-        .format(self._nn_type, input_layer.shape))
+        if IS_DEBUG is True :
+            print("\n\n*** build_subnetwork() : NN type= {} / Input layer shape= {}"\
+            .format(self._nn_type, input_layer.shape))
 
         #-----------------------------------------------------------------------
         # Default complexity value
@@ -652,7 +659,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                                                             , logits_dimension\
                                                             , training\
                                                             , rnn_cell_type = rnn_cell_type)
-            print("\n***build_subnetwork() / RNN : logits shape= {}".format(logits.shape))
+            if IS_DEBUG is True :
+                print("\n***build_subnetwork() / RNN : logits shape= {}".format(logits.shape))
             
         else :
             print("\n*** ERROR : NN type={} no yet supported!".format(self._nn_type))
@@ -681,14 +689,10 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             if self._nn_type == 'CNN' or self._nn_type == 'CNNBase':
                 summary.scalar("Conv_layers", tf.constant(self._cnn_convlayer))
                 summary.scalar("Dense_layers", tf.constant(self._num_layers))
-        if False :
-            if type(self._num_layers) is np.ndarray:                 
-                print("\n*** persisted_tensors= {},{},{},{} ".format(self._nn_type, type(self._num_layers), self._num_layers.shape, self.name))
-                self._num_layers = int(self.name.split('_')[2])
-                persisted_tensors = {self._nn_type: tf.constant(self._num_layers)}
         
         #print("\n*** persisted_tensors= {},{},{}".format(self._nn_type, self._num_layers, type(self._num_layers)))
-        print("\n*** build_subnetwork() : last_layer= {}".format(last_layer))
+        if IS_DEBUG is True :
+            print("\n*** build_subnetwork() : last_layer= {}".format(last_layer))
         return adanet.Subnetwork(
             last_layer=last_layer,
             logits=logits,
@@ -697,7 +701,12 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
 
     def build_subnetwork_train_op(self, subnetwork, loss, var_list, labels,
                                 iteration_step, summary, previous_ensemble):
-        """See `adanet.subnetwork.Builder`."""
+        """This method is invoked from method 
+        _EnsembleBuilder._build_ensemble_spec  defined in adanet package 
+        file ensemble.py.
+        It is used to train subnetwork candidates.
+        
+        See `adanet.subnetwork.Builder`."""
 
         # NOTE: The `adanet.Estimator` increments the global step.
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -706,7 +715,11 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
 
     def build_mixture_weights_train_op(self, loss, var_list, logits, labels,
                                      iteration_step, summary):
-        """See `adanet.subnetwork.Builder`."""
+        """ This method is invoked from method 
+        _EnsembleBuilder._build_ensemble_spec  defined in adanet package 
+        file ensemble.py.
+        
+        See `adanet.subnetwork.Builder`."""
 
         if not self._learn_mixture_weights:
             return tf.no_op("mixture_weights_train_op")
@@ -743,6 +756,6 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                 return "{}_layer_{}".format(nn_type, num_layers)
         else :                 
             return "{}_layer_{}".format(self._nn_type, num_layers)
-        #return f'cnn_{self._n_convs}'
+
 #-------------------------------------------------------------------------------
 

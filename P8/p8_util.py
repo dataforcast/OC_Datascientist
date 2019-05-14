@@ -47,16 +47,19 @@ IS_DEBUG = p8_util_config.IS_DEBUG
 def create_nn_builder(param_feature_shape, output_dir, layer_num=None):
     '''Creates an NNAdaNetBuilder object from configuration defined into file 
     p8_util_config.
-    This allows to show 
+    This function may be used for Baseline when testing NN networks fixing 
+    number of layers from p8_util_config.py file.
     Input :
         * param_feature_shape : shape of the features. This parameter is unknowned 
         from configuration prior to dataset read.
         * output_dir : Directory where logs are dumped.
-        * layer_num : number of layers used to build (deep) neural network. When 
-        None value, then value from confugration file is used to create 
-        NNAdaNetBuilder object. 
-        Otherwise, dictionaries from configuration file are updated with this value.
-        
+        * layer_num : number of layers used to build (deep) neural network. 
+            If  value is None, then number of layers value is picked from configration file 
+            to instantiate NNAdaNetBuilder object. 
+            
+            If value is not None, then this means that NNAdaNetBuilder object is 
+            instantiated from Adanet Algorithm. In this case, dictionaries in 
+            configuration file are updated with this value.
     Output :
         * Object of type NNAdaNetBuilder
     
@@ -71,7 +74,9 @@ def create_nn_builder(param_feature_shape, output_dir, layer_num=None):
     else :
         pass
 
-    print("\n Number of convolutional layers= {}".format(layer_num))
+    if IS_DEBUG is True :
+        print("\n*** Number of convolutional layers= {}".format(layer_num))
+    
     oNNAdaNetBuilder = NNAdaNetBuilder.NNAdaNetBuilder(p8_util_config.dict_adanet_config, num_layers=layer_num)
     oNNAdaNetBuilder.feature_shape = param_feature_shape
     oNNAdaNetBuilder.output_dir = output_dir
@@ -381,6 +386,7 @@ def make_config(model_name, output_dir=None, is_restored=False):
     '''Reset output directory.
     Returns a TF configuration object for feeding Esmimator.
     '''
+
     if output_dir is None : 
         output_dir=LOG_DIR
 
@@ -397,7 +403,8 @@ def make_config(model_name, output_dir=None, is_restored=False):
         save_checkpoints_steps=10,
         save_summary_steps=10,
         tf_random_seed=RANDOM_SEED,
-        model_dir=outdir),outdir
+        model_dir=outdir,
+        ),outdir
 #-------------------------------------------------------------------------------
 
 
