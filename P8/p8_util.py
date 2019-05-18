@@ -66,7 +66,12 @@ def create_nn_builder(param_feature_shape, output_dir, layer_num=None):
     '''
     if layer_num is None :
         if p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'CNN' :
-            layer_num = p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['cnn_layer_num']
+            if p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['cnn_dense_layer_num'] is None :
+                layer_num = p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['cnn_conv_layer_num']
+            elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['cnn_conv_layer_num'] is None :
+                layer_num = p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['cnn_dense_layer_num']
+            else :
+                pass            
         elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'RNN' :
             layer_num = p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['rnn_layer_num']
         elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'DNN' :
@@ -79,13 +84,20 @@ def create_nn_builder(param_feature_shape, output_dir, layer_num=None):
     
     oNNAdaNetBuilder = NNAdaNetBuilder.NNAdaNetBuilder(p8_util_config.dict_adanet_config, num_layers=layer_num)
     oNNAdaNetBuilder.feature_shape = param_feature_shape
+    
+    # Create internaly log output dir and classsifier.
     oNNAdaNetBuilder.output_dir = output_dir
 
     #---------------------------------------------------------------------------
     # Dictionaries from configuration file are updated with this number of layers.
     #---------------------------------------------------------------------------
     if p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'CNN' :
-        p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['cnn_layer_num'] = layer_num
+        if p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['cnn_dense_layer_num'] is not None :
+            p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['cnn_dense_layer_num'] = layer_num
+        elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['cnn_conv_layer_num'] is not None :
+            p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['cnn_conv_layer_num'] = layer_num
+        else :
+            pass
     elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'RNN' :
         p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['rnn_layer_num']=layer_num
     elif p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'DNN' :
@@ -554,55 +566,6 @@ def input_fn(partition, x, y, input_fn_param):
 
     if IS_DEBUG is True :
         print("\n***_input_fn() : Label shape ={}".format(label_shape))
-
-    features, labels = iterator.get_next()
-    
-    return features, labels
-
-  return _input_fn    
-#-------------------------------------------------------------------------------
-
-
-def input_fn_deprecated(partition, x, y, num_epochs, batch_size=None, feature_shape = [224,224,3]):
-  """Generate an input_fn for the Estimator."""
-
-  def _input_fn():
-    #---------------------------------------------------------------------------
-    # Defining shapes with None as first value allows the generator to 
-    # adapt itself when batch does not fit expected size.
-    # Otherwise an error value may be raized such as 
-    # ValueError: `generator` yielded an element of shape () where an element of shape (1,) was expected.
-    #---------------------------------------------------------------------------
-    label_shape=[1]
-    if label_shape is None :
-        label_shape=[3]
-
-    print("\n*** input_fn() : feature_shape= {} / Label shape= {}"\
-    .format(feature_shape, label_shape))
-    
-    training=False
-
-    if partition == "train":
-        training = True
-        dataset = tf.data.Dataset.from_generator(
-            generator(x, y), (tf.float32, tf.int32), (feature_shape, label_shape))
-        
-        dataset = dataset.shuffle(10 * batch_size, seed=RANDOM_SEED).repeat(num_epochs)
-    else:
-        print("feature_shape= {}".format(feature_shape))
-        dataset = tf.data.Dataset.from_generator(
-            generator(x, y), (tf.float32, tf.int32), (feature_shape, label_shape))          
-
-    # We call repeat after shuffling, rather than before, to prevent separate
-    # epochs from blending together.
-    if training:
-        #-----------------------------------------------------------------------
-        # Each EPOCH is shuffled. Then shuffle applies before EPOCH
-        #-----------------------------------------------------------------------
-        dataset = dataset.shuffle(10 * batch_size, seed=RANDOM_SEED).repeat(num_epochs)
-
-    dataset = dataset.map(preprocess_image).batch(batch_size)
-    iterator = dataset.make_one_shot_iterator()
 
     features, labels = iterator.get_next()
     

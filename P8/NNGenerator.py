@@ -121,7 +121,7 @@ class NNGenerator(adanet.subnetwork.Generator):
             else :
                 # Returns a list of instanciated classes that implement 
                 # subnetworks candidates.
-                print("\n*** NNGenerator : layers= ({},{})".format(num_layers, num_layers+1))
+                #print("\n*** NNGenerator : layers= ({},{})".format(num_layers, num_layers+1))
                 if False :
                     return [
                         self._nn_builder_fn(num_layers=num_layers),

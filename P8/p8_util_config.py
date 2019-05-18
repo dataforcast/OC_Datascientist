@@ -18,13 +18,23 @@ IS_LABEL_ENCODED = True # Labels are re-encoded from one shot encoding to
 # Then 1  EPOCH contains 3 steps.
 # If NUM EPOCH is 20, then data will be processed 20 times, each time within 3 steps.
 #-------------------------------------------------------------------------------
-NUM_EPOCHS = 6
 
 # For ADANET, this is the number of iterations that will take place.
-TRAIN_STEPS = 5
+TRAIN_STEPS = 200
 
 
-BATCH_SIZE = 138//4
+BATCH_SIZE = 138#138//4
+
+#NUM_EPOCHS = 20
+# This sequence is oriented to baseline, running
+# over NUM_EPOCHS number considering TRAIN_STEPS
+
+#-------------------------------------------------------------------------------
+MINI_BATCH_SIZE=138
+DATA_SIZE=414
+MINI_BATCH_NUMBER = DATA_SIZE//MINI_BATCH_SIZE
+NUM_EPOCHS = TRAIN_STEPS//MINI_BATCH_NUMBER
+#-------------------------------------------------------------------------------
 
 LEARNING_RATE = 1.e-3
 NB_CLASS = 3
@@ -44,7 +54,7 @@ NN_TYPE = 'DNN'
 RNN_CELL_TYPE = 'SGRU'
 
 DNN_HIDDEN_UNITS=128
-DNN_NUM_LAYERS = 0
+DNN_NUM_LAYERS = 3  
 
 IS_BATCH_NORM = True
 DROPOUT_RATE = 0.0 
@@ -56,8 +66,8 @@ DROPOUT_RATE = 0.0
 # layers.
 # For CNN baseline, value has to be >0 and NN type fixed to CNNBase.
 #-------------------------------------------------------------------------------
-CNN_LAYER_NUM  = None
-#CNN_LAYER_NUM  = 3
+#CNN_CONV_LAYER_NUM  = None
+CNN_CONV_LAYER_NUM  = 2 
 
 #-------------------------------------------------------------------------------
 
@@ -74,8 +84,8 @@ CNN_DENSE_UNIT_SIZE = 128
 # Otherwise, CNN is built at each Adanet iteration with same number of dense 
 # layers.
 #-------------------------------------------------------------------------------
-CNN_DENSE_LAYER_NUM = 2
-#CNN_DENSE_LAYER_NUM = None
+#CNN_DENSE_LAYER_NUM = 2
+CNN_DENSE_LAYER_NUM = None
 #-------------------------------------------------------------------------------
 
 
@@ -102,7 +112,7 @@ if NN_TYPE == 'CNN' or NN_TYPE == 'CNNBase':
 # RNN Network
 #-------------------------------------------------------------------------------
 RNN_ACTIVATION_NAME = None
-RNN_HIDDEN_UNITS = 128
+RNN_HIDDEN_UNITS = 8#128
 RNN_NUM_LAYERS = 2
 RNN_TIMESTEPS = 224 
 if NN_TYPE == 'RNN' :
@@ -117,7 +127,7 @@ ADANET_OUTPUT_DIR='./tmp/adanet'
 ADANET_INITIAL_NUM_LAYERS = 0
 ADANET_NN_CANDIDATE = 2
 ADANET_LAMBDA = 1.e-5#0.005
-ADANET_ITERATIONS = 2  #@param {type:"integer"}
+ADANET_ITERATIONS = 10  #@param {type:"integer"}
 ADANET_IS_LEARN_MIXTURE_WEIGHTS = True
 if NN_TYPE == 'RNN' :
     ADANET_INITIAL_NUM_LAYERS = 1
@@ -136,6 +146,10 @@ if NN_TYPE == 'RNN' :
 # Step 2 : 1 Conv layer + 1 Dense layer 
 # Step 3 : 2 Conv layers + 1 dense layer
 #-------------------------------------------------------------------------------
+# There will be TRAIN_STEPS global steps within ADANET_ITERATIONS
+# This mean Adanet will test ADANET_ITERATIONS couple of subnetworks.
+# This is the Adanet train step per adanet iterations for learning mixture 
+#   weights
 ADANET_MAX_ITERATION_STEPS=TRAIN_STEPS//ADANET_ITERATIONS
 
 #-------------------------------------------------------------------------------
@@ -159,7 +173,7 @@ dict_rnn_layer_config={ 'rnn_layer_num':RNN_NUM_LAYERS
 #---------------------------------------------------
 dict_cnn_layer_config={ 'feature_map_size':[64,]
                       ,'cnn_kernel_size':CNN_KERNEL_SIZE
-                      ,'cnn_layer_num':CNN_LAYER_NUM
+                      ,'cnn_conv_layer_num':CNN_CONV_LAYER_NUM
                       ,'cnn_filters' : CNN_FILTERS
                       ,'cnn_strides' :  CNN_STRIDES
                       ,'cnn_padding_name' : CNN_PADDING_NAME
