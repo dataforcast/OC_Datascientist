@@ -50,14 +50,14 @@ RNN_CELL_TYPE =  'GRU'
 RNN_CELL_TYPE = 'SGRU'
 
 
-NN_TYPE = 'DNN'
+NN_TYPE = 'CNN'
 RNN_CELL_TYPE = 'SGRU'
 
 DNN_HIDDEN_UNITS=128
-DNN_NUM_LAYERS = 3  
+DNN_NUM_LAYERS = 6
 
 IS_BATCH_NORM = True
-DROPOUT_RATE = 0.0 
+DROPOUT_RATE = 0.5 
 
 #-------------------------------------------------------------------------------
 # When CONV_NUM_LAYERS value is None, then conv. layers will growth with number 
@@ -67,7 +67,7 @@ DROPOUT_RATE = 0.0
 # For CNN baseline, value has to be >0 and NN type fixed to CNNBase.
 #-------------------------------------------------------------------------------
 #CNN_CONV_LAYER_NUM  = None
-CNN_CONV_LAYER_NUM  = 2 
+CNN_CONV_LAYER_NUM  = 4
 
 #-------------------------------------------------------------------------------
 
@@ -85,7 +85,7 @@ CNN_DENSE_UNIT_SIZE = 128
 # layers.
 #-------------------------------------------------------------------------------
 #CNN_DENSE_LAYER_NUM = 2
-CNN_DENSE_LAYER_NUM = None
+CNN_DENSE_LAYER_NUM = 3
 #-------------------------------------------------------------------------------
 
 

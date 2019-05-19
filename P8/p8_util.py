@@ -482,30 +482,6 @@ def generator(images, labels):
         print("\n*** generator() : labels shape= {} / label values= {}".format(labels.shape, labels[10]))
 
   return _gen
-  
-def generator_deprecated(images, labels):
-  """Returns a generator that returns image-label pairs."""
-
-  def _gen():
-    '''yield key word will return a generator.
-    Such object is an iterator that iterates over elements once only.
-    '''
-    is_label_encoded = p8_util_config.IS_LABEL_ENCODED
-    
-    
-    for image, label in zip(images, labels):
-      #yield image, label
-
-      #-------------------------------------------------------------------------
-      # NB : label shape has to be compliant with shape defined in  _input_fn()
-      # Otherwise, an error will occure when checking shapes issued from iterator 
-      # from Dataset package because of shapes.
-      #-------------------------------------------------------------------------
-      if is_label_encoded :
-          yield image, np.array(label).reshape(1)
-      else :
-          yield image, label
-  return _gen
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
