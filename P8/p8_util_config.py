@@ -20,7 +20,7 @@ IS_LABEL_ENCODED = True # Labels are re-encoded from one shot encoding to
 #-------------------------------------------------------------------------------
 
 # For ADANET, this is the number of iterations that will take place.
-TRAIN_STEPS = 200
+TRAIN_STEPS = 5
 
 
 BATCH_SIZE = 138#138//4
@@ -50,14 +50,14 @@ RNN_CELL_TYPE =  'GRU'
 RNN_CELL_TYPE = 'SGRU'
 
 
-NN_TYPE = 'CNN'
-RNN_CELL_TYPE = 'SGRU'
+NN_TYPE = 'DNN'
+RNN_CELL_TYPE = 'RNN'
 
 DNN_HIDDEN_UNITS=128
 DNN_NUM_LAYERS = 6
 
 IS_BATCH_NORM = True
-DROPOUT_RATE = 0.5 
+DROPOUT_RATE = 0.0
 
 #-------------------------------------------------------------------------------
 # When CONV_NUM_LAYERS value is None, then conv. layers will growth with number 
@@ -66,8 +66,8 @@ DROPOUT_RATE = 0.5
 # layers.
 # For CNN baseline, value has to be >0 and NN type fixed to CNNBase.
 #-------------------------------------------------------------------------------
-#CNN_CONV_LAYER_NUM  = None
-CNN_CONV_LAYER_NUM  = 4
+CNN_CONV_LAYER_NUM  = None
+#CNN_CONV_LAYER_NUM  = 4
 
 #-------------------------------------------------------------------------------
 
@@ -112,8 +112,8 @@ if NN_TYPE == 'CNN' or NN_TYPE == 'CNNBase':
 # RNN Network
 #-------------------------------------------------------------------------------
 RNN_ACTIVATION_NAME = None
-RNN_HIDDEN_UNITS = 8#128
-RNN_NUM_LAYERS = 2
+RNN_HIDDEN_UNITS = 128
+RNN_NUM_LAYERS = 1
 RNN_TIMESTEPS = 224 
 if NN_TYPE == 'RNN' :
     OPTIMIZER=tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
@@ -122,12 +122,12 @@ if NN_TYPE == 'RNN' :
 #-------------------------------------------------------------------------------
 # Adanet hyper-parameters
 #-------------------------------------------------------------------------------
-ADANET_FEATURE_SHAPE = None
+ADANET_FEATURE_SHAPE = (224,224*3)
 ADANET_OUTPUT_DIR='./tmp/adanet'
 ADANET_INITIAL_NUM_LAYERS = 0
 ADANET_NN_CANDIDATE = 2
 ADANET_LAMBDA = 1.e-5#0.005
-ADANET_ITERATIONS = 10  #@param {type:"integer"}
+ADANET_ITERATIONS = 1  #@param {type:"integer"}
 ADANET_IS_LEARN_MIXTURE_WEIGHTS = True
 if NN_TYPE == 'RNN' :
     ADANET_INITIAL_NUM_LAYERS = 1

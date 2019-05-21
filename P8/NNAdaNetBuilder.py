@@ -146,22 +146,26 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
 
     def _get_output_dir(self) :
        return self._output_dir
-    def _set_output_dir(self, output_dir) :
-        
+
+    def _set_output_dir(self, output_dir) :        
         self._output_dir = os.path.join(output_dir, self._nn_type)
-        if 'RNN' == self._nn_type :
-            dict_nn_layer_config= self._dict_rnn_layer_config
-            rnn_cell_type = dict_nn_layer_config['rnn_cell_type']
-            model_name = rnn_cell_type
-        elif  'CNN' == self._nn_type or 'CNNBase' == self._nn_type :
-            if self._dict_cnn_layer_config['cnn_dense_layer_num'] is None :
-                model_name = self._nn_type+'DENSE'
-            elif self._dict_cnn_layer_config['cnn_conv_layer_num'] is None :
-                model_name = self._nn_type+'CONV'            
-            else :
-                model_name = self._nn_type    
-        else : 
-            model_name = self._nn_type
+        
+        if False:
+            if 'RNN' == self._nn_type :
+                dict_nn_layer_config= self._dict_rnn_layer_config
+                rnn_cell_type = dict_nn_layer_config['rnn_cell_type']
+                model_name = rnn_cell_type
+            elif  'CNN' == self._nn_type or 'CNNBase' == self._nn_type :
+                if self._dict_cnn_layer_config['cnn_dense_layer_num'] is None :
+                    model_name = self._nn_type+'DENSE'
+                elif self._dict_cnn_layer_config['cnn_conv_layer_num'] is None :
+                    model_name = self._nn_type+'CONV'            
+                else :
+                    model_name = self._nn_type    
+            else : 
+                model_name = self._nn_type
+
+        model_name = p8_util.build_model_name(self._nn_type)
         self._classifier_config , self._output_dir_log= p8_util.make_config(model_name\
                                         , output_dir=self._output_dir\
                                         , is_restored=False)
@@ -230,13 +234,13 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         adanet_global_steps = p8_util_config.TRAIN_STEPS
         adanet_iter_per_booting = p8_util_config.ADANET_MAX_ITERATION_STEPS
         print("\n")
+        print("Global steps  : ................................... {}".format(adanet_global_steps))
+        print("NN type              : ............................ {}".format(self._nn_type))
+        print("Features shape       : ............................ {}".format(self._feature_shape))
         print("Adanet outputdir     : ............................ {}".format(self._output_dir))
         print("Adanet output log    : ............................ {}".format(self._output_dir_log))
         print("Adanet boosting iter.: ............................ {}".format(adanet_max_iteration_steps))
-        print("Adanet global steps  : ............................ {}".format(adanet_global_steps))
         print("Adanet iter per boost: ............................ {}".format(adanet_iter_per_booting))
-        print("NN type              : ............................ {}".format(self._nn_type))
-        print("Features shape       : ............................ {}".format(self._feature_shape))
         #print("Units in dense layer : ............................ {}".format(self._layer_size))
         print("Number of layers     : ............................ {}".format(self._num_layers))
         print("Dropout rate         : ............................ {}".format(self._dropout))

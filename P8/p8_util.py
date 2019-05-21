@@ -25,6 +25,9 @@ from keras.layers import Flatten, Dense, Dropout
 
 from sklearn import preprocessing
 
+from adanet.ensemble import MixtureWeightType
+from adanet.ensemble.weighted import ComplexityRegularizedEnsembler
+
 
 import p5_util
 import p8_util_config
@@ -40,11 +43,83 @@ _NUM_LAYERS_KEY = "num_layers"
 FEATURES_KEY = 'images'
 
 IS_DEBUG = p8_util_config.IS_DEBUG
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def build_adanet_estimator(subnetwork_generator):
+    '''Build ADANET estimator.
+    Input : 
+        *   subnetwork_generator : subnetwork generator
+        *   nn_type : type of neural network
+        *   feature_shape : shape of features.
+
+    Output : 
+        *   adanet_estimator : ADANET estimator.
+    '''
+    
+    output_dir = './tmp/adanet'
+    
+    #---------------------------------------------------------------------------
+    # Get parameters from configuration file.
+    #---------------------------------------------------------------------------
+    dict_adanet_config = p8_util_config.dict_adanet_config
+    feature_shape = dict_adanet_config['adanet_feature_shape']
+    
+    dict_nn_layer_config = dict_adanet_config['adanet_nn_layer_config']
+    nn_type = dict_nn_layer_config['nn_type']
+    
+    #---------------------------------------------------------------------------
+    # Fixe mixture weights
+    #---------------------------------------------------------------------------
+    if 'RNN' == nn_type :
+        mixture_weight_type=MixtureWeightType.VECTOR
+    else :
+        mixture_weight_type=MixtureWeightType.MATRIX
+
+    ensembler = ComplexityRegularizedEnsembler(mixture_weight_type=mixture_weight_type\
+                                            , adanet_lambda=p8_util_config.dict_adanet_config['adanet_lambda'])
+
+    input_fn_param={'num_epochs':p8_util_config.NUM_EPOCHS,\
+                    'batch_size':p8_util_config.BATCH_SIZE,\
+                    'feature_shape': feature_shape,\
+                   }
+
+    train_input_fn=input_fn_2("train", input_fn_param)
+    
+    model_name = build_model_name(nn_type)
+    
+    adanet_estimator_config, output_dir_log= make_config(model_name\
+                                        , output_dir=output_dir\
+                                        , is_restored=False)
+                                        
+    nb_class = p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_logit_dimension']
+        
+    feature_columns, loss_reduction, tf_head \
+        = get_tf_head(feature_shape, nb_class, nn_type=nn_type, feature_shape=feature_shape)
+    
+    p8_util_config.dict_adanet_config['adanet_feature_columns'] = feature_columns    
+    p8_util_config.dict_adanet_config['adanet_feature_shape'] = feature_shape
+    
+    adanet_estimator = adanet.Estimator(
+        head=p8_util_config.dict_adanet_config['adanet_tf_head'],
+        subnetwork_generator=subnetwork_generator,
+        ensemblers        = [ensembler],
+
+        max_iteration_steps=p8_util_config.ADANET_MAX_ITERATION_STEPS,
+
+        evaluator=adanet.Evaluator(
+            input_fn=train_input_fn,
+            steps=None),
+        config=  adanet_estimator_config)
+    return adanet_estimator, output_dir_log
+#-------------------------------------------------------------------------------
+    
+
     
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def create_nn_builder(param_feature_shape, output_dir, layer_num=None):
+def create_nn_builder( output_dir, layer_num=None):
     '''Creates an NNAdaNetBuilder object from configuration defined into file 
     p8_util_config.
     This function may be used for Baseline when testing NN networks fixing 
@@ -64,6 +139,7 @@ def create_nn_builder(param_feature_shape, output_dir, layer_num=None):
         * Object of type NNAdaNetBuilder
     
     '''
+    param_feature_shape = p8_util_config.dict_adanet_config['adanet_feature_shape']
     if layer_num is None :
         if p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_type'] == 'CNN' :
             if p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['cnn_dense_layer_num'] is None :
@@ -487,6 +563,88 @@ def generator(images, labels):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
+def build_model_name(nn_type):
+    '''Build estimator model name from type of neural network.
+    '''    
+
+    if 'RNN' == nn_type :
+        dict_rnn_layer_config= p8_util_config.dict_rnn_layer_config
+        rnn_cell_type = dict_rnn_layer_config['rnn_cell_type']
+        model_name = rnn_cell_type
+    elif  'CNN' == nn_type or 'CNNBase' == nn_type :
+        dict_cnn_layer_config = p8_util_config.dict_cnn_layer_config
+        if dict_cnn_layer_config['cnn_dense_layer_num'] is None :
+            model_name = nn_type+'DENSE'
+        elif dict_cnn_layer_config['cnn_conv_layer_num'] is None :
+            model_name = nn_type+'CONV'            
+        else :
+            model_name = nn_type    
+    else : 
+        model_name = nn_type
+    return model_name
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def input_fn_2(partition, input_fn_param) :
+  """Generate an input_fn for the Estimator."""
+
+  def _input_fn():
+    filename_dataset='./data/arr_keras_X_y_train_test.dump'
+    num_epochs = input_fn_param['num_epochs']
+    batch_size = input_fn_param['batch_size']
+    feature_shape = input_fn_param['feature_shape']    
+    
+    x_train, x_test, y_train, y_test, n_class, feature_shape \
+    = load_dataset(filename_dataset)
+
+    if 1 == len(y_train.shape):
+        label_shape = [1]
+    else : 
+        label_shape = [y_train.shape[1]]
+     
+    #---------------------------------------------------------------------------
+    # Defining shapes with None as first value allows the generator to 
+    # adapt itself when batch does not fit expected size.
+    # Otherwise an error value may be raized such as 
+    # ValueError: `generator` yielded an element of shape () where an element of shape (1,) was expected.
+    #---------------------------------------------------------------------------
+    
+    if IS_DEBUG is True :
+        print("\n*** input_fn() : feature_shape= {} / label_shape= {}"\
+        .format(feature_shape, label_shape))
+    
+    training=False
+        
+    if partition == "train":
+        dataset = tf.data.Dataset.from_generator(generator(x_train, y_train), (tf.float32, tf.int32), (feature_shape, ()))
+        training = True
+        dataset = dataset.shuffle(10 * batch_size, seed=RANDOM_SEED).repeat(num_epochs)
+    else:
+        dataset = tf.data.Dataset.from_generator(generator(x_test, y_test), (tf.float32, tf.int32), (feature_shape, ()))
+        if IS_DEBUG is True :
+            print("\n*** input_fn : TEST / feature_shape= {}".format(feature_shape))
+
+    # We call repeat after shuffling, rather than before, to prevent separate
+    # epochs from blending together.
+    dataset = dataset.map(preprocess_color_image).batch(batch_size)
+    
+    iterator = dataset.make_one_shot_iterator()
+
+    if IS_DEBUG is True :
+        print("\n***_input_fn() : Label shape ={}".format(label_shape))
+
+    features, labels = iterator.get_next()
+    
+    return features, labels
+
+  return _input_fn    
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
 def input_fn(partition, x, y, input_fn_param):
   """Generate an input_fn for the Estimator."""
 
@@ -516,12 +674,7 @@ def input_fn(partition, x, y, input_fn_param):
     
     training=False
     
-    if False :
-        dataset = tf.data.Dataset.from_generator(
-            generator(x, y), (tf.float32, tf.int32), (feature_shape, label_shape))
-    else :        
-        #dataset = tf.data.Dataset.from_generator(generator(x, y), (tf.float32, tf.int32), ((224, 224, 3), ()))
-        dataset = tf.data.Dataset.from_generator(generator(x, y), (tf.float32, tf.int32), (feature_shape, ()))
+    dataset = tf.data.Dataset.from_generator(generator(x, y), (tf.float32, tf.int32), (feature_shape, ()))
         
         
     if partition == "train":
@@ -533,10 +686,7 @@ def input_fn(partition, x, y, input_fn_param):
 
     # We call repeat after shuffling, rather than before, to prevent separate
     # epochs from blending together.
-    if False :
-        dataset = dataset.map(preprocess_image).batch(batch_size)
-    else :
-        dataset = dataset.map(preprocess_color_image).batch(batch_size)
+    dataset = dataset.map(preprocess_color_image).batch(batch_size)
     
     iterator = dataset.make_one_shot_iterator()
 
@@ -550,6 +700,36 @@ def input_fn(partition, x, y, input_fn_param):
   return _input_fn    
 #-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def train_and_evaluate(adanet_estimator):
+
+    #---------------------------------------------------------------------
+    # Input function parameters stay same as for train_input_fn
+    #---------------------------------------------------------------------
+    input_fn_param={'num_epochs':p8_util_config.NUM_EPOCHS,\
+                    'batch_size':p8_util_config.BATCH_SIZE,\
+                    'feature_shape': p8_util_config.dict_adanet_config['adanet_feature_shape'],\
+                   }
+
+    train_input_fn=input_fn_2("train", input_fn_param)
+    test_input_fn=input_fn_2("test",input_fn_param)
+
+    train_spec=tf.estimator.TrainSpec(
+            input_fn= train_input_fn,
+            max_steps=p8_util_config.TRAIN_STEPS)
+
+    eval_spec=tf.estimator.EvalSpec(
+            input_fn= test_input_fn,
+            steps=None,
+            start_delay_secs=1,
+            throttle_secs=1)
+    import p8_util
+
+    results, _ = tf.estimator.train_and_evaluate(adanet_estimator, train_spec, eval_spec)
+    return results, _
+#-------------------------------------------------------------------------------
 
 
   

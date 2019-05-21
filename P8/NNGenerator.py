@@ -3,7 +3,7 @@ import tensorflow as tf
 import adanet
 
 import functools
-
+import p8_util
 import p8_util_config
 import NNAdaNetBuilder
 from NNAdaNetBuilder import NNAdaNetBuilder
@@ -55,9 +55,24 @@ class NNGenerator(adanet.subnetwork.Generator):
           ValueError: If layer_size < 1.
           ValueError: If initial_num_layers < 0.
         """
-        
+        #---------------------------------------------------------------------------------
+        # Update Adanet configuration with feature columns.
+        #---------------------------------------------------------------------------------
+        dict_nn_layer_config = p8_util_config.dict_adanet_config['adanet_nn_layer_config']
+        nb_class= dict_nn_layer_config['nn_logit_dimension']
+        nn_type = dict_nn_layer_config['nn_type']
         feature_columns = dict_adanet_config['adanet_feature_columns']
-        
+        feature_shape   = dict_adanet_config['adanet_feature_shape']
+
+        if feature_columns is None :
+            feature_columns, loss_reduction, tf_head\
+            = p8_util.get_tf_head(feature_shape, nb_class, nn_type=nn_type\
+            , feature_shape=feature_shape)
+    
+            p8_util_config.dict_adanet_config['adanet_feature_columns'] = feature_columns
+            p8_util_config.dict_adanet_config['adanet_tf_head'] = tf_head
+
+
         print("\n*** NNGenerator() : feature_columns= {}".format(feature_columns))
         
         initial_num_layers = dict_adanet_config['adanet_initial_num_layers']
