@@ -4,7 +4,7 @@ networks.
 import tensorflow as tf
 
 IS_DEBUG = True
-DATASET_TYPE='P7'
+#DATASET_TYPE='P7'
 DATASET_TYPE='MNIST'
 #-------------------------------------------------------------------------------
 # Dataset configuration
@@ -117,7 +117,7 @@ if NN_TYPE == 'CNN' or NN_TYPE == 'CNNBase':
 #-------------------------------------------------------------------------------
 RNN_ACTIVATION_NAME = None
 RNN_HIDDEN_UNITS = 128
-RNN_NUM_LAYERS = 1
+RNN_NUM_LAYERS = 2
 RNN_TIMESTEPS = 224 
 
 if DATASET_TYPE == 'MNIST':
