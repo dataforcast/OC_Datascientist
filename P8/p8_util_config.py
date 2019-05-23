@@ -3,8 +3,9 @@ networks.
 '''
 import tensorflow as tf
 
-IS_DEBUG = False
-
+IS_DEBUG = True
+DATASET_TYPE='P7'
+DATASET_TYPE='MNIST'
 #-------------------------------------------------------------------------------
 # Dataset configuration
 #-------------------------------------------------------------------------------
@@ -20,7 +21,7 @@ IS_LABEL_ENCODED = True # Labels are re-encoded from one shot encoding to
 #-------------------------------------------------------------------------------
 
 # For ADANET, this is the number of iterations that will take place.
-TRAIN_STEPS = 5
+TRAIN_STEPS = 300
 
 
 BATCH_SIZE = 138#138//4
@@ -37,7 +38,10 @@ NUM_EPOCHS = TRAIN_STEPS//MINI_BATCH_NUMBER
 #-------------------------------------------------------------------------------
 
 LEARNING_RATE = 1.e-3
+
 NB_CLASS = 3
+if DATASET_TYPE == 'MNIST':
+    NB_CLASS = 10
 
 NN_TYPE = 'DNN'
 NN_TYPE = 'CNN'
@@ -50,8 +54,8 @@ RNN_CELL_TYPE =  'GRU'
 RNN_CELL_TYPE = 'SGRU'
 
 
-NN_TYPE = 'DNN'
-RNN_CELL_TYPE = 'RNN'
+NN_TYPE = 'RNN'
+RNN_CELL_TYPE = 'SGRU'
 
 DNN_HIDDEN_UNITS=128
 DNN_NUM_LAYERS = 6
@@ -64,10 +68,10 @@ DROPOUT_RATE = 0.0
 # of layers provided from NNGenerator.
 # Otherwise, CNN is built at each Adanet iteration with same number of conv. 
 # layers.
-# For CNN baseline, value has to be >0 and NN type fixed to CNNBase.
+# For CNN baseline, value has to be >0 and NN type to be fixed to CNNBase.
 #-------------------------------------------------------------------------------
-CNN_CONV_LAYER_NUM  = None
-#CNN_CONV_LAYER_NUM  = 4
+#CNN_CONV_LAYER_NUM  = None
+CNN_CONV_LAYER_NUM  = 3
 
 #-------------------------------------------------------------------------------
 
@@ -85,7 +89,7 @@ CNN_DENSE_UNIT_SIZE = 128
 # layers.
 #-------------------------------------------------------------------------------
 #CNN_DENSE_LAYER_NUM = 2
-CNN_DENSE_LAYER_NUM = 3
+CNN_DENSE_LAYER_NUM = None
 #-------------------------------------------------------------------------------
 
 
@@ -115,6 +119,10 @@ RNN_ACTIVATION_NAME = None
 RNN_HIDDEN_UNITS = 128
 RNN_NUM_LAYERS = 1
 RNN_TIMESTEPS = 224 
+
+if DATASET_TYPE == 'MNIST':
+    RNN_TIMESTEPS = 28
+
 if NN_TYPE == 'RNN' :
     OPTIMIZER=tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
     INITIALIZER_NAME = 'truncated_normal'
@@ -123,11 +131,14 @@ if NN_TYPE == 'RNN' :
 # Adanet hyper-parameters
 #-------------------------------------------------------------------------------
 ADANET_FEATURE_SHAPE = (224,224*3)
+if DATASET_TYPE == 'MNIST':
+    ADANET_FEATURE_SHAPE = (28,28)
+
 ADANET_OUTPUT_DIR='./tmp/adanet'
 ADANET_INITIAL_NUM_LAYERS = 0
 ADANET_NN_CANDIDATE = 2
 ADANET_LAMBDA = 1.e-5#0.005
-ADANET_ITERATIONS = 1  #@param {type:"integer"}
+ADANET_ITERATIONS = 40  #@param {type:"integer"}
 ADANET_IS_LEARN_MIXTURE_WEIGHTS = True
 if NN_TYPE == 'RNN' :
     ADANET_INITIAL_NUM_LAYERS = 1

@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import tensorflow as tf
+import keras
 from tensorflow.contrib import rnn
 
 import adanet
@@ -380,6 +381,9 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         cnn_conv_layer  = 0   
         #conv_layer, dense_layer = self.nn_layertype_alternate()        
         
+        
+        
+        #model = keras.models.Sequential(name='ConvAdanet')
         #-----------------------------------------------------------------------                
         # Convolutional Layers
         #-----------------------------------------------------------------------                        
@@ -390,17 +394,40 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
           
         last_layer =  features['images']
         last_layer = list(features.values())[0]
+        print("\**** Input layer= {}".format(last_layer))
         for layer in range_layer :     
             last_layer = self._cnn_bacth_norm(last_layer, is_training)
-            last_layer = tf.layers.conv2d(last_layer
-                                    , filters=cnn_filters
-                                    , kernel_size=tuple_cnn_kernel_size
-                                    , strides=cnn_strides
-                                    , padding=cnn_padding_name
-                                    , activation=conv_activation_fn
-                                    , kernel_initializer=layer_initializer())
-            pool_size = (2, 2)
-            last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
+            print("\**** Last layer= {} / {}".format(layer,last_layer))
+            if True :
+                last_layer = tf.layers.conv2d(last_layer
+                                        , filters=cnn_filters
+                                        , kernel_size=tuple_cnn_kernel_size
+                                        , strides=cnn_strides
+                                        , padding=cnn_padding_name
+                                        , activation=conv_activation_fn
+                                        , kernel_initializer=layer_initializer())
+                #C = (I-F+2P)/S +1
+                # 28-5+1 = 24
+                pool_size = (2, 2)
+                last_layer = tf.layers.max_pooling2d(inputs=last_layer, pool_size= pool_size , strides=2)
+            else :
+                last_layer = keras.layers.Conv2D(cnn_filters   
+                , kernel_size=tuple_cnn_kernel_size
+                , strides=cnn_strides
+                , padding=cnn_padding_name
+                , data_format=None
+                , dilation_rate=(1, 1)
+                , activation=conv_activation_fn
+                , use_bias=True
+                , kernel_initializer='glorot_uniform'
+                , bias_initializer='zeros'
+                , kernel_regularizer=None
+                , bias_regularizer=None
+                , activity_regularizer=None
+                , kernel_constraint=None
+                , bias_constraint=None)(last_layer)
+                last_layer = tf.keras.layers.MaxPooling2D(pool_size=(2,2), strides=(2,2))(last_layer)
+    
 
 
         #-----------------------------------------------------------------------                
@@ -468,12 +495,19 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         
         timesteps = self._dict_rnn_layer_config['rnn_timesteps']
 
-
-        #print(last_layer.shape, type(last_layer))
-        last_layer = tf.reshape(last_layer, [-1,224,224*3])   
-        #print(last_layer.shape, type(last_layer))
-        list_layer = tf.unstack(last_layer, 224, 1)
-        #print(len(last_layer), type(last_layer))
+        raws = p8_util_config.ADANET_FEATURE_SHAPE[0]
+        cols = p8_util_config.ADANET_FEATURE_SHAPE[1]
+        #last_layer = tf.reshape(last_layer, [-1,raws*cols])   
+        #list_layer = tf.unstack(last_layer, raws, 1)
+        if True:
+            if p8_util_config.DATASET_TYPE == 'P7' :
+                last_layer = tf.reshape(last_layer, [-1,raws,cols])   
+                list_layer = tf.unstack(last_layer, raws, 1)
+            elif p8_util_config.DATASET_TYPE == 'MNIST' :
+                last_layer = tf.reshape(last_layer, [-1,raws,cols])   
+                list_layer = tf.unstack(last_layer, raws, 1)
+            else :
+                pass
         
         # Define a rnn cell with tensorflow
         if 'RNN' == rnn_cell_type :
@@ -563,7 +597,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         
         if self._cnn_convlayer > 0 : 
             last_layer =  features['images']       
-            for layer in range(self._cnn_convlayer) :     
+            for layer in range(self._cnn_convlayer) :
                 last_layer = self._cnn_bacth_norm(last_layer, is_training)
                 last_layer = tf.layers.conv2d(last_layer, filters=64,
                                       kernel_size=(3,3) , strides=1,
@@ -625,6 +659,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
         
         return last_layer,logits
    #----------------------------------------------------------------------------
+
+
     #----------------------------------------------------------------------------
     #
     #----------------------------------------------------------------------------
@@ -680,8 +716,8 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             # root of its depth; depth includes Conv layers as well as dense layers.
             # Complexity is the sum of current growth layers and fixed layers.
             # Fixed layers may be convolutional or dense layers, depending 
-            # configuration values from dictionary (None mean layer is incremented
-            # from Adanet weaklearner algorithm)
+            # configuration values from dictionary (None means layers are 
+            # increased from Adanet weaklearner algorithm)
             #-------------------------------------------------------------------
             complexity = self._num_layers
 

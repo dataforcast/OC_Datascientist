@@ -78,10 +78,11 @@ def build_adanet_estimator(subnetwork_generator):
 
     ensembler = ComplexityRegularizedEnsembler(mixture_weight_type=mixture_weight_type\
                                             , adanet_lambda=p8_util_config.dict_adanet_config['adanet_lambda'])
-
+    dataset_type = p8_util_config.DATASET_TYPE
     input_fn_param={'num_epochs':p8_util_config.NUM_EPOCHS,\
                     'batch_size':p8_util_config.BATCH_SIZE,\
                     'feature_shape': feature_shape,\
+                    'dataset_type': dataset_type
                    }
 
     train_input_fn=input_fn_2("train", input_fn_param)
@@ -180,7 +181,7 @@ def create_nn_builder( output_dir, layer_num=None):
         p8_util_config.dict_adanet_config['adanet_nn_layer_config']['nn_layer_config']['dnn_layer_num']=layer_num
 
     if IS_DEBUG is True :
-        print("\nMax steps= {} / Number of EPOCH={}".format(p8_util_config.MAX_STEPS,p8_util_config.NUM_EPOCHS))
+        print("\nMax steps= {} / Number of EPOCH={}".format(p8_util_config.TRAIN_STEPS,p8_util_config.NUM_EPOCHS))
     return oNNAdaNetBuilder
         
 #-------------------------------------------------------------------------------
@@ -445,7 +446,7 @@ def load_dataset(filename, dataset_type='P7', is_label_encoded=False) :
     elif dataset_type == 'MNIST' :
         x_train, x_valid, x_test, y_train, y_valid, y_test = load_data_mnist()
         nClasses = max(len(np.unique(y_train)), len(np.unique(y_test)))
-        if True:
+        if False:
             y_train=array_label_encode_binary(y_train)
             y_test=array_label_encode_binary(y_test)
             y_valid=array_label_encode_binary(y_valid)
@@ -461,7 +462,7 @@ def load_dataset(filename, dataset_type='P7', is_label_encoded=False) :
     #print("Dimensions= {}".format(tuple_dimension))
     #print("Number of classes= "+str(nClasses))
     if dataset_type == 'MNIST' :
-        return x_train, x_valid, x_test, y_train, y_valid, y_test,  nClasses \
+        return x_train, x_test, y_train, y_test,  nClasses \
         ,tuple_dimension[0][1:]        
 
     return x_train, x_test, y_train, y_test, nClasses,tuple_dimension[0][1:]
@@ -591,14 +592,21 @@ def input_fn_2(partition, input_fn_param) :
   """Generate an input_fn for the Estimator."""
 
   def _input_fn():
-    filename_dataset='./data/arr_keras_X_y_train_test.dump'
     num_epochs = input_fn_param['num_epochs']
     batch_size = input_fn_param['batch_size']
     feature_shape = input_fn_param['feature_shape']    
+    dataset_type = input_fn_param['dataset_type']    
     
-    x_train, x_test, y_train, y_test, n_class, feature_shape \
-    = load_dataset(filename_dataset)
-
+    
+    if dataset_type == 'MNIST' :
+        x_train, x_test, y_train, y_test, n_class, feature_shape \
+        = load_dataset(None, dataset_type='MNIST')
+    elif dataset_type == 'P7' :
+        filename_dataset='./data/arr_keras_X_y_train_test.dump'
+        x_train, x_test, y_train, y_test, n_class, feature_shape \
+        = load_dataset(filename_dataset)
+    else:
+        print("\n*** ERROR : Dataset type= {} Not supported!".format(dataset_type))
     if 1 == len(y_train.shape):
         label_shape = [1]
     else : 
@@ -628,7 +636,10 @@ def input_fn_2(partition, input_fn_param) :
 
     # We call repeat after shuffling, rather than before, to prevent separate
     # epochs from blending together.
-    dataset = dataset.map(preprocess_color_image).batch(batch_size)
+    if p8_util_config.DATASET_TYPE == 'P7':
+        dataset = dataset.map(preprocess_color_image).batch(batch_size)
+    if p8_util_config.DATASET_TYPE == 'MNIST':
+        dataset = dataset.map(preprocess_image).batch(batch_size)
     
     iterator = dataset.make_one_shot_iterator()
 
@@ -708,9 +719,11 @@ def train_and_evaluate(adanet_estimator):
     #---------------------------------------------------------------------
     # Input function parameters stay same as for train_input_fn
     #---------------------------------------------------------------------
+    dataset_type = p8_util_config.DATASET_TYPE
     input_fn_param={'num_epochs':p8_util_config.NUM_EPOCHS,\
                     'batch_size':p8_util_config.BATCH_SIZE,\
                     'feature_shape': p8_util_config.dict_adanet_config['adanet_feature_shape'],\
+                    'dataset_type':dataset_type
                    }
 
     train_input_fn=input_fn_2("train", input_fn_param)
@@ -725,7 +738,6 @@ def train_and_evaluate(adanet_estimator):
             steps=None,
             start_delay_secs=1,
             throttle_secs=1)
-    import p8_util
 
     results, _ = tf.estimator.train_and_evaluate(adanet_estimator, train_spec, eval_spec)
     return results, _
