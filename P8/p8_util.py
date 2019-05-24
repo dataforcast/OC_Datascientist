@@ -1,4 +1,5 @@
-
+'''This file implements all utility functions involved in ADANET solution.
+'''
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -48,13 +49,16 @@ IS_DEBUG = p8_util_config.IS_DEBUG
 #-------------------------------------------------------------------------------
 def build_adanet_estimator(subnetwork_generator):
     '''Build ADANET estimator.
+
     Input : 
-        *   subnetwork_generator : subnetwork generator
-        *   nn_type : type of neural network
+        *   subnetwork_generator : subnetwork generator that generates a candidate 
+            that is provided to ADANET weaklearner algorithm.
+        *   nn_type : type of neural network candidate to be generated. It is used 
+            to select mixture weights type : scalar, vector or matrix.
         *   feature_shape : shape of features.
 
     Output : 
-        *   adanet_estimator : ADANET estimator.
+        *   adanet_estimator : ADANET estimator instance of adanet.Estimator class.
     '''
     
     output_dir = './tmp/adanet'
@@ -188,6 +192,9 @@ def create_nn_builder( output_dir, layer_num=None):
 #
 #-------------------------------------------------------------------------------
 def get_tf_head(tuple_dimension, nClasses, nn_type='CNN', feature_shape=None) :
+    '''Build a multi-class (tensorflow) head along with tensorflow features 
+    columns and loss computation type.
+    '''
     #FEATURES_KEY = feature_key
     list_dimension = [dimension for dimension in tuple_dimension]
     
@@ -204,12 +211,20 @@ def get_tf_head(tuple_dimension, nClasses, nn_type='CNN', feature_shape=None) :
 
     if IS_DEBUG is True :
         print("\n*** get_tf_head() : feature shape= {}".format(feature_shape))
+        
+    #---------------------------------------------------------------------------
+    # Build numeric features colums.
+    #---------------------------------------------------------------------------
     my_feature_columns = [tf.feature_column.numeric_column(FEATURES_KEY\
                                                 , shape=feature_shape)]
     if IS_DEBUG is True :
         print("\n*** get_tf_head() : feature columns= {}".format(my_feature_columns))
     # Some `Estimators` use feature columns for understanding their input features.
     # We will average the losses in each mini-batch when computing gradients.
+
+    #---------------------------------------------------------------------------
+    # Select loss reduction type depending on neural network type.
+    #---------------------------------------------------------------------------
     if nn_type == 'RNN' :
         loss_reduction = tf.losses.Reduction.SUM_OVER_BATCH_SIZE
     else :
@@ -226,16 +241,20 @@ def get_tf_head(tuple_dimension, nClasses, nn_type='CNN', feature_shape=None) :
 #   
 #-------------------------------------------------------------------------------
 def custom_model_fn( features, labels, mode, params ): 
-    '''This function implements training, evaluation and prediction.
+    '''This function implements training, evaluation and prediction for customized 
+    estimator.
     It also implements the predictor model.
     It is designed in the context of a customized Estimator.
 
     This function is invoked form Estimator's train, predict and evaluate methods.
+    Input :
         features : batch of features provided from input function.
         labels : batch labels provided from input function.
         mode : provided by input function, mode discriminate train, evaluation and prediction steps.
         params : parameters used in this function, passed to Estimator by higher level call.
-
+    Output:
+        tf.estimator.EstimatorSpec thagt will be passed to an Estimator.
+        
     '''
     #-----------------------------------------------------------------------------
     # Get from parameters object that is used form Adanet to build NN sub-networks.
@@ -390,6 +409,7 @@ def batch_coloredimage_serial_reshape(x_batch):
        |              |--+           |   |          |
        |              |              |___|          |
        +--------------+              |   |          |
+                                     |   |          |
                                      | B |          |
                                      |   |          |
                                      +---+----------+
@@ -589,7 +609,16 @@ def build_model_name(nn_type):
 #
 #-------------------------------------------------------------------------------
 def input_fn_2(partition, input_fn_param) :
-  """Generate an input_fn for the Estimator."""
+  '''Generates an input_fn for the Estimator.
+  Estimator is in charhe to train and evluate model, serialise weights and biases.
+  
+  input_fn pumps and feeds data into the estimator.
+  Data is pumped either from a .dump file or from MNIST dataset.
+  
+  Input:
+    *   partition : fixes train, evaluation or prediction operation.
+    *   input_fn_param : contains all parameters for loading data.
+  '''
 
   def _input_fn():
     num_epochs = input_fn_param['num_epochs']
@@ -598,6 +627,9 @@ def input_fn_2(partition, input_fn_param) :
     dataset_type = input_fn_param['dataset_type']    
     
     
+    #---------------------------------------------------------------------------
+    # Select data source.
+    #---------------------------------------------------------------------------
     if dataset_type == 'MNIST' :
         x_train, x_test, y_train, y_test, n_class, feature_shape \
         = load_dataset(None, dataset_type='MNIST')
@@ -618,13 +650,14 @@ def input_fn_2(partition, input_fn_param) :
     # Otherwise an error value may be raized such as 
     # ValueError: `generator` yielded an element of shape () where an element of shape (1,) was expected.
     #---------------------------------------------------------------------------
-    
     if IS_DEBUG is True :
         print("\n*** input_fn() : feature_shape= {} / label_shape= {}"\
         .format(feature_shape, label_shape))
     
-    training=False
-        
+    #---------------------------------------------------------------------------
+    # Building the dataset, tensorflow formated
+    #---------------------------------------------------------------------------
+    training=False        
     if partition == "train":
         dataset = tf.data.Dataset.from_generator(generator(x_train, y_train), (tf.float32, tf.int32), (feature_shape, ()))
         training = True
@@ -715,6 +748,8 @@ def input_fn(partition, x, y, input_fn_param):
 #
 #-------------------------------------------------------------------------------
 def train_and_evaluate(adanet_estimator):
+    '''Apply ADANET train and evaluation.
+    '''
 
     #---------------------------------------------------------------------
     # Input function parameters stay same as for train_input_fn
