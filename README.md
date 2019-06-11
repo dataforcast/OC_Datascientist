@@ -13,6 +13,15 @@ The professional projects presented here are the results of my apprenticeship.
 <br>
 
 <a href="URL">http://bit.ly/Linkedin_FBANGUI</a>
+<hr>
+## <h1><font color='blus'>ADANET Evaluation</font></h1>
+<br>
+AdaNet is a TensorFlow framework for fast and flexible AutoML with learning guarantees.
+AdaNet implements an adaptive algorithm and learns neural architecture from neural Subnetworks.
+<br>
+
+See project description on : 
+<a href="URL">https://github.com/dataforcast/OC_Datascientist/tree/master/P8/README.mkd</a>
 
 
 <hr>
