@@ -1,0 +1,246 @@
+# <center><h1>EVALUATION OF ADANET ALGORITHM</h1></center>
+
+<hr>
+
+<br>
+<h2><font size=5>Abstract</font></h2>
+<hr>
+<font size=4>
+This study presents an evaluation of the ADANET algorithm using images from the Standford dogs dataset database. It is a multi-class classification problem of predicting a breed of a dog from its image.
+</font>
+
+<br>
+<font size=4>
+The algorithm is based on the theory of statistical learning and ensemble models. As such, ADANET is an extension of the ensemble methods to neural networks.
+</font>
+
+<br>
+<font size=4>
+The ADANET algorithm aims to overcome the exhaustive search for hyper-parameters of a neural network. The predictive model is constructed by learning the structure of a network of neurons to
+from subnets of candidate neurons. The structure of the result network satisfies the complexity requirements inherent to neural networks with a guarantee of learning.</font>
+</font>
+
+<br>
+<font size=4>
+DNN, CNN and RNN networks type are tested.
+The implementation uses the ADANET package from Tensorflow. The construction of candidate subnets provided for learning ADANET are implemented in Tensrorflow.
+
+<br>
+
+<br><br>
+<h2>Project artefacts</h2>
+<hr>
+
+<br>
+
+* <font size=4>Project artefacts are located under <a href="URL">http://bit.ly/FBangui_Datasciences_Adanet</font></a>
+<br>
+
+* <font size=4>These slides present the overall approach of the study : <a href="URL">
+        https://github.com/dataforcast/OC_Datascientist/blob/master/P8/report/Slides_P8_V2.pdf</font></a>
+<br>
+
+<br>
+
+<font size=4>Software architecture :</font> 
+
+<center><img src="./report/SwArchitecture.png" alt="Drawing" style="width: 200px;"/></center>
+<br>
+
+* <font size=4> Adanet package uses Tensorflow package. Adanet implements its own `Estimator` class in order to train and  evaluate Adanet models. Adanet is a micro-framework. It defines classes `Generator` and `Builder` to to inherited.</font>
+<br>
+
+* <font size=4> In project package : </font>
+* > <font size=4> Project package uses Tensorflow API in order to build neural networks ( `tf.layers`) , pump data from dataset ( `tf.data.Dataset`)  and train and evaluate model ( `tf.estimator`) </font>
+* > <font size=4> `NNGenerator` inherites from `Generator`</font>
+* > <font size=4> `NNAdnetBuilder` inherites from `Builder`</font>
+* > <font size=4> `NNAdanetBilder` and `BaselineEstimator` both of them use `p8_util` and `p8_util_config` </font>
+* > <font size=4> `p8_util` contains miscelleneous functions </font>
+* > <font size=4> `p8_util_config` contains estmators configuration. This ensure both baseline and Adanet will use same configuration for cross-evaluation. </font>
+* > <font size=4> `RNN` `CNN` and `DNN` objects are abstractions of Tensorflow implementation. </font>
+* > <font size=4> `BaselineEstimator` is a customized estimator that uses Tensorflow `Estimator` class. </font>
+<br>
+* <font size=4> Notebooks : </font>
+* > <font size=4> `Adanet` this notebok is used to evaluate various Adanet implementations. </font>
+* > <font size=4> `Baseline` this notebok is used to evaluate various Baseline implementations. </font>
+
+<br>
+<h2><font size=5>ADANET modeling of a neural network</font></h2>
+<br>
+<font size=4>
+In the ADANET model, an estimator is a subnet of neurons and the final estimator is composed of a set of subnets.
+</font>
+
+<br>
+<font size=4>
+A layered neural network is an approximation of a prediction function, denoted f : 
+</font>
+
+<center><img src="./report/ModelAdanet1.png" alt="Drawing" style="width: 200px;"/></center>
+<br>
+<font size=4>
+Taking into account a number of neurons k per layer, the last function can be rewritten:
+</font>
+<center><img src="./report/ModelAdanet2.png" alt="Drawing" style="width: 200px;"/></center>
+<center><img src="./report/AdanetArchitecture1.png" alt="Drawing" style="width: 200px;"/></center>
+
+<h2><font size=5>Regularization of the complexity of Rademacher</font></h2>
+<font size=4>
+The concept of complexity is highlighted in the inequality that explains the principle of minimizing structural risk. More specifically, the complexity is highlighted in the term
+C (F) of the following inequality:
+</font>
+<center><img src="./report/AdanetComplexity1.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>
+
+<font size=4>
+Where : 
+</font>
+
+<center><img src="./report/AdanetComplexityExplained1.png" alt="Drawing" style="width: 200px;"/></center>
+
+<br>
+
+<font size=4>
+Using Rademacher complexity leads to following inequality : 
+</font>
+<br>
+<center><img src="./report/AdanetComplexityRademacher.png" alt="Drawing" style="width: 200px;"/></center>
+
+<font size=4>
+Where : 
+</font>
+
+
+<center><img src="./report/AdanetComplexityExplained2.png" alt="Drawing" style="width: 200px;"/></center>
+<br>
+
+<font size=4>
+The previous expression is remarkable:<br>
+     • generalization error term is bounded by terms that only depend on the estimator and the dataset.<br>
+     • The complexity of Rademacher is regularized (penalized) by the L1 norm of the weights Wk. This regularization flows "naturally" from the formulation of the neural network model.
+</font>
+
+<br>
+<h2><font size=5>Learning guarantee</font></h2>
+<font size=4>
+This regularization means that the basic estimators h constituting the estimator f (w, h) can be sought in families of estimators of increasing complexity without thereby affecting the capacity of the estimator to generalize.
+</font>
+<br>
+
+<font size=4>
+Indeed, this regularization of the cost function has the effect of making the values of the weights W even lower than the basic estimators h j will be complex. This property guarantees that the result estimator can be constructed by enriching itself with increasingly complex basic estimators and that the error of generalization will reflect the empirical error. **This is what is called the learning guarantee**.
+</font>
+
+<br>
+<h2><font size=5>Adanet weaklearner algorithm</font></h2>
+<center><img src="./report/AdanetWeakLearner.png" alt="Drawing" style="width: 200px;"/></center>
+
+
+<font size=4>
+
+*   At step t, an ensemble of subnetworks are forming an Adanet ensemble.
+*   2 candidates are trained : candidate 1 and candidate 2
+*   complexity values of each one of the candidates are computed
+*   For each one of the candidates, weights linked to the Adanet Ensemble are computed; this allows to compute loss reduction from the ADANET cost function.
+*   Selected candidate is the one that minimizes the most the cost function
+*   ADANET ensemble is increased with the selected candidate.
+
+</font>
+
+<br>
+<h2><font size=5>Adanet evaluations</font></h2>
+
+<br>
+<h3><font size=4>Dataset</font></h3>
+<center><img src="./report/Dataset1.png" alt="Drawing" style="width: 200px;"/></center>
+<br>
+
+<font size=4>
+These images are issued from Standford dogs dataset.
+Aims is to predict a breed from an image.</font>
+
+<br>
+
+<font size=4>Problem complexity comes from :</font>
+
+
+*   <font size=4>backgrounds, introducing noise</font>
+*   <font size=4>topics confusion </font>
+*   <font size=4>high variance in profiles, scales, colors</font>
+*   <font size=4>some images having multiple dogs</font>
+</font>
+
+<br>
+<h3><font size=4>Dense Neural Networks (DNN)</font></h3>
+
+<center><img src="./report/AdanetEvaluationDNN.png" alt="Drawing" style="width: 200px;"/></center>
+
+<font size=4>
+Baseline is showned on the left side while ADANET is shown on the right side.
+While loss function from baseline decreases the accuracy error increases.
+</font>
+<br>
+
+<font size=4>
+Due to regularized complexity in ADANET model, contributions of all canddates subnetworks leads to decrease loss function while accuracy does not deteriorate, despite the fact accuracy dos not improve.
+</font>
+<br>
+
+<font size=4>
+It can be deduced that dense neuron networks are not complex enough in order to process these dogs image classification.
+</font>
+
+<br>
+<h3><font size=4> Complexity impact over ADANET architecture</font></h3>
+<font size=4>On the following, ADANET algorithm has been run with and without the rademaacher complexity argument. The subnetworks candidates are DNN subnets.</font>
+
+<center><img src="./report/AdanetDNNComplexity.png" alt="Drawing" style="width: 200px;"/></center>
+
+<font size=4>
+On the left side, no regularization took place. This leads to ADANET Ensemble architecture to increase until 12 layers for 200 iterations.
+</font>
+<br>
+
+<font size=4>
+On the right side, complexity regularization has been activated. The number of layers remain stable to 6 layers, after 100 iterations.
+</font>
+
+<br>
+<h3><font size=4>Convolutional Neural Networks (CNN)</font></h3>
+<center><img src="./report/AdanetEvaluationCNN.png" alt="Drawing" style="width: 200px;"/></center>
+<font size=4>Dense layers are increased along with ADANET iterations. The number of convolutional layers has been fixed to 3. This explains the poor performances of both, baseline and ADANET. ADANET has a slight better performence. This is due to the fact ADANET complexity increases along with iterations. </font>
+
+
+<br>
+<h3><font size=4>Recurrent Neural Networks (RNN)</font></h3>
+<br>
+<h4><font size=4> Images serialization</font></h4>
+The scheme below show how images has been serialized in order to be processed by a recurrent network.
+<center><img src="./report/ImageSerialization.png" alt="Drawing" style="width: 200px;"/></center>
+<font size=4> RNN cells are expanded into 224 units and each unit is feeded with a slice of image of 224*3 pixels.</font>
+<br>
+
+<font size=4>Doing so, the last slide of pixels, t224 depends on all previous pixels sildes.</font>
+<br>
+
+<font size=4>RNN Baseline has been tested with Vanilla RNN, LSTM and GRU cells.</font>
+<br>
+<h4><font size=4>Recurrent Neural Networks (RNN) Baseline</font></h4>
+<br>
+<center><img src="./report/BaselineRNN.png" alt="Drawing" style="width: 200px;"/></center>
+<br>
+
+<font size=4>GRU cell staked with 2 layers have the best performences for this baseline.</font>
+<font size=4>Ressources were not enough in order to evaluate ADANET with standford dataset. MNIST dataset has been used in order to evaluate ADANET with RNN.</font>
+<br>
+<h4><font size=4>MNIST dataset</font></h4>
+
+<center><img src="./report/MNIST.png" alt="Drawing" style="width: 200px;"/></center>
+
+The followings scheme compare ADANET with GRU baseline. ADANET candidates are GRU  cells.
+
+<center><img src="./report/AdanetEvaluationGRU.png" alt="Drawing" style="width: 200px;"/></center>
+
+<font size=4>Baseline result has been achieved with 300 iterations while 40 iterations has been used for ADANET.</font>
+ 
