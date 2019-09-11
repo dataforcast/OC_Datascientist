@@ -7,12 +7,13 @@ I'am a software engineer consultant with a mathematical background.
 </br>
 
 <br>
-I started Data Sciences projected by 2014, using customers CRM databases to deliver insights serving marketing services.
-
-Then I decided to go indeep in Datasciences skills.
+I started learning Data Sciences by 2014, using customers CRM databases to deliver insights serving sales and marketing services.
 
 <br>
-The professional projects presented here are the result of a "deep learning" of Data Sciences.<br>
+Then I decided to go indeep in Data Sciences skills to be able to deliver more value from Data Sciences technologies.
+
+<br>
+The professional projects presented here are the result of my "deep learning" of Data Sciences.<br>
 
 <a href="URL">http://bit.ly/Linkedin_FBANGUI</a>
 <hr>
