@@ -1,16 +1,18 @@
 # Set of projects 
 <hr>
 
-Projects carried out on behalf of the Master 2 Centrale Supélec / Openclassrooms training in datasience.
 
 <br>
 I'am a software engineer consultant with a mathematical background.
-<br>
+</br>
 
-At the beginning of 2018, I decided to develop skills in Datasciences.
-
-The professional projects presented here are the results of my apprenticeship.
 <br>
+I started Data Sciences projected by 2014, using customers CRM databases to deliver insights serving marketing services.
+
+Then I decided to go indeep in Datasciences skills.
+
+<br>
+The professional projects presented here are the result of a "deep learning" of Data Sciences.<br>
 
 <a href="URL">http://bit.ly/Linkedin_FBANGUI</a>
 <hr>
