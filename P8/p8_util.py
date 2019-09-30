@@ -7,6 +7,7 @@ from __future__ import print_function
 import time
 import random
 import numpy as np
+import pandas as pd
 import functools
 import os
 import shutil
@@ -28,6 +29,10 @@ from sklearn import preprocessing
 
 from adanet.ensemble import MixtureWeightType
 from adanet.ensemble.weighted import ComplexityRegularizedEnsembler
+from sklearn.model_selection import train_test_split
+
+import nltk
+import keras
 
 
 import p5_util
@@ -41,9 +46,45 @@ RANDOM_SEED = 42
 LOG_DIR = './tmp/models'
 
 _NUM_LAYERS_KEY = "num_layers"
-FEATURES_KEY = 'images'
-
+#FEATURES_KEY = 'images'
+FEATURES_KEY = p8_util_config.FEATURES_KEY
 IS_DEBUG = p8_util_config.IS_DEBUG
+
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def get_sample(X, y, ratio=-1) :
+    if ratio == -1 :
+        range_value = len(X)
+    else :
+        range_value = int(len(X)*ratio)
+    return X[:range_value], y[:range_value]
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def clean_X_label(X, label) :
+    
+    ser_ = pd.Series(X)
+
+    list_index = [i for i in ser_.index if len(ser_[i])==0]
+    
+    ser_.drop(list_index, inplace=True)
+    list_to_clean_1 = ser_.tolist()
+    
+    print("Cleaned empty text = {}".format(len(list_index)))
+    ser_ = pd.Series(label)
+    ser_.drop(list_index, inplace=True)
+
+    list_to_clean_2 = ser_.tolist()
+    
+    return list_to_clean_1, list_to_clean_2
+#-------------------------------------------------------------------------------
+
+
+
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
@@ -232,9 +273,14 @@ def get_tf_head(tuple_dimension, nClasses, nn_type='CNN', feature_shape=None) :
     
     # A `Head` instance defines the loss function and metrics for `Estimators`.
     # Tells Tensorfow how to compute loss function and metrics
-    tf_head = tf.contrib.estimator.multi_class_head(nClasses\
-                                                  , loss_reduction=loss_reduction)
-    return my_feature_columns, loss_reduction, tf_head    
+    if nClasses > 1 :
+        tf_head = tf.contrib.estimator.multi_class_head(nClasses\
+                                          , loss_reduction=loss_reduction)
+    else :
+        tf_head = tf.contrib.estimator.logistic_regression_head(weight_column=None,
+        loss_reduction=tf.losses.Reduction.SUM_OVER_BATCH_SIZE, name=None)
+
+    return my_feature_columns, loss_reduction, tf_head
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -439,6 +485,104 @@ def batch_coloredimage_serial_reshape(x_batch):
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def preprocess_dataset_jigsaw(X_train, X_test) :
+    ''' Preprocessing stands for :
+        1) Removing stopwords from any document from corpus
+        2) Tokenize any document from corpus; each document will be a list of 
+        tokens.
+        3) Encode any document as Bag Of Words
+        4) Fixe the same sequence length for any document.
+    '''
+    #---------------------------------------------------------------------------
+    # Stopwords to be removed
+    #---------------------------------------------------------------------------
+    nltk.download('stopwords')  
+
+    stop_words = nltk.corpus.stopwords.words('english')
+
+    X_train = [[word for word in list_word if word not in stop_words ] \
+    for list_word in X_train]
+
+    X_test = [[word for word in list_word if word not in stop_words ] \
+    for list_word in X_test]
+    
+    #---------------------------------------------------------------------------
+    # Get max length padding from Series quantile; 
+    # For getting max length, all corpus is used : X_test and X_train.
+    #---------------------------------------------------------------------------
+    X = X_train.copy()
+    #X.extend(X_test)
+    
+    ser_train = pd.Series(X)
+    ser_train_len = ser_train.apply(lambda x : len(x))
+    max_length = int(ser_train_len.quantile(0.75))
+    
+    
+    #---------------------------------------------------------------------------
+    # Build tokenizer; this last one is fitted from both X_train and X_test 
+    # documents.
+    #---------------------------------------------------------------------------    
+    keras_tokenizer = keras.preprocessing.text.Tokenizer()
+    keras_tokenizer.fit_on_texts(X)
+    vocab_size = len(keras_tokenizer.word_index) + 1
+
+    #---------------------------------------------------------------------------
+    # X_train is encoded in BOW and padded 
+    #---------------------------------------------------------------------------
+    X_train_encoded = keras_tokenizer.texts_to_sequences(X_train)
+
+    #---------------------------------------------------------------------------
+    # Documents from X_train are padded to a max length of max_length words
+    #---------------------------------------------------------------------------
+    X_train_encoded = keras.preprocessing.sequence.\
+    pad_sequences(X_train_encoded, maxlen=max_length, padding='post')
+    
+    #---------------------------------------------------------------------------
+    # X_test is encoded in BOW and padded as well as X_train.
+    #---------------------------------------------------------------------------
+    X_test_encoded = keras_tokenizer.texts_to_sequences(X_test)
+    
+    # pad documents to a max length of 4 words
+    X_test_encoded = keras.preprocessing.sequence.\
+    pad_sequences(X_test_encoded, maxlen=max_length, padding='post')
+
+    
+    return X_train_encoded, X_test_encoded
+    
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def load_dataset_jigsaw(sampling_ratio =None) :
+    df_test = pd.read_csv('./data/test.csv.zip', compression='zip', header=0,\
+     sep=',', quotechar='"')
+    df_train = pd.read_csv('./data/train.csv.zip', compression='zip', header=0,\
+     sep=',', quotechar='"')
+
+    df_train['comment_text'] = df_train['comment_text'].apply(lambda x : x.lower())
+    X_train, X_test, y_train, y_test = \
+    train_test_split(df_train['comment_text'],\
+    df_train['target'],test_size=0.33, random_state=42)
+
+    print("Train dataset: X = {} Label= {}".format(X_train.shape, y_train.shape))
+    print("Test dataset: X = {} Label= {}".format(X_test.shape, y_test.shape))
+    if sampling_ratio is None :
+        pass
+    else :
+        X_train, y_train  = get_sample(X_train, y_train, ratio=sampling_ratio)
+        print("X_train, y_train shapes= {} {}".format(X_train.shape, y_train.shape))
+
+        X_test, y_test  = get_sample(X_test, y_test, ratio=sampling_ratio)
+        print("X_test, y_test shapes= {} {}".format(X_test.shape, y_test.shape))
+
+    return X_train, y_train, X_test, y_test
+#-------------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------------
 #    
 #-------------------------------------------------------------------------------
 def load_dataset(filename, dataset_type='P7', is_label_encoded=False) :
@@ -471,11 +615,35 @@ def load_dataset(filename, dataset_type='P7', is_label_encoded=False) :
             y_test=array_label_encode_binary(y_test)
             y_valid=array_label_encode_binary(y_valid)
             nClasses = y_train.shape[1]
+    elif dataset_type == 'JIGSAW' :
+        nClasses = 0
+        if False :
+            sampling_ratio = p8_util_config.SAMPLING_RATIO
+            X_train, y_train, X_test, y_test = \
+            load_dataset_jigsaw(sampling_ratio=sampling_ratio)
+            
+            x_train, x_test = preprocess_dataset_jigsaw(X_train, X_test)    
+        else :
+            filename = './data/X_train_encoded.dump'
+            x_train = p5_util.object_load(filename)
+
+            filename = './data/X_test_encoded.dump'
+            x_test = p5_util.object_load(filename)
+
+            filename = './data/y_test.dump'
+            y_test = p5_util.object_load(filename)
+            if type(y_test) is list :
+                y_test = np.array(y_test)
+
+            filename = './data/y_train.dump'
+            y_train = p5_util.object_load(filename)
+            if type(y_train) is list :
+                y_train = np.array(y_train)
     else :
         pass
-        
-    w_size = x_train.shape[1]
-    h_size = x_train.shape[2]        
+    
+    #w_size = x_train.shape[1]
+    #h_size = x_train.shape[2]        
 
     tuple_dimension = (x_train.shape,x_test.shape,y_train.shape,y_test.shape)
     
@@ -544,6 +712,14 @@ def array_label_encode_binary(y):
 #-------------------------------------------------------------------------------
 # 
 #-------------------------------------------------------------------------------
+def preprocess_text(text, label):
+    """Preprocesses an image for an `Estimator`."""
+    if IS_DEBUG is True :
+        print("\n*** preprocess_text() : label shape= {}".format(label.shape))
+    
+    features = {p8_util_config.FEATURES_KEY: text}
+    return features, label
+
 def preprocess_color_image(image, label):
     """Preprocesses an image for an `Estimator`."""
     if IS_DEBUG is True :
@@ -610,7 +786,7 @@ def build_model_name(nn_type):
 #-------------------------------------------------------------------------------
 def input_fn_2(partition, input_fn_param) :
   '''Generates an input_fn for the Estimator.
-  Estimator is in charhe to train and evluate model, serialise weights and biases.
+  Estimator is in charge to train and evluate model, serialise weights and biases.
   
   input_fn pumps and feeds data into the estimator.
   Data is pumped either from a .dump file or from MNIST dataset.
@@ -632,11 +808,16 @@ def input_fn_2(partition, input_fn_param) :
     #---------------------------------------------------------------------------
     if dataset_type == 'MNIST' :
         x_train, x_test, y_train, y_test, n_class, feature_shape \
-        = load_dataset(None, dataset_type='MNIST')
+        = load_dataset(None, dataset_type=dataset_type)
     elif dataset_type == 'P7' :
         filename_dataset='./data/arr_keras_X_y_train_test.dump'
         x_train, x_test, y_train, y_test, n_class, feature_shape \
         = load_dataset(filename_dataset)
+    elif dataset_type == 'JIGSAW':
+        filename = None
+        x_train, x_test, y_train, y_test, nClasses,tuple_dimension = \
+        load_dataset(filename, dataset_type=dataset_type)
+        
     else:
         print("\n*** ERROR : Dataset type= {} Not supported!".format(dataset_type))
     if 1 == len(y_train.shape):
@@ -659,11 +840,17 @@ def input_fn_2(partition, input_fn_param) :
     #---------------------------------------------------------------------------
     training=False        
     if partition == "train":
-        dataset = tf.data.Dataset.from_generator(generator(x_train, y_train), (tf.float32, tf.int32), (feature_shape, ()))
         training = True
+        if p8_util_config.DATASET_TYPE == 'JIGSAW' :
+            dataset = tf.data.Dataset.from_generator(generator(x_train, y_train), (tf.float32, tf.float32), (feature_shape, ()))
+        else :
+            dataset = tf.data.Dataset.from_generator(generator(x_train, y_train), (tf.float32, tf.int32), (feature_shape, ()))
         dataset = dataset.shuffle(10 * batch_size, seed=RANDOM_SEED).repeat(num_epochs)
     else:
-        dataset = tf.data.Dataset.from_generator(generator(x_test, y_test), (tf.float32, tf.int32), (feature_shape, ()))
+        if p8_util_config.DATASET_TYPE == 'JIGSAW' :
+            dataset = tf.data.Dataset.from_generator(generator(x_test, y_test), (tf.float32, tf.float32), (feature_shape, ()))
+        else :
+            dataset = tf.data.Dataset.from_generator(generator(x_test, y_test), (tf.float32, tf.int32), (feature_shape, ()))
         if IS_DEBUG is True :
             print("\n*** input_fn : TEST / feature_shape= {}".format(feature_shape))
 
@@ -673,6 +860,8 @@ def input_fn_2(partition, input_fn_param) :
         dataset = dataset.map(preprocess_color_image).batch(batch_size)
     if p8_util_config.DATASET_TYPE == 'MNIST':
         dataset = dataset.map(preprocess_image).batch(batch_size)
+    if p8_util_config.DATASET_TYPE == 'JIGSAW':
+        dataset = dataset.map(preprocess_text).batch(batch_size)
     
     iterator = dataset.make_one_shot_iterator()
 
@@ -762,7 +951,7 @@ def train_and_evaluate(adanet_estimator):
                    }
 
     train_input_fn=input_fn_2("train", input_fn_param)
-    test_input_fn=input_fn_2("test",input_fn_param)
+    test_input_fn =input_fn_2("test",input_fn_param)
 
     train_spec=tf.estimator.TrainSpec(
             input_fn= train_input_fn,

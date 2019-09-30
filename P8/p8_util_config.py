@@ -4,13 +4,30 @@ networks.
 import tensorflow as tf
 
 IS_DEBUG = True
+
+#-------------------------------------------------------------------------------
+# Classification pb / Regression pb
+#-------------------------------------------------------------------------------
+IS_CLASSIFIER = False
+if IS_CLASSIFIER is True :
+    IS_REGRESSOR = False
+else :
+    IS_REGRESSOR = True
+        
+
+#-------------------------------------------------------------------------------
+# Dataset source
+#-------------------------------------------------------------------------------
 #DATASET_TYPE='P7'
-DATASET_TYPE='MNIST'
+#DATASET_TYPE='MNIST'
+DATASET_TYPE='JIGSAW'
+
 #-------------------------------------------------------------------------------
 # Dataset configuration
 #-------------------------------------------------------------------------------
-IS_LABEL_ENCODED = True # Labels are re-encoded from one shot encoding to 
+IS_LABEL_ENCODED = True # Labels are re-encoded from one hot encoding to 
                         # classes values. 
+                        # Apply with Classification pb only
  
 #-------------------------------------------------------------------------------
 # They are 414 data 
@@ -21,7 +38,7 @@ IS_LABEL_ENCODED = True # Labels are re-encoded from one shot encoding to
 #-------------------------------------------------------------------------------
 
 # For ADANET, this is the number of iterations that will take place.
-TRAIN_STEPS = 300
+TRAIN_STEPS = 10
 
 
 BATCH_SIZE = 138#138//4
@@ -39,9 +56,6 @@ NUM_EPOCHS = TRAIN_STEPS//MINI_BATCH_NUMBER
 
 LEARNING_RATE = 1.e-3
 
-NB_CLASS = 3
-if DATASET_TYPE == 'MNIST':
-    NB_CLASS = 10
 
 NN_TYPE = 'DNN'
 NN_TYPE = 'CNN'
@@ -117,11 +131,7 @@ if NN_TYPE == 'CNN' or NN_TYPE == 'CNNBase':
 #-------------------------------------------------------------------------------
 RNN_ACTIVATION_NAME = None
 RNN_HIDDEN_UNITS = 128
-RNN_NUM_LAYERS = 2
-RNN_TIMESTEPS = 224 
-
-if DATASET_TYPE == 'MNIST':
-    RNN_TIMESTEPS = 28
+RNN_NUM_LAYERS = 1
 
 if NN_TYPE == 'RNN' :
     OPTIMIZER=tf.train.AdamOptimizer(learning_rate=LEARNING_RATE)
@@ -133,6 +143,23 @@ if NN_TYPE == 'RNN' :
 ADANET_FEATURE_SHAPE = (224,224*3)
 if DATASET_TYPE == 'MNIST':
     ADANET_FEATURE_SHAPE = (28,28)
+    FEATURES_KEY = 'images'
+    NB_CLASS = 10
+    RNN_TIMESTEPS = 28
+elif DATASET_TYPE == 'JIGSAW':
+    ADANET_FEATURE_SHAPE = (1,37)
+    FEATURES_KEY = 'texts'
+    NB_CLASS = 1
+    RNN_TIMESTEPS = 37 
+    SAMPLING_RATIO = 0.01
+elif DATASET_TYPE == 'P7' :
+    ADANET_FEATURE_SHAPE = (224,224*3)
+    FEATURES_KEY = 'images'
+    NB_CLASS = 3
+    RNN_TIMESTEPS = 224 
+else :
+    pass
+
 
 ADANET_OUTPUT_DIR='./tmp/adanet'
 ADANET_INITIAL_NUM_LAYERS = 0

@@ -3,6 +3,7 @@ import pandas as pd
 import numpy.ma as ma
 
 import glob
+import dill
 
 from sklearn import preprocessing
 from sklearn import model_selection
@@ -861,32 +862,6 @@ def df_normalize(df,column):
    return df
 #-------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------
-#
-#-------------------------------------------------------------------------------
-def object_load(fileName):
-   """ This function load a dumped (serialized) object from file name given as 
-   parameter. It uses pickle package.
-   Input : 
-      * file_name : name of the file to access dumped object
-   Output :
-      * dumped (deserialized) object      
-   """
-   print("p5_util.object_load : fileName= "+fileName)
-
-   try:
-       with open(fileName, 'rb') as (dataFile):
-           oUnpickler=pickle.Unpickler(dataFile)
-           dumped_object=oUnpickler.load()
-   except FileNotFoundError:
-       print('\n*** ERROR : file not found : ' + fileName)
-       return None
-   except ModuleNotFoundError as moduleNotFoundError:
-       print('\n*** ERROR : no module found : ' + str(moduleNotFoundError))
-       return None
-
-   return dumped_object
-#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 #
@@ -1069,36 +1044,106 @@ def object_load_split(data_len, step, data_path, core_name):
 #-------------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------------
-def object_dump(object_to_dump, fileName):
-   """ This function dump (serialize), into a file name, an object given as 
-   parameter using pickle package.
-   Input : 
+def object_dump(object_to_dump, fileName, is_verbose=False):
+    """ This function dump (serialize), into a file name, an object given as 
+    parameter using pickle package.
+    Input : 
       * object_to_dump : object to be dumped
       * fileName : name of the file in which object has been dumped
-   Output : none
+    Output : none
       
-   """
-   if None is fileName :
-      print("*** ERROR : no name provided for object dumping")   
-      return
-   else:
-      pass
+    """
+    if None is fileName :
+        print("*** ERROR : no name provided for object dumping")   
+        return
+    else:
+        pass
 
-   if 0 == len(fileName) :
-      print("*** ERROR : no file name for object dumping")   
-      return
-   else:
-      pass
-      
-   try :
-      with open(fileName, 'wb') as (dumpedFile):
-          oPickler=pickle.Pickler(dumpedFile)
-          oPickler.dump(object_to_dump)
-   except pickle.PicklingError as picklingError :
-      print("*** ERROR : dumping into "+str(fileName)\
-      +" Error= "+str(picklingError))   
-   return
+    if 0 == len(fileName) :
+        print("*** ERROR : no file name for object dumping")   
+        return
+    else:
+        pass
+  
+    #---------------------------------------------------------------------------
+    # Get file extension; this will lead to type of dump 
+    #---------------------------------------------------------------------------
+    if is_verbose :
+        print("object_dump: file name= {}".format(fileName))
+    else :
+        pass
+
+    extension = fileName.split(".")[-1]
+    if len(extension) >0 :
+        try :
+            if extension == "dill" :
+                with open(fileName,'wb') as fp:
+                    dill.dump(object_to_dump,fp)     
+            elif extension == "dump" :
+                with open(fileName, 'wb') as (dumpedFile):
+                    oPickler=pickle.Pickler(dumpedFile)
+                    oPickler.dump(object_to_dump)
+            else : 
+                print("\n*** ERROR : object_dump() : extension not supported for dump : ".format(extension))      
+        except pickle.PicklingError as picklingError :
+            print("*** ERROR : dumping into "+str(fileName)\
+            +" Error= "+str(picklingError))
+    else :
+        print("\n*** ERROR : object_dump() : No extension for file name= ".format(fileName))      
+    return
 #-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------------
+def object_load(fileName, is_verbose=True):
+    """ This function load a dumped (serialized) object from file name given as 
+    parameter. It uses pickle package.
+    Input : 
+      * file_name : name of the file to access dumped object
+      * is_verbose : when True, file name to be loaded is printed.
+    Output :
+      * dumped (deserialized) object      
+    """
+    if is_verbose :
+        print("p5_util.object_load : fileName= "+fileName)
+    #-----------------------------------------------------------------------------
+    # Get file extension; this will lead to type of dump 
+    #-----------------------------------------------------------------------------
+    extension = fileName.split(".")[-1]
+    if len(extension) >0 :
+        if extension == "dill" :
+            #-------------------------------------------------------------------
+            # Load object dumped in dill format
+            #-------------------------------------------------------------------
+            with open(fileName,'rb') as fp:
+                dumped_object = dill.load(fp)
+
+        elif extension == "dump" :
+            #-------------------------------------------------------------------
+            # Load object dumped in dump format
+            #-------------------------------------------------------------------
+            try:
+                with open(fileName, 'rb') as (dataFile):
+                    oUnpickler=pickle.Unpickler(dataFile)
+                    dumped_object=oUnpickler.load()
+            except FileNotFoundError:
+                print('\n*** ERROR : file not found : ' + fileName)
+                return None
+            except ModuleNotFoundError as moduleNotFoundError:
+                print('\n*** ERROR : no module found : ' + str(moduleNotFoundError))
+                return None
+        else :
+            print("\n*** ERROR : object_load() : extension not supported for dump : ".format(extension))      
+        
+    else :
+        print("\n*** ERROR : object_load() : No extension for file name= ".format(fileName))      
+
+
+    return dumped_object
+#-------------------------------------------------------------------------------
+
+
 
 #-------------------------------------------------------------------------------
 #

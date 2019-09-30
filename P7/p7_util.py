@@ -148,12 +148,88 @@ def p7_get_name_from_function(_function) :
 #------------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------------
-def p7_plot_cnn_history(cnn_model ,X_test, y_test, history=None) :
+def p7_plot_cnn_history(cnn_model ,X_test, y_test, history=None, legend='') :
     '''Display loss and accuracy curves along with steps history.
     '''
-    [test_loss, test_acc] = cnn_model.evaluate(X_test, y_test)
-    print("Evaluation result on Test Data : Loss = {0:1.2F}, accuracy = {1:1.2F}"\
-    .format(test_loss, test_acc))
+    
+    if cnn_model is None :
+        list_model_acc_name = [key for key in history.history.keys()]
+    else : 
+        list_model_acc_name = cnn_model.metrics_names
+    if X_test is not None and y_test is not None :
+        list_model_acc_name = cnn_model.metrics_names
+        #[test_loss, test_acc] = cnn_model.evaluate(X_test, y_test)
+        list_model_acc_value  = cnn_model.evaluate(X_test, y_test)
+        for acc_name, acc_value in zip(list_model_acc_name, list_model_acc_value) :
+            print("Evaluation result on Test Data : {0} = {1:1.3F}".format(acc_name, acc_value))
+    else :
+        list_model_acc_value = list()
+        list_model_acc_value = [0.0 for acc_name in list_model_acc_name]
+            
+    #print("Evaluation result on Test Data : Loss = {0:1.2F}, accuracy = {1:1.2F}"\
+    #.format(test_loss, test_acc))
+    
+    list_key = history.history.keys()
+    list_key_loss = ['loss','val_loss']
+
+    if history is not None :
+        #Plot the Loss Curves
+        plt.figure(figsize=[8,6])
+        plt.plot(history.history['loss'],'r',linewidth=1.0)
+        plt.plot(history.history['val_loss'],'b',linewidth=1.0)
+        plt.legend(['Training loss', 'Validation Loss'],fontsize=18)
+        plt.xlabel('Epochs ',fontsize=16)
+        plt.ylabel('Loss',fontsize=16)
+        plt.title('Loss Curves ',fontsize=16)
+
+        #Plot the Error measure Curves
+        list_error_measure = [key for key in list_key if key not in list_key_loss]
+        for error_measure in list_error_measure :
+            plt.figure(figsize=[8,6])
+            if error_measure[:4] == 'val_':
+                val_error_measure = error_measure
+                train_error_measure =  error_measure[4:]
+                list_error_measure.remove(val_error_measure)
+                list_error_measure.remove(train_error_measure)
+            else :
+                val_error_measure = 'val_'+error_measure
+                train_error_measure =  error_measure
+                list_error_measure.remove(val_error_measure)
+                list_error_measure.remove(train_error_measure)
+
+            plt.plot(history.history[train_error_measure],'r',linewidth=1.0)
+            plt.plot(history.history[val_error_measure],'b',linewidth=1.0)
+            plt.legend(['Training error '+str(legend), 'Validation error '+str(legend)],fontsize=18)
+            plt.xlabel('Epochs ',fontsize=16)
+            plt.ylabel(error_measure,fontsize=16)
+            plt.title(error_measure+' Curves',fontsize=16)
+            #break
+    return list_model_acc_value
+    
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+def p7_plot_cnn_history_deprecated(cnn_model ,X_test, y_test, history=None) :
+    '''Display loss and accuracy curves along with steps history.
+    '''
+    
+    list_model_acc_name = cnn_model.metrics_names
+    if X_test is not None and y_test is not None :
+        list_model_acc_name = cnn_model.metrics_names
+        #[test_loss, test_acc] = cnn_model.evaluate(X_test, y_test)
+        list_model_acc_value  = cnn_model.evaluate(X_test, y_test)
+        for acc_name, acc_value in zip(list_model_acc_name, list_model_acc_value) :
+            print("Evaluation result on Test Data : {0} = {1:1.3F}".format(acc_name, acc_value))
+    else :
+        list_model_acc_value = list()
+        list_model_acc_value = [0.0 for acc_name in list_model_acc_name]
+            
+    #print("Evaluation result on Test Data : Loss = {0:1.2F}, accuracy = {1:1.2F}"\
+    #.format(test_loss, test_acc))
+    
+    list_key = history.history.keys()
 
     if history is not None :
         #Plot the Loss Curves
@@ -167,13 +243,14 @@ def p7_plot_cnn_history(cnn_model ,X_test, y_test, history=None) :
 
         #Plot the Accuracy Curves
         plt.figure(figsize=[8,6])
+        
         plt.plot(history.history['acc'],'r',linewidth=1.0)
         plt.plot(history.history['val_acc'],'b',linewidth=1.0)
         plt.legend(['Training Accuracy', 'Validation Accuracy'],fontsize=18)
         plt.xlabel('Epochs ',fontsize=16)
         plt.ylabel('Accuracy',fontsize=16)
         plt.title('Accuracy Curves',fontsize=16)
-    return test_loss, test_acc
+    return list_model_acc_value
     
 #------------------------------------------------------------------------------
 

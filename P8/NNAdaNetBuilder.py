@@ -259,6 +259,7 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
             self._show_dnn()
         else :
             pass
+        print("\n\n")
     #----------------------------------------------------------------------------
         
     #----------------------------------------------------------------------------
@@ -504,6 +505,9 @@ class NNAdaNetBuilder(adanet.subnetwork.Builder) :
                 last_layer = tf.reshape(last_layer, [-1,raws,cols])   
                 list_layer = tf.unstack(last_layer, raws, 1)
             elif p8_util_config.DATASET_TYPE == 'MNIST' :
+                last_layer = tf.reshape(last_layer, [-1,raws,cols])   
+                list_layer = tf.unstack(last_layer, raws, 1)
+            elif p8_util_config.DATASET_TYPE == 'JIGSAW' :
                 last_layer = tf.reshape(last_layer, [-1,raws,cols])   
                 list_layer = tf.unstack(last_layer, raws, 1)
             else :

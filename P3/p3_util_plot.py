@@ -19,6 +19,7 @@ import seaborn as sns
 from sklearn import decomposition
 from sklearn.decomposition import KernelPCA
 from sklearn.decomposition import PCA
+from sklearn.decomposition import IncrementalPCA
 
 from sklearn.manifold import TSNE
 from sklearn.manifold import MDS
@@ -261,15 +262,32 @@ def df_pca_all_plot(df, plot=True) :
    
    list_explained_variance_ratio = list()
    n_components_max = df.shape[1]
-   ind_components = 1
+   if False :
+       if n_components_max <= df.shape[0] :
+          print("\n*** Decomposition : PCA")
+          algorithm = PCA
+          dict_param={'svd_solver':'auto'}
+       else :
+          print("\n*** Decomposition : TruncatedSVD")
+          algorithm = decomposition.TruncatedSVD
+          dict_param=dict()
+   
+   algorithm,  dict_param = get_decomp_algo(df)
+   #n_components_max = min(df.shape[0], df.shape[1])
+   ind_components = 0
    iviz = 0
-   while ind_components <= n_components_max :
-       pca = PCA(n_components=ind_components)
-       pca.fit(X_scaled)
-       list_explained_variance_ratio.append(pca.explained_variance_ratio_.sum())
+   while ind_components < n_components_max :
+       #print(ind_components)
+       decomp = algorithm(n_components=ind_components, **dict_param)
+       try :
+           decomp.fit(X_scaled)
+       except ValueError as valueError :
+           print("\n***ERROR : valueError : {}".format(valueError))
+           return None
+       list_explained_variance_ratio.append(decomp.explained_variance_ratio_.sum())
        iviz +=1
        if 0 == iviz%100:
-         print("** Component = "+str(ind_components))
+         print("** Processed components : {}/{} ".format(ind_components+1,n_components_max), end='\r')
        ind_components += 1
 
    # Le dernier incrément est retiré; 
@@ -285,40 +303,201 @@ def df_pca_all_plot(df, plot=True) :
 # ------------------------------------------------------------------------------
 #
 # ------------------------------------------------------------------------------
-def df_kpca_all_plot(df, kernel_pca= 'rbf', plot=True) :
-   ''' Affiche, pour le PCA avec noyau les contributions cumulées à la variance 
-   des composantes principales.'''
-   #kernel : “linear” | “poly” | “rbf” | “sigmoid” | “cosine” | “precomputed”
-   X = df.values
-   std_scale = preprocessing.StandardScaler().fit(X)
-   X_scaled = std_scale.transform(X)
+def get_decomp_algo(df):
+    n_components_max = df.shape[1]
+    if n_components_max <= df.shape[0] :
+        print("\n*** Decomposition : PCA")
+        decomp_algo = PCA
+        dict_param={'svd_solver':'auto'}
+    else :
+        print("\n*** Decomposition : TruncatedSVD")
+        decomp_algo = decomposition.TruncatedSVD
+        dict_param=dict()
+    return    decomp_algo,  dict_param
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+#
+# ------------------------------------------------------------------------------
+def plot_pca_variance(pca) :
+    '''Displays curve of explained variance regarding components.
+    '''
+    # Affichage de la courbe de la variance expliquée
+    n_components_max = pca.get_params()['n_components']
+    list_explained_variance_ratio = pca.explained_variance_ratio_.cumsum()
+    z = plt.figure(figsize=(10,10))
+    z=plt.plot(range(1,n_components_max+1),list_explained_variance_ratio, 'o-')
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+#
+# ------------------------------------------------------------------------------
+def get_component_from_cum_variance(pca, var_percent) :
+    '''Returns the number of component that explains the percent of variance 
+    given as function parameter.
+    
+    Input : 
+        *   pca : PCA based decomposition algorithm. It may be IncrementalPCA,
+        KernelPCA, PCA....
+        Class must implement explained_variance_ratio_() method.
+        *   var_percent : percentage of explained variance expected.
+    Output :
+        * Number of compoenents.
+    '''
+    #---------------------------------------------------------------------------
+    # Get cumulative sum of explained variance ratio.
+    #---------------------------------------------------------------------------
+    try :
+        list_explained_variance = pca.explained_variance_ratio_.cumsum()
+    except AttributeError as attributeError:
+        print("\n*** ERROR : get_component_from_cum_variance(): {}".format(attributeError))
+        return None
+    #---------------------------------------------------------------------------
+    # Get the list of all cumulative values less then var_percent.
+    #---------------------------------------------------------------------------
+    list_component = [component for component in list_explained_variance if \
+                      component <= var_percent]
+
+    #---------------------------------------------------------------------------
+    # The dimension is the number of elements in list.
+    #---------------------------------------------------------------------------
+    return len(list_component)
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+#
+# ------------------------------------------------------------------------------
+def df_kpca_all_plot(df, kernel_pca= 'rbf', plot=True, dict_kernel_param=None) :
+    ''' Affiche, pour le PCA avec noyau les contributions cumulées à la variance 
+    des composantes principales.'''
+    #kernel : “linear” | “   poly” | “rbf” | “sigmoid” | “cosine” | “precomputed”
+    #----------------------------------------------------------------------------
+    # Dataset is scaled with standard deviation.
+    # Doing so, variabme importance depends on variance, and does not depend on 
+    # variable magnetude.
+    #----------------------------------------------------------------------------
+    X = df.values
+    std_scale = preprocessing.StandardScaler().fit(X)
+    X_scaled = std_scale.transform(X)
+
+    if plot is False :
+        return X_scaled
    
-   if plot is False :
-      return X_scaled
-   
-   list_explained_variance_ratio = list()
-   n_components_max = df.shape[1]
-   ind_components = 1
-   parameter_gamma = 1./df.shape[1]
-   while ind_components <= n_components_max :
+    #----------------------------------------------------------------------------
+    # Extract kernel PCA parameters from dictionary given in function parameters.
+    #----------------------------------------------------------------------------
+    if dict_kernel_param is not None :
+        kernel_name = dict_kernel_param['kernel_name']
+        #-----------------------------------------------------------------------
+        if 'gamma' in  dict_kernel_param.keys() :
+            parameter_gamma = dict_kernel_param['gamma']
+        else :
+            parameter_gamma = 1./df.shape[1]
+        #-----------------------------------------------------------------------
+        if 'degree' in dict_kernel_param.keys() :
+            degree = dict_kernel_param['degree']
+        else :
+            degree = 3
+    else :
+        kernel_name = kernel_pca
+        parameter_gamma = 1./df.shape[1]
+        degree = 3
+    
+    #----------------------------------------------------------------------------
+    # For any dimension from dataset, kernel PCA is computed and cumulated.
+    #----------------------------------------------------------------------------
+    list_explained_variance_ratio = list()
+    n_components_max = df.shape[1]
+    ind_components = 1
+    while ind_components <= n_components_max :
        kpca = decomposition.KernelPCA(n_components=ind_components\
-       , kernel=kernel_pca, gamma=parameter_gamma)
+       , kernel=kernel_name, gamma=parameter_gamma, degree=degree)
 
        kpca.fit(X_scaled)
        list_explained_variance_ratio.append(kpca.lambdas_.sum())
+       if 0 == ind_components%100:
+        print("** Processed components {}/{}= ".format(ind_components,n_components_max))
+
        ind_components += 1
 
-   # Le dernier incrément est retiré; 
-   # il correspond à ind_components = n_components_max+1
-   ind_components -=1   
+    #----------------------------------------------------------------------------
+    # Le dernier incrément est retiré; 
+    # il correspond à ind_components = n_components_max+1
+    #----------------------------------------------------------------------------
+    ind_components -=1   
 
-   # Affichage de la courbe de la variance expliquée
-   z = plt.figure(figsize=(10,10))
-   z=plt.plot(range(ind_components),list_explained_variance_ratio, 'o-')
-   return X_scaled
+    #----------------------------------------------------------------------------
+    # Affichage de la courbe de la variance expliquée
+    #----------------------------------------------------------------------------
+    z = plt.figure(figsize=(10,10))
+    z=plt.plot(range(ind_components),list_explained_variance_ratio, 'o-')
+    return X_scaled
 # ------------------------------------------------------------------------------
 
+# ------------------------------------------------------------------------------
+# 
+# ------------------------------------------------------------------------------
+def X_pca_components_plot(X_pca, X_scaled, nb_components=2, ratio=1.,\
+ param_title=None, x_max_y_max=None, plane=(0,1)) :
 
+   
+    if ratio < 1 :
+        #-----------------------------------------------------------------------
+        # Randomly get nb_index of points from array to be plot.
+        #-----------------------------------------------------------------------
+        size=len(X_pca)
+        nb_index = int(size*ratio)
+        index_array = np.random.randint(0,size,nb_index)
+        
+        #-----------------------------------------------------------------------
+        # Select part of array sliding original array with random indexes
+        #-----------------------------------------------------------------------
+        X_pca = X_pca[index_array]
+        X_scaled = X_scaled[index_array]
+    else : 
+        pass
+
+    print("\nShape of points to be plot: ".format(X_pca.shape))
+    
+    # Cadrage de l'affichage selon X
+    comp = plane[0]
+    xmin, xmax = np.min(X_pca[:,comp]),np.max(X_pca[:,comp])
+    if x_max_y_max is None :
+        pass
+    else :
+        xmax = x_max_y_max[0]
+    
+    plt.xlim([xmin-1, xmax+1])
+
+    plt.xlabel('Main component '+str(comp), size=14, color='b')
+    if param_title is None :
+       plt.title('Main components', size=14, color='b')
+    else :
+       plt.title(param_title, size=14, color='b')
+
+    if 2 == nb_components :
+        # Cadrage de l'affichage selon Y
+        comp = plane[1]
+        ymin, ymax = np.min(X_pca[:,comp]),np.max(X_pca[:,comp])
+        if x_max_y_max is None :
+            pass
+        else :
+            ymax = x_max_y_max[1]
+        
+        plt.ylim([ymin-1, ymax+1])
+
+        plt.ylabel('Main component '+str(comp), size=14, color='b')
+
+        plt.scatter(X_pca[:, 0], X_pca[:, 1], c='r', alpha=0.2)
+    
+    elif  1 == nb_components :
+        # First component fo treansformed PCA is X axis,  
+        plt.scatter(X_pca[:, 0], np.zeros(X_scaled[:, 0].shape),c='r')
+
+    else :
+      print("*** WARNING : max PCA plot components = 2")
+
+# ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
 # 
@@ -500,47 +679,64 @@ def df_data_pca_1_plot(df, model, model_1D, X, parameter_title=None\
 # ------------------------------------------------------------------------------
 #
 # ------------------------------------------------------------------------------
-def df_kpca_components_plot(df, X_scaled, color_feature, gamma_parameter=15\
-, nb_components=2, original_data=False) :
+def df_kpca_components_plot(df, X_scaled, color_feature=None, gamma_parameter=15\
+, nb_components=2, original_data=False, dict_kernel_param=None) :
 
-   z = plt.figure(figsize=(10,10))
+    z = plt.figure(figsize=(10,10))
+    
+    if dict_kernel_param is None :
+        kernel_name = 'rbf'
+        parameter_gamma = 1./df.shape[1]
+    else :
+        kernel_name = dict_kernel_param['kernel_name']
+        if 'gamma' in  dict_kernel_param.keys() :
+            parameter_gamma = dict_kernel_param['gamma']
+        else :
+            parameter_gamma = 1./df.shape[1]
+        if 'degree' in dict_kernel_param.keys() :
+            degree = dict_kernel_param['degree']
+        else :
+            degree = 3
 
-   kpca = KernelPCA(n_components=nb_components, kernel='rbf'\
-   , gamma=gamma_parameter)
+    kpca = decomposition.KernelPCA(n_components=nb_components,\
+    kernel=kernel_name, gamma=parameter_gamma, degree=degree)
 
-   #----------------------------------------------------------------------------
-   #kpca = KernelPCA(n_components=2,  gamma=30)
-   #----------------------------------------------------------------------------
-   X_projected = kpca.fit_transform(X_scaled)
-   print(X_projected.shape)
+        
 
-   #----------------------------------------------------------------------------
-   # Projection selon la 1er composante principale.
-   #----------------------------------------------------------------------------
-   kpca_1 = KernelPCA(n_components=1, kernel='rbf', gamma=gamma_parameter\
-   , fit_inverse_transform=True)
-   X_projected_1 = kpca_1.fit_transform(X_scaled)
+    #----------------------------------------------------------------------------
+    # Perform KPCA transformation
+    #----------------------------------------------------------------------------
+    X_projected = kpca.fit_transform(X_scaled)
+    print(X_projected.shape)
 
-   #----------------------------------------------------------------------------
-   # Retour à l'espace originel
-   #----------------------------------------------------------------------------
-   X_inv_1 = kpca_1.inverse_transform(X_projected_1)
+    #----------------------------------------------------------------------------
+    # Projection selon la 1er composante principale.
+    #----------------------------------------------------------------------------
+    kpca_1 = KernelPCA(n_components=1, kernel=kernel_name, gamma=gamma_parameter\
+    , fit_inverse_transform=True, degree=degree)
+    
+    X_projected_1 = kpca_1.fit_transform(X_scaled)
 
-   #----------------------------------------------------------------------------
-   # Cadrage de l'affichage selon X et Y
-   #----------------------------------------------------------------------------
-   xmin, xmax = np.min(X_projected[:,0]),np.max(X_projected[:,0])
-   plt.xlim([xmin-1, xmax+1])
-   
-   ymin, ymax = np.min(X_projected[:,1]),np.max(X_projected[:,1])
-   plt.ylim([ymin-1, ymax+1])
+    #----------------------------------------------------------------------------
+    # Retour à l'espace originel
+    #----------------------------------------------------------------------------
+    X_inv_1 = kpca_1.inverse_transform(X_projected_1)
 
-   plt.title('KPCA(rbf): 2 composantes principales', color='b', size=14)
+    #----------------------------------------------------------------------------
+    # Cadrage de l'affichage selon X et Y
+    #----------------------------------------------------------------------------
+    xmin, xmax = np.min(X_projected[:,0]),np.max(X_projected[:,0])
+    plt.xlim([xmin-1, xmax+1])
 
-   print("X_proj dans l'espace orginel : {}".format(X_inv_1.shape))
-   plt.scatter(X_inv_1[:, 0], X_inv_1[:, 1], c='r', s=20)
+    ymin, ymax = np.min(X_projected[:,1]),np.max(X_projected[:,1])
+    plt.ylim([ymin-1, ymax+1])
 
-   if color_feature in df.columns :
+    plt.title('KPCA('+kernel_name+'): 2 composantes principales', color='b', size=14)
+
+    print("X_proj dans l'espace orginel : {}".format(X_inv_1.shape))
+    plt.scatter(X_inv_1[:, 0], X_inv_1[:, 1], c='r', s=20)
+
+    if color_feature in df.columns :
          #----------------------------------------------------------------------------
          # colorer en utilisant la variable color_feature
          #----------------------------------------------------------------------------
@@ -554,7 +750,7 @@ def df_kpca_components_plot(df, X_scaled, color_feature, gamma_parameter=15\
           plt.ylabel('Y', color='b', size=14)
           plt.scatter(X_scaled[:, 0], X_scaled[:, 1],c=df.get(color_feature))
         
-   else :
+    else :
       if original_data is False :
           plt.xlabel('Composante Pcple 1', color='b', size=14)
           plt.ylabel('Composante Pcple 2', color='b', size=14)
@@ -564,11 +760,11 @@ def df_kpca_components_plot(df, X_scaled, color_feature, gamma_parameter=15\
           plt.ylabel('Y', color='b', size=14)
           plt.scatter(X_scaled[:, 0], X_scaled[:, 1])
         
-   # Affichage de la barre de couleur
-   if color_feature in df.columns :
+    # Affichage de la barre de couleur
+    if color_feature in df.columns :
       z = plt.colorbar()
 
-   return kpca
+    return kpca
 # ------------------------------------------------------------------------------
 
 

@@ -125,20 +125,22 @@ def clean_marker_text(text,leading_marker=None, trailing_marker=None):
 #-------------------------------------------------------------------------------
 def p6_df_standardization(ser, is_stemming=False, is_lem=True\
     , is_stopword=True, verbose=True, list_to_keep=list()
-    , is_sentence_filter=False) :
+    , is_sentence_filter=False
+    , is_lxml=True) :
     """ Applies all pre-processing actions over a Series ser given as 
     parameter.
     
-    Returned Series is a cleaned one.
+    Returned Series is a cleaned one. 
     """
 
     if verbose is True :
         print("\nCleaning text in-between markers <code></code> markers...")
     ser = ser.apply(cb_remove_marker,args=('code',))
 
-    if verbose is True :
-        print("\nCleaning LXML markers...")
-    ser = ser.apply(cb_clean_lxml)
+    if is_lxml is True :
+        if verbose is True :
+            print("\nCleaning LXML markers...")
+        ser = ser.apply(cb_clean_lxml)
 
     if is_sentence_filter is True :
         if verbose is True :
@@ -173,8 +175,8 @@ def p6_df_standardization(ser, is_stemming=False, is_lem=True\
 #-------------------------------------------------------------------------------
 def p6_str_standardization(post, is_stemming=False, is_lem=True, is_stopword=True\
     ,is_stopverb=True, is_stopalfanum=False, list_to_keep=list(), verbose=False):
-    """Applies to a given POST all transformations in order to clean 
-    text model.
+    """Apply to a given POST all transformations in order to clean and 
+    standardize text model.
         Input : 
             * post : suite of words forming a POST
             * is_stemming : when True, stemming is applied on given post.

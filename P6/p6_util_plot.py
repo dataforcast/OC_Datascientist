@@ -100,7 +100,7 @@ def X_y_plot(X,y,item_count, title, p_x_title, p_y_title) :
 def ser_item_occurency_plot(ser_item_name, ser_item_count
 , item_count=None, title=None, p_reverse=True, p_x_title=None
 , p_y_title=None, shift=0, legend=None):
-    """Plot values issued from 2 inout Series as following : 
+    """Plot values issued from 2 input Series as following : 
     Input :
         * ser_item_name :  Series containing names of items to be plot;
         these name will be ticked on X axis.
