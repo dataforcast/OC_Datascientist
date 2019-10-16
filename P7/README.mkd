@@ -1,5 +1,4 @@
 # <center><h1>Dogs images classification regarding to breed</h1></center>
-This project carried out on behalf of the Master 2 Centrale Supélec / Openclassrooms training in datasience
 <hr>
 
 <br>
