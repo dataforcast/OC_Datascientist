@@ -46,13 +46,13 @@ At a first step, clustering algorithm are used to classify customers. Once done,
 
 * Considering this clustering with respect to monthly incomes, graphs reveal an interpretable model, with 3 mains segments. It can be shown that *Gold customers* (green curve) those producing the most value for the web site owner over a period of time, they do anticipate buys before christmas period. At the opposite, copper clients (blue curve) buy items at the end last period of christmas, such customers who do not have enough advanced cash.
 <br>
-This model reveals a middle segment of silver customers (red curve), those whom behaviour is in-between glod clients and copper clients.
+This model reveals a middle segment of silver customers (red curve), those whom behaviour is in-between gold clients and copper clients.
 
 <img src="./P5_MarketSegmentation_IncomesSegmentation.png" alt="Drawing" style="width: 200px;"/>
 
 
 
-* Based on these results, supervized algorithm have been benchmarked in order to produce the best estimator allowing to classify a client into a market segment : 
+* Based on these results, supervized algorithms have been benchmarked in order to produce the best estimator allowing to classify a client into a market segment : 
 <br>
 
   -> Random Forest<br>
@@ -61,7 +61,7 @@ This model reveals a middle segment of silver customers (red curve), those whom 
   -> SVC with linear kernel<br>
   -> Linear SVC<br>
 
-As expected with assumptions issued exploratory analysis, linear estimators provides the bests performances.
+As expected with assumptions issued from exploratory analysis, linear estimators provides the bests performances.
 
 <img src="./P5_MarketSegmentation_MLPerf.png" alt="Drawing" style="width: 200px;"/>
 
