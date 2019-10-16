@@ -40,7 +40,7 @@ At a first step, clustering algorithm are used to classify customers. Once done,
 
 <img src="./P5_MarketSegmentation_PCA.png" alt="Drawing" style="width: 200px;"/>
 
-* Clustering algorithms has been applied in order to find similarities in-between data-points. Kmeans and GMM algoritms have been used. Algorithm selection has been performed based on Silhouette coefficients, inter-inertia values and AIC/BIC criterias. GMM, a enerative algorithm based on Gaussian distributions showned the bests results.
+* Clustering algorithms has been applied in order to find similarities in-between data-points. Kmeans and GMM algoritms have been used. Algorithm selection has been performed based on Silhouette coefficients, inter-inertia values and AIC/BIC criterias. GMM, a generative algorithm based on Gaussian distributions showned the bests results.
 
 <img src="./P5_MarketSegmentation_Clustering.png" alt="Drawing" style="width: 200px;"/>
 
