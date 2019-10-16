@@ -1,5 +1,4 @@
 # <center><h1>Flights delays estimator</h1></center>
-This project carried out on behalf of the Master 2 Centrale Supélec / Openclassrooms training in datasience
 <hr>
 
 <br><br><br>
