@@ -17,7 +17,7 @@ The professional projects presented here are the result of my "deep learning" of
 
 <a href="URL">http://bit.ly/Linkedin_FBANGUI</a>
 <hr>
-<h1><font color='blus'>Kaggle competition : Jigsaw Unintended Bias in Toxicity Classification</font></h1>
+<h1><font color='blus'>Kaggle project: Jigsaw Unintended Bias in Toxicity Classification</font></h1>
 <br>
 <br>
 
