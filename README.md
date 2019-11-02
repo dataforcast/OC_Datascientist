@@ -22,7 +22,7 @@ The professional projects presented here are the result of my "deep learning" of
 <br>
 
 See project description on : 
-<a href="URL">https://github.com/dataforcast/tree/master/NLP1/README.mkd</a>
+<a href="URL">https://github.com/dataforcast/NLP1</a>
 
 
 <h1><font color='blus'>ADANET Evaluation</font></h1>
