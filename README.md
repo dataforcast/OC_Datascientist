@@ -17,6 +17,14 @@ The professional projects presented here are the result of my "deep learning" of
 
 <a href="URL">http://bit.ly/Linkedin_FBANGUI</a>
 <hr>
+<h1><font color='blus'>Kaggle competition : Jigsaw Unintended Bias in Toxicity Classification</font></h1>
+<br>
+<br>
+
+See project description on : 
+<a href="URL">https://github.com/dataforcast/NLP1/README.mkd</a>
+
+
 <h1><font color='blus'>ADANET Evaluation</font></h1>
 <br>
 AdaNet is a TensorFlow framework for fast and flexible AutoML with learning guarantees.
@@ -37,7 +45,7 @@ See project description on :
 <a href="URL">https://github.com/dataforcast/OC_Datascientist/tree/master/P7/README.mkd</a>
 <hr>
 
-##<h1><font color='blus'>TAG engine for StackOverFlow platform</font></h1>
+<h1><font color='blus'>TAG engine for StackOverFlow platform</font></h1>
 <br>
 Results issued from use of NLP algorithm, supervised and unsupervized Machine Learning algorihtms are exposed.
 <br>
