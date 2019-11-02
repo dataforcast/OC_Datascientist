@@ -17,7 +17,7 @@ The professional projects presented here are the result of my "deep learning" of
 
 <a href="URL">http://bit.ly/Linkedin_FBANGUI</a>
 <hr>
-## <h1><font color='blus'>ADANET Evaluation</font></h1>
+##<h1><font color='blus'>ADANET Evaluation</font></h1>
 <br>
 AdaNet is a TensorFlow framework for fast and flexible AutoML with learning guarantees.
 AdaNet implements an adaptive algorithm and learns neural architecture from neural Subnetworks.
@@ -28,7 +28,7 @@ See project description on :
 
 
 <hr>
-## <h1><font color='blus'>Images classification</font></h1>
+##<h1><font color='blus'>Images classification</font></h1>
 <br>
 Benchmarks issued from use of classifiers based on machine learning and use of classifiers based on artificial neuron networks are exposed.
 <br>
@@ -37,7 +37,7 @@ See project description on :
 <a href="URL">https://github.com/dataforcast/OC_Datascientist/tree/master/P7/README.mkd</a>
 <hr>
 
-## <h1><font color='blus'>TAG engine for StackOverFlow platform</font></h1>
+##<h1><font color='blus'>TAG engine for StackOverFlow platform</font></h1>
 <br>
 Results issued from use of NLP algorithm, supervised and unsupervized Machine Learning algorihtms are exposed.
 <br>
@@ -51,7 +51,7 @@ See project description on :
 
 <hr>
 
-## <h1><font color='blus'>Market segmentation</font></h1>
+<h1><font color='blus'>Market segmentation</font></h1>
 <br>
 Results of the use of generative Machine Learing algorithms along with supervized Machine Learning algorithms are experimented in order to reveal and interpret market segments from a e-commerce web database.
 <br>
