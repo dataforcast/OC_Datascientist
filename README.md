@@ -102,4 +102,5 @@ See project description : <a href="URL">https://github.com/dataforcast/OC_Datasc
 Exploratory analysis leads to propose a scoring algorithm in order to evaluate a recipe sanity. 
 <br>
 
+
 See project description : <a href="URL">https://github.com/dataforcast/OC_Datascientist/blob/master/P2/README.mkd</a>
