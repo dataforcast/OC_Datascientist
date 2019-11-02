@@ -17,7 +17,7 @@ The professional projects presented here are the result of my "deep learning" of
 
 <a href="URL">http://bit.ly/Linkedin_FBANGUI</a>
 <hr>
-##<h1><font color='blus'>ADANET Evaluation</font></h1>
+<h1><font color='blus'>ADANET Evaluation</font></h1>
 <br>
 AdaNet is a TensorFlow framework for fast and flexible AutoML with learning guarantees.
 AdaNet implements an adaptive algorithm and learns neural architecture from neural Subnetworks.
@@ -28,7 +28,7 @@ See project description on :
 
 
 <hr>
-##<h1><font color='blus'>Images classification</font></h1>
+<h1><font color='blus'>Images classification</font></h1>
 <br>
 Benchmarks issued from use of classifiers based on machine learning and use of classifiers based on artificial neuron networks are exposed.
 <br>
@@ -65,7 +65,7 @@ See project description on :
 
 <hr>
 
-## <h1><font color='blus'>Flights delays estimator</font></h1>
+<h1><font color='blus'>Flights delays estimator</font></h1>
 
 Results of the use of linear Machine Learning estimators are presented in order to estimate flight delays over TRANSTATS USA government database for year 2016.
 
@@ -77,7 +77,7 @@ See project description on :
 
 <hr>
 
-## <h1><font color='blus'>Moovies recommendation engine</font></h1>
+<h1><font color='blus'>Moovies recommendation engine</font></h1>
 <br>
 This is a simple engine based on textual data available from IMDB. Collaborative dimension of such engine 
 is not taken into account.
@@ -89,7 +89,7 @@ A set of unsupervized machine learning algorithms are experimented and benchmark
 See project description : <a href="URL">https://github.com/dataforcast/OC_Datascientist/blob/master/P3/README.mkd</a>
 <hr>
 
-## <h1><font color='blus'>Food recipe generator</font></h1>
+<h1><font color='blus'>Food recipe generator</font></h1>
 <br>
 Exploratory analysis leads to propose a scoring algorithm in order to evaluate a recipe sanity. 
 <br>
