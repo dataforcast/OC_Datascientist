@@ -29,6 +29,8 @@ See project description on :
 <br>
 AdaNet is a TensorFlow framework for fast and flexible AutoML with learning guarantees.
 AdaNet implements an adaptive algorithm and learns neural architecture from neural Subnetworks.
+
+See description on https://arxiv.org/abs/1607.01097
 <br>
 
 See project description on : 
